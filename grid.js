@@ -19,9 +19,9 @@ const client = Binance({
 
 // Parameter trading untuk grid
 const SYMBOL = "XRPUSDT"; // Symbol yang akan ditradingkan
-const GRID_COUNT = 5; // Jumlah level grid di atas dan di bawah harga pasar saat ini
+const GRID_COUNT = 20; // Jumlah level grid di atas dan di bawah harga pasar saat ini
 const LEVERAGE = 50; // Leverage untuk trading
-const BASE_USDT = 0.2; // Nilai order per grid dalam USDT
+const BASE_USDT = 0.1; // Nilai order per grid dalam USDT
 
 let totalProfit = 0;
 let totalLoss = 0;
@@ -43,7 +43,6 @@ async function getSymbolPrecision(symbol) {
     throw error;
   }
 }
-
 
 // Fungsi untuk menutup semua order terbuka
 async function closeOpenOrders() {
@@ -186,14 +185,20 @@ async function determineMarketCondition(candles) {
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, direction) {
   try {
-    console.log(chalk.blue(`Menutup semua order lama sebelum membuat order grid baru (${direction})...`));
-    
+    console.log(
+      chalk.blue(
+        `Menutup semua order lama sebelum membuat order grid baru (${direction})...`
+      )
+    );
+
     // Tutup semua order lama
     await closeOpenOrders();
 
     console.log(chalk.blue(`Menempatkan order grid baru (${direction})...`));
 
-    const { pricePrecision, quantityPrecision } = await getSymbolPrecision(SYMBOL);
+    const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
+      SYMBOL
+    );
 
     for (let i = 1; i <= GRID_COUNT; i++) {
       const price =
@@ -206,15 +211,11 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
       // Tentukan take profit dan stop loss
-      const takeProfitPrice = 
-        direction === "LONG" 
-          ? roundedPrice + atr 
-          : roundedPrice - atr;
+      const takeProfitPrice =
+        direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
 
-      const stopLossPrice = 
-        direction === "LONG" 
-          ? roundedPrice - atr 
-          : roundedPrice + atr;
+      const stopLossPrice =
+        direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
 
       // Buat order grid
       await client.futuresOrder({
