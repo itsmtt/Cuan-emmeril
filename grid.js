@@ -217,7 +217,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const stopLossPrice =
         direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
 
-      // Buat order dengan take profit dan stop loss
+      // Buat order grid
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
@@ -235,21 +235,35 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-      // Tambahkan order OCO untuk take profit dan stop loss
-      await client.futuresOrderOco({
+      // Tambahkan take profit
+      await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "SELL" : "BUY",
+        type: "TAKE_PROFIT_MARKET",
+        stopPrice: takeProfitPrice.toFixed(pricePrecision),
         quantity: roundedQuantity,
-        price: takeProfitPrice.toFixed(pricePrecision),
-        stopPrice: stopLossPrice.toFixed(pricePrecision),
-        stopLimitPrice: stopLossPrice.toFixed(pricePrecision), // Bisa disesuaikan untuk stop-limit
+        timeInForce: "GTC",
       });
 
       console.log(
         chalk.green(
-          `Take Profit di ${takeProfitPrice.toFixed(
-            pricePrecision
-          )} dan Stop Loss di ${stopLossPrice.toFixed(pricePrecision)}`
+          `Take Profit di harga ${takeProfitPrice.toFixed(pricePrecision)}`
+        )
+      );
+
+      // Tambahkan stop loss
+      await client.futuresOrder({
+        symbol: SYMBOL,
+        side: direction === "LONG" ? "SELL" : "BUY",
+        type: "STOP_MARKET",
+        stopPrice: stopLossPrice.toFixed(pricePrecision),
+        quantity: roundedQuantity,
+        timeInForce: "GTC",
+      });
+
+      console.log(
+        chalk.green(
+          `Stop Loss di harga ${stopLossPrice.toFixed(pricePrecision)}`
         )
       );
     }
