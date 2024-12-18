@@ -19,9 +19,9 @@ const client = Binance({
 
 // Parameter trading untuk grid
 const SYMBOL = "XRPUSDT"; // Symbol yang akan ditradingkan
-const GRID_COUNT = 10; // Jumlah level grid di atas dan di bawah harga pasar saat ini
+const GRID_COUNT = 20; // Jumlah level grid di atas dan di bawah harga pasar saat ini
 const LEVERAGE = 50; // Leverage untuk trading
-const BASE_USDT = 0.2; // Nilai order per grid dalam USDT
+const BASE_USDT = 0.1; // Nilai order per grid dalam USDT
 
 let totalProfit = 0;
 let totalLoss = 0;
@@ -217,7 +217,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const stopLossPrice =
         direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
 
-      // Buat order grid
+      // Buat order dengan take profit dan stop loss
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
@@ -235,35 +235,21 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-      // Tambahkan take profit
-      await client.futuresOrder({
+      // Tambahkan order OCO untuk take profit dan stop loss
+      await client.futuresOrderOco({
         symbol: SYMBOL,
         side: direction === "LONG" ? "SELL" : "BUY",
-        type: "TAKE_PROFIT_MARKET",
-        stopPrice: takeProfitPrice.toFixed(pricePrecision),
         quantity: roundedQuantity,
-        timeInForce: "GTC",
-      });
-
-      console.log(
-        chalk.green(
-          `Take Profit di harga ${takeProfitPrice.toFixed(pricePrecision)}`
-        )
-      );
-
-      // Tambahkan stop loss
-      await client.futuresOrder({
-        symbol: SYMBOL,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        type: "STOP_MARKET",
+        price: takeProfitPrice.toFixed(pricePrecision),
         stopPrice: stopLossPrice.toFixed(pricePrecision),
-        quantity: roundedQuantity,
-        timeInForce: "GTC",
+        stopLimitPrice: stopLossPrice.toFixed(pricePrecision), // Bisa disesuaikan untuk stop-limit
       });
 
       console.log(
         chalk.green(
-          `Stop Loss di harga ${stopLossPrice.toFixed(pricePrecision)}`
+          `Take Profit di ${takeProfitPrice.toFixed(
+            pricePrecision
+          )} dan Stop Loss di ${stopLossPrice.toFixed(pricePrecision)}`
         )
       );
     }
