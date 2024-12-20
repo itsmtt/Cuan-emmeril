@@ -1,12 +1,10 @@
-require('dotenv').config(); // Menggunakan dotenv untuk keamanan API key
 const Binance = require('binance-api-node').default;
-const chalk = require('chalk'); // Memberikan warna pada output
-const fs = require('fs');
+const chalk = require('chalk'); // Untuk memberikan warna pada output
 
-// Konfigurasi API key dan secret Anda melalui file .env
+// Konfigurasi API key dan secret Anda
 const client = Binance({
-  apiKey: process.env.BINANCE_API_KEY,
-  apiSecret: process.env.BINANCE_API_SECRET,
+  apiKey: 'XmRkrzNO7gFvUjB16WfHTBUs04T2UpXdN37UDfWPriMVoSQ9hUqnuPVAOUMR5p7Q',
+  apiSecret: 's1bzfjvCWXZQa2w8VL3VgkoXUcTd64ygXzjLsvnWYckxvsRF7ryX2YyQFOfqe63E',
 });
 
 // Parameter trading
