@@ -54,8 +54,43 @@ async function calculateRSI(candles, period) {
   return 100 - (100 / (1 + rs));
 }
 
+async function closeOpenOrders() {
+  try {
+    const positions = await client.futuresPositionRisk();
+    const openPosition = positions.find(position => parseFloat(position.positionAmt) !== 0 && position.symbol === SYMBOL);
+
+    if (openPosition) {
+      console.log(chalk.yellow(`Order terbuka terdeteksi pada ${SYMBOL}. Menutup order...`));
+
+      const side = parseFloat(openPosition.positionAmt) > 0 ? 'SELL' : 'BUY';
+      const quantity = Math.abs(parseFloat(openPosition.positionAmt));
+
+      await client.futuresOrder({
+        symbol: SYMBOL,
+        side: side,
+        type: 'MARKET',
+        quantity: quantity.toFixed(6),
+      });
+
+      console.log(chalk.green(`Order terbuka berhasil ditutup.`));
+    } else {
+      console.log(chalk.green('Tidak ada order terbuka yang perlu ditutup.')); 
+    }
+  } catch (error) {
+    console.error(chalk.bgRed('Gagal memeriksa atau menutup order terbuka:'), error);
+  }
+}
+
 async function trade() {
   try {
+    
+    // Cek dan tutup order terbuka saat bot mulai
+    await closeOpenOrders();
+
+    // Jeda waktu untuk memastikan sistem stabil sebelum membuat order baru
+    console.log(chalk.blue('Menunggu 5 detik sebelum memulai order baru...'));
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
     // Ambil informasi simbol untuk mendapatkan step size
     const exchangeInfo = await client.futuresExchangeInfo();
     const symbolInfo = exchangeInfo.symbols.find(s => s.symbol === SYMBOL);
