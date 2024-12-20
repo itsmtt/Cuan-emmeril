@@ -68,6 +68,34 @@ async function closeOpenOrders() {
   }
 }
 
+function logTradeToTerminal(result) {
+    console.log(chalk.green('================= Trade Log ================='));
+    console.log(`Waktu       : ${new Date().toISOString()}`);
+    console.log(`Tipe Trade  : ${result.type}`);
+    console.log(`Posisi      : ${result.side}`);
+    console.log(`Harga Entry : ${result.entryPrice}`);
+    console.log(`Harga Exit  : ${result.exitPrice}`);
+    console.log(`Profit/Loss : ${result.profitOrLoss} USDT`);
+    console.log(chalk.blue(`Total Profit: ${totalProfit.toFixed(2)} USDT`));
+    console.log(chalk.red(`Total Loss  : ${totalLoss.toFixed(2)} USDT`));
+    console.log(chalk.green('==========================================='));
+}
+
+function logTrade(result) {
+    const logData = {
+        time: new Date().toISOString(),
+        result: result,
+        totalProfit: totalProfit.toFixed(2),
+        totalLoss: totalLoss.toFixed(2),
+    };
+
+    // Simpan ke file
+    fs.appendFileSync('trade_log.json', JSON.stringify(logData, null, 2) + ',\n');
+
+    // Tampilkan ke terminal
+    logTradeToTerminal(result);
+}
+
 async function trade() {
   await closeOpenOrders();
   await new Promise(resolve => setTimeout(resolve, 5000)); // Jeda 5 detik sebelum order baru
