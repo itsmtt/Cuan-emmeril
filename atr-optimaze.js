@@ -15,7 +15,7 @@ const SHORT_EMA_PERIOD = 9; // Periode EMA pendek
 const LONG_EMA_PERIOD = 21; // Periode EMA panjang
 const ATR_PERIOD = 14; // Periode ATR
 const MIN_ATR = 0.001; // Filter volatilitas minimum
-const RISK_REWARD_RATIO = 1.5; // Rasio risk/reward dinamis
+const RISK_REWARD_RATIO = 1.2; // Rasio risk/reward dinamis
 
 let totalProfit = 0;
 let totalLoss = 0;
