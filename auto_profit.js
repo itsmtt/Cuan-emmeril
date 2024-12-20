@@ -20,12 +20,6 @@ let totalLoss = 0;
 let reconnectAttempts = 0;
 let activeOrder = null; // Menyimpan informasi order yang sedang aktif
 
-
-
-function shouldStopApplication() {
-  return false; // Fitur mematikan aplikasi di jam 7 pagi dinonaktifkan
-}
-
 async function calculateEMA(data, period) {
   const k = 2 / (period + 1);
   let ema = data[0]; // EMA pertama diinisialisasi ke harga pertama
