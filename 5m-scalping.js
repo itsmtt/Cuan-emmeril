@@ -23,12 +23,6 @@ let totalLoss = 0;
 let reconnectAttempts = 0;
 let activeOrder = null; // Menyimpan informasi order yang sedang aktif
 
-function getCurrentTimeInJakarta() {
-  const now = new Date();
-  const jakartaOffset = 7 * 60; // Waktu Indonesia Barat (WIB) adalah UTC+7
-  const localTime = new Date(now.getTime() + jakartaOffset * 60 * 1000);
-  return localTime;
-}
 
 async function calculateEMA(data, period) {
   const k = 2 / (period + 1);
