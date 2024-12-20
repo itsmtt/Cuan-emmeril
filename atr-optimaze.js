@@ -68,34 +68,6 @@ async function closeOpenOrders() {
   }
 }
 
-function logTradeToTerminal(result) {
-    console.log(chalk.green('================= Trade Log ================='));
-    console.log(`Waktu       : ${new Date().toISOString()}`);
-    console.log(`Tipe Trade  : ${result.type}`);
-    console.log(`Posisi      : ${result.side}`);
-    console.log(`Harga Entry : ${result.entryPrice}`);
-    console.log(`Harga Exit  : ${result.exitPrice}`);
-    console.log(`Profit/Loss : ${result.profitOrLoss} USDT`);
-    console.log(chalk.blue(`Total Profit: ${totalProfit.toFixed(2)} USDT`));
-    console.log(chalk.red(`Total Loss  : ${totalLoss.toFixed(2)} USDT`));
-    console.log(chalk.green('==========================================='));
-}
-
-function logTrade(result) {
-    const logData = {
-        time: new Date().toISOString(),
-        result: result,
-        totalProfit: totalProfit.toFixed(2),
-        totalLoss: totalLoss.toFixed(2),
-    };
-
-    // Simpan ke file
-    fs.appendFileSync('trade_log.json', JSON.stringify(logData, null, 2) + ',\n');
-
-    // Tampilkan ke terminal
-    logTradeToTerminal(result);
-}
-
 async function trade() {
   await closeOpenOrders();
   await new Promise(resolve => setTimeout(resolve, 5000)); // Jeda 5 detik sebelum order baru
@@ -176,56 +148,31 @@ async function trade() {
 }
 
 async function monitorOrder(quantity, side, takeProfit, stopLoss) {
-    while (true) {
-        try {
-            const ticker = await client.futuresPrices();
-            const currentPrice = parseFloat(ticker[SYMBOL]);
+  while (true) {
+    try {
+      const ticker = await client.futuresPrices();
+      const currentPrice = parseFloat(ticker[SYMBOL]);
 
-            if ((side === 'BUY' && currentPrice >= takeProfit) || (side === 'SELL' && currentPrice <= takeProfit)) {
-                console.log(chalk.bgGreen(`Take profit tercapai pada harga ${takeProfit.toFixed(4)}`));
+      if ((side === 'BUY' && currentPrice >= takeProfit) || (side === 'SELL' && currentPrice <= takeProfit)) {
+        console.log(chalk.bgGreen(`Take profit tercapai pada harga ${takeProfit.toFixed(4)}`));
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: side === 'BUY' ? 'SELL' : 'BUY',
+          type: 'MARKET',
+          quantity: quantity.toFixed(6),
+        });
+        break;
 
-                await client.futuresOrder({
-                    symbol: SYMBOL,
-                    side: side === 'BUY' ? 'SELL': 'BUY',
-                    type: 'MARKET',
-                    quantity: quantity.toFixed(6),
-                });
-
-                const profit = Math.abs((takeProfit - activeOrder.price) * activeOrder.quantity);
-                totalProfit += profit;
-                logTrade({
-                    type: 'Take Profit',
-                    profitOrLoss: profit.toFixed(2),
-                    side,
-                    entryPrice: activeOrder.price,
-                    exitPrice: takeProfit,
-                });
-
-                activeOrder = null;
-                break;
-            } else if ((side === 'BUY' && currentPrice <= stopLoss) || (side === 'SELL' && currentPrice >= stopLoss)) {
-                console.log(chalk.bgRed(`Stop loss tercapai pada harga ${stopLoss.toFixed(4)}`));
-
-                await client.futuresOrder({
-                    symbol: SYMBOL,
-                    side: side === 'BUY' ? 'SELL': 'BUY',
-                    type: 'MARKET',
-                    quantity: quantity.toFixed(6),
-                });
-
-                const loss = Math.abs((activeOrder.price - stopLoss) * activeOrder.quantity);
-                totalLoss += loss;
-                logTrade({
-                    type: 'Stop Loss',
-                    profitOrLoss: `-${loss.toFixed(2)}`,
-                    side,
-                    entryPrice: activeOrder.price,
-                    exitPrice: stopLoss,
-                });
-
-                activeOrder = null;
-                break;
-            }
+      } else if ((side === 'BUY' && currentPrice <= stopLoss) || (side === 'SELL' && currentPrice >= stopLoss)) {
+        console.log(chalk.bgRed(`Stop loss tercapai pada harga ${stopLoss.toFixed(4)}`));
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: side === 'BUY' ? 'SELL' : 'BUY',
+          type: 'MARKET',
+          quantity: quantity.toFixed(6),
+        });
+        break;
+      }
       await new Promise(resolve => setTimeout(resolve, 5000));
     } catch (error) {
       console.error(chalk.bgRed('Kesalahan memonitor order:'), error);
