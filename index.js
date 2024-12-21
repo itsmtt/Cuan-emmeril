@@ -214,7 +214,7 @@ async function trade() {
 }
 
 async function monitorOrder(quantity, side) {
-    const PROFIT_ROI = 5; // ROI target profit 10%
+    const PROFIT_ROI = 10; // ROI target profit 10%
     const LOSS_ROI = 5; // ROI stop loss 20%
 
     const entryPrice = activeOrder.price;
