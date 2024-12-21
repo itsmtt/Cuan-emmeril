@@ -11,11 +11,11 @@ const client = Binance({
 const SYMBOL = 'XRPUSDT'; // Symbol yang akan ditradingkan
 const ORDER_AMOUNT_USDT = 2; // Jumlah USDT yang akan digunakan untuk order
 const LEVERAGE = 5; // Leverage untuk trading futures
-const SHORT_EMA_PERIOD = 5; // Periode EMA pendek untuk scalping
-const LONG_EMA_PERIOD = 20; // Periode EMA panjang untuk scalping
+const SHORT_EMA_PERIOD = 9; // Periode EMA pendek untuk scalping
+const LONG_EMA_PERIOD = 21; // Periode EMA panjang untuk scalping
 const RSI_PERIOD = 14; // Periode RSI untuk scalping
 const ATR_PERIOD = 14; // Periode ATR untuk menentukan take profit dan stop loss
-const MIN_VOLATILITY = 0.005; // Volatilitas minimum untuk menetapkan level take profit dan stop loss
+const MIN_VOLATILITY = 0.001; // Volatilitas minimum untuk menetapkan level take profit dan stop loss
 const RISK_REWARD_RATIO = 1.5; // Rasio risiko-keuntungan
 
 let totalProfit = 0;
