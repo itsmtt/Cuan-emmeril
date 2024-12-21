@@ -126,7 +126,7 @@ async function trade() {
         // Ambil data candlestick
         const candles = await client.futuresCandles({
           symbol: SYMBOL,
-          interval: '5m', // Kerangka waktu 5 menit
+          interval: '1m', // Kerangka waktu 5 menit
           limit: Math.max(SHORT_EMA_PERIOD, LONG_EMA_PERIOD, RSI_PERIOD, ATR_PERIOD) + 1,
         });
 
