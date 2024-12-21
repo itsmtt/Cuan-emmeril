@@ -154,7 +154,11 @@ async function monitorOrder(quantity, side, takeProfit, stopLoss) {
       const currentPrice = parseFloat(ticker[SYMBOL]);
 
       if ((side === 'BUY' && currentPrice >= takeProfit) || (side === 'SELL' && currentPrice <= takeProfit)) {
-        console.log(chalk.bgGreen(`Take profit tercapai pada harga ${takeProfit.toFixed(4)}`));
+        const profit = Math.abs(takeProfit - activeOrder.price) * quantity;
+        totalProfit += profit;
+        console.log(chalk.bgGreen(`Take profit tercapai pada harga ${takeProfit.toFixed(4)}. Profit: ${profit.toFixed(4)}`));
+        console.log(chalk.green(`Total Profit: ${totalProfit.toFixed(4)}, Total Loss: ${totalLoss.toFixed(4)}`));
+
         await client.futuresOrder({
           symbol: SYMBOL,
           side: side === 'BUY' ? 'SELL' : 'BUY',
@@ -164,7 +168,11 @@ async function monitorOrder(quantity, side, takeProfit, stopLoss) {
         break;
 
       } else if ((side === 'BUY' && currentPrice <= stopLoss) || (side === 'SELL' && currentPrice >= stopLoss)) {
-        console.log(chalk.bgRed(`Stop loss tercapai pada harga ${stopLoss.toFixed(4)}`));
+        const loss = Math.abs(activeOrder.price - stopLoss) * quantity;
+        totalLoss += loss;
+        console.log(chalk.bgRed(`Stop loss tercapai pada harga ${stopLoss.toFixed(4)}. Loss: ${loss.toFixed(4)}`));
+        console.log(chalk.red(`Total Profit: ${totalProfit.toFixed(4)}, Total Loss: ${totalLoss.toFixed(4)}`));
+
         await client.futuresOrder({
           symbol: SYMBOL,
           side: side === 'BUY' ? 'SELL' : 'BUY',
@@ -173,6 +181,7 @@ async function monitorOrder(quantity, side, takeProfit, stopLoss) {
         });
         break;
       }
+
       await new Promise(resolve => setTimeout(resolve, 5000));
     } catch (error) {
       console.error(chalk.bgRed('Kesalahan memonitor order:'), error);
