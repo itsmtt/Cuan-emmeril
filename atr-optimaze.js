@@ -9,8 +9,8 @@ const client = Binance({
 
 // Parameter trading
 const SYMBOL = 'XRPUSDT'; // Symbol yang akan ditradingkan
-const ORDER_AMOUNT_USDT = 1; // Jumlah USDT yang digunakan per order
-const LEVERAGE = 10; // Leverage untuk trading futures
+const ORDER_AMOUNT_USDT = 2; // Jumlah USDT yang digunakan per order
+const LEVERAGE = 5; // Leverage untuk trading futures
 const SHORT_EMA_PERIOD = 9; // Periode EMA pendek
 const LONG_EMA_PERIOD = 21; // Periode EMA panjang
 const ATR_PERIOD = 14; // Periode ATR
