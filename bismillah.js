@@ -22,7 +22,7 @@ let totalProfit = 0;
 let totalLoss = 0;
 let profitCount = 0;
 let lossCount = 0;
-let reconnectAttempts = 0;
+// let reconnectAttempts = 0;
 let activeOrder = null; // Menyimpan informasi order yang sedang aktif
 
 async function calculateEMA(data, period) {
