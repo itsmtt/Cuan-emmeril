@@ -3,14 +3,14 @@ const chalk = require('chalk'); // Untuk memberikan warna pada output
 
 // Konfigurasi API key dan secret Anda
 const client = Binance({
-    apiKey: '',
-    apiSecret: '',
+  apiKey: 'XmRkrzNO7gFvUjB16WfHTBUs04T2UpXdN37UDfWPriMVoSQ9hUqnuPVAOUMR5p7Q',
+  apiSecret: 's1bzfjvCWXZQa2w8VL3VgkoXUcTd64ygXzjLsvnWYckxvsRF7ryX2YyQFOfqe63E',
 });
 
 // Parameter trading
 const SYMBOL = 'XRPUSDT'; // Symbol yang akan ditradingkan
-const ORDER_AMOUNT_USDT = 1; // Jumlah USDT yang akan digunakan untuk order
-const LEVERAGE = 10; // Leverage untuk trading futures
+const ORDER_AMOUNT_USDT = 2; // Jumlah USDT yang akan digunakan untuk order
+const LEVERAGE = 5; // Leverage untuk trading futures
 const SHORT_EMA_PERIOD = 9; // Periode EMA pendek
 const LONG_EMA_PERIOD = 21; // Periode EMA panjang
 
@@ -214,8 +214,8 @@ async function trade() {
 }
 
 async function monitorOrder(quantity, side) {
-    const PROFIT_ROI = 10; // ROI target profit 10%
-    const LOSS_ROI = 20; // ROI stop loss 20%
+    const PROFIT_ROI = 5; // ROI target profit 10%
+    const LOSS_ROI = 5; // ROI stop loss 20%
 
     const entryPrice = activeOrder.price;
 
