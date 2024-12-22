@@ -8,15 +8,15 @@ const client = Binance({
 });
 
 // Parameter trading
-const SYMBOL = 'CGPTUSDT'; // Symbol yang akan ditradingkan
+const SYMBOL = 'XRPUSDT'; // Symbol yang akan ditradingkan
 const ORDER_AMOUNT_USDT = 2; // Jumlah USDT yang akan digunakan untuk order
-const LEVERAGE = 5; // Leverage untuk trading futures
+const LEVERAGE = 10; // Leverage untuk trading futures
 const SHORT_EMA_PERIOD = 5; // Periode EMA pendek untuk scalping
 const LONG_EMA_PERIOD = 20; // Periode EMA panjang untuk scalping
 const RSI_PERIOD = 14; // Periode RSI untuk scalping
 const ATR_PERIOD = 14; // Periode ATR untuk menentukan take profit dan stop loss
-const MIN_VOLATILITY = 0.001; // Volatilitas minimum untuk menetapkan level take profit dan stop loss
-const RISK_REWARD_RATIO = 1.5; // Rasio risiko-keuntungan
+const MIN_VOLATILITY = 0.005; // Volatilitas minimum untuk menetapkan level take profit dan stop loss
+const RISK_REWARD_RATIO = 2; // Rasio risiko-keuntungan
 
 let totalProfit = 0;
 let totalLoss = 0;
@@ -126,7 +126,7 @@ async function trade() {
         // Ambil data candlestick
         const candles = await client.futuresCandles({
           symbol: SYMBOL,
-          interval: '1m', // Kerangka waktu 5 menit
+          interval: '15m', // Kerangka waktu 5 menit
           limit: Math.max(SHORT_EMA_PERIOD, LONG_EMA_PERIOD, RSI_PERIOD, ATR_PERIOD) + 1,
         });
 
