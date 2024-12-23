@@ -15,7 +15,7 @@ const client = Binance({
 
 // Parameter trading untuk grid
 const SYMBOL = 'XRPUSDT'; // Symbol yang akan ditradingkan
-const GRID_COUNT = 10; // Jumlah level grid di atas dan di bawah harga pasar saat ini
+const GRID_COUNT = 5; // Jumlah level grid di atas dan di bawah harga pasar saat ini
 const LEVERAGE = 50; // Leverage untuk trading
 const BASE_USDT = 0.2; // Nilai order per grid dalam USDT
 
@@ -55,6 +55,24 @@ async function closeOpenOrders() {
   }
 }
 
+// Fungsi untuk memeriksa apakah semua order telah selesai
+async function waitForOrdersToComplete() {
+  try {
+    console.log(chalk.blue('Menunggu semua order selesai...'));
+    let openOrders;
+    do {
+      openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+      if (openOrders.length > 0) {
+        console.log(chalk.yellow(`Masih ada ${openOrders.length} order terbuka, menunggu...`));
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Tunggu 5 detik sebelum memeriksa lagi
+      }
+    } while (openOrders.length > 0);
+    console.log(chalk.green('Semua order telah selesai.'));
+  } catch (error) {
+    console.error(chalk.bgRed('Kesalahan saat memeriksa status order:'), error.message || error);
+  }
+}
+
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
   const highs = candles.map(c => parseFloat(c.high));
@@ -71,37 +89,6 @@ async function calculateATR(candles, period) {
 
   const atr = trs.slice(-period).reduce((sum, tr) => sum + tr, 0) / period;
   return atr;
-}
-
-// Fungsi untuk menghitung EMA
-async function calculateEMA(data, period) {
-  const k = 2 / (period + 1);
-  let ema = data[0];
-  for (let i = 1; i < data.length; i++) {
-    ema = data[i] * k + ema * (1 - k);
-  }
-  return ema;
-}
-
-// Fungsi untuk menghitung RSI
-async function calculateRSI(candles, period) {
-  const closingPrices = candles.map(c => parseFloat(c.close));
-  let gains = 0, losses = 0;
-
-  for (let i = 1; i <= period; i++) {
-    const change = closingPrices[i] - closingPrices[i - 1];
-    if (change > 0) {
-      gains += change;
-    } else {
-      losses -= change;
-    }
-  }
-
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  const rs = avgGain / avgLoss;
-
-  return 100 - (100 / (1 + rs));
 }
 
 // Fungsi untuk menentukan kondisi pasar
@@ -190,6 +177,8 @@ async function trade() {
     } else {
       console.log(chalk.blue('Kondisi pasar netral, tidak ada order grid yang ditempatkan.'));
     }
+
+    await waitForOrdersToComplete(); // Tunggu sampai semua order selesai sebelum melanjutkan
   } catch (error) {
     console.error(chalk.bgRed('Kesalahan utama dalam trading:'), error.message || error);
   }
