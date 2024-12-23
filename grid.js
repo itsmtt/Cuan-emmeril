@@ -54,62 +54,6 @@ async function closeOpenOrders() {
     console.error(chalk.bgRed('Kesalahan saat menutup order terbuka:'), error.message || error);
   }
 }
-require('dotenv').config(); // Load .env file
-const Binance = require('binance-api-node').default;
-const chalk = require('chalk');
-
-// Validasi API Key
-if (!process.env.API_KEY || !process.env.API_SECRET) {
-  console.error(chalk.bgRed('API Key atau Secret tidak ditemukan. Pastikan file .env sudah diatur dengan benar.'));
-  process.exit(1);
-}
-
-const client = Binance({
-  apiKey: process.env.API_KEY,
-  apiSecret: process.env.API_SECRET,
-});
-
-// Parameter trading untuk grid
-const SYMBOL = 'XRPUSDT'; // Symbol yang akan ditradingkan
-const GRID_COUNT = 5; // Jumlah level grid di atas dan di bawah harga pasar saat ini
-const LEVERAGE = 50; // Leverage untuk trading
-const BASE_USDT = 0.2; // Nilai order per grid dalam USDT
-
-let totalProfit = 0;
-let totalLoss = 0;
-
-// Fungsi untuk mendapatkan presisi pasangan perdagangan
-async function getSymbolPrecision(symbol) {
-  try {
-    const exchangeInfo = await client.futuresExchangeInfo();
-    const symbolInfo = exchangeInfo.symbols.find(s => s.symbol === symbol);
-    if (!symbolInfo) throw new Error(`Symbol ${symbol} tidak ditemukan.`);
-    const pricePrecision = symbolInfo.pricePrecision; // Presisi untuk harga
-    const quantityPrecision = symbolInfo.quantityPrecision; // Presisi untuk kuantitas
-    return { pricePrecision, quantityPrecision };
-  } catch (error) {
-    console.error(chalk.bgRed('Kesalahan saat mendapatkan presisi pasangan perdagangan:'), error.message || error);
-    throw error;
-  }
-}
-
-// Fungsi untuk menutup semua order terbuka
-async function closeOpenOrders() {
-  try {
-    console.log(chalk.blue('Memeriksa dan menutup semua order terbuka...'));
-    const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-    if (openOrders.length > 0) {
-      for (const order of openOrders) {
-        await client.futuresCancelOrder({ symbol: SYMBOL, orderId: order.orderId });
-        console.log(chalk.green(`Order dengan ID ${order.orderId} berhasil dibatalkan.`));
-      }
-    } else {
-      console.log(chalk.green('Tidak ada order terbuka yang perlu ditutup.'));
-    }
-  } catch (error) {
-    console.error(chalk.bgRed('Kesalahan saat menutup order terbuka:'), error.message || error);
-  }
-}
 
 // Fungsi untuk memeriksa apakah semua order telah selesai
 async function waitForOrdersToComplete() {
@@ -242,6 +186,9 @@ async function placeGridOrders(currentPrice, atr, direction) {
     console.error(chalk.bgRed('Kesalahan saat menempatkan order grid:'), error.message || error);
   }
 }
+
+
+  
 
 // Fungsi trading utama
 async function trade() {
