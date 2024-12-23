@@ -22,7 +22,7 @@ const BASE_USDT = 0.2; // Nilai order per grid dalam USDT
 let totalProfit = 0;
 let totalLoss = 0;
 
-// Fungsi menghitung EMA
+// Fungsi untuk menghitung EMA
 async function calculateEMA(data, period) {
   const k = 2 / (period + 1);
   let ema = data[0];
@@ -32,7 +32,7 @@ async function calculateEMA(data, period) {
   return ema;
 }
 
-// Fungsi menghitung RSI
+// Fungsi untuk menghitung RSI
 async function calculateRSI(candles, period) {
   const closingPrices = candles.map(c => parseFloat(c.close));
   let gains = 0, losses = 0;
@@ -53,7 +53,7 @@ async function calculateRSI(candles, period) {
   return 100 - (100 / (1 + rs));
 }
 
-// Fungsi menghitung ATR
+// Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
   const highs = candles.map(c => parseFloat(c.high));
   const lows = candles.map(c => parseFloat(c.low));
@@ -71,7 +71,25 @@ async function calculateATR(candles, period) {
   return atr;
 }
 
-// Menentukan kondisi pasar
+// Fungsi untuk menutup semua order terbuka
+async function closeOpenOrders() {
+  try {
+    console.log(chalk.blue('Memeriksa dan menutup semua order terbuka...'));
+    const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+    if (openOrders.length > 0) {
+      for (const order of openOrders) {
+        await client.futuresCancelOrder({ symbol: SYMBOL, orderId: order.orderId });
+        console.log(chalk.green(`Order dengan ID ${order.orderId} berhasil dibatalkan.`));
+      }
+    } else {
+      console.log(chalk.green('Tidak ada order terbuka yang perlu ditutup.'));
+    }
+  } catch (error) {
+    console.error(chalk.bgRed('Kesalahan saat menutup order terbuka:'), error.message || error);
+  }
+}
+
+// Fungsi untuk menentukan kondisi pasar
 async function determineMarketCondition(candles) {
   const closingPrices = candles.map(c => parseFloat(c.close));
   const shortEMA = await calculateEMA(closingPrices.slice(-10), 10); // EMA pendek
@@ -89,7 +107,7 @@ async function determineMarketCondition(candles) {
   }
 }
 
-// Menempatkan order grid
+// Fungsi untuk menempatkan order grid
 async function placeGridOrders(currentPrice, atr, direction) {
   try {
     console.log(chalk.blue(`Menempatkan order grid (${direction})...`));
@@ -101,17 +119,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
 
-      // Simulasi profit dan loss per order
-      const profitOrLoss = direction === 'LONG'
-        ? (currentPrice - price) * quantity
-        : (price - currentPrice) * quantity;
-
-      if (profitOrLoss > 0) {
-        totalProfit += profitOrLoss;
-      } else {
-        totalLoss += Math.abs(profitOrLoss);
-      }
-
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === 'LONG' ? 'BUY' : 'SELL',
@@ -122,7 +129,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
       });
 
       console.log(chalk.green(`Order ${direction === 'LONG' ? 'beli' : 'jual'} ditempatkan di harga ${price.toFixed(6)} dengan kuantitas ${quantity.toFixed(6)}`));
-      console.log(chalk.cyan(`Profit saat ini: ${totalProfit.toFixed(2)} USDT, Loss saat ini: ${totalLoss.toFixed(2)} USDT`));
     }
 
     console.log(chalk.blue('Semua order grid berhasil ditempatkan.'));
@@ -131,7 +137,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
   }
 }
 
-// Fungsi trading utama
+// Fungsi utama trading
 async function trade() {
   try {
     const ticker = await client.futuresPrices();
@@ -170,9 +176,9 @@ async function trade() {
 
 // Loop utama untuk menjalankan bot
 async function runBot() {
+  await closeOpenOrders(); // Tutup order terbuka sebelum memulai trading
   while (true) {
     await trade();
-    console.log(chalk.cyan(`Menunggu ${TRADE_INTERVAL / 60000} menit sebelum trading berikutnya...`));
     console.log(chalk.magenta(`Total Profit: ${totalProfit.toFixed(2)} USDT, Total Loss: ${totalLoss.toFixed(2)} USDT`));
   }
 }
