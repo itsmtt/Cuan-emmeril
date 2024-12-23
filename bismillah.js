@@ -1,5 +1,5 @@
-const Binance = require('binance-api-node').default;
 require('dotenv').config();
+const Binance = require('binance-api-node').default;
 const chalk = require('chalk'); // Untuk memberikan warna pada output
 
 // Konfigurasi API key dan secret Anda
