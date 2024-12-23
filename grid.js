@@ -15,7 +15,7 @@ const client = Binance({
 
 // Parameter trading untuk grid
 const SYMBOL = 'XRPUSDT'; // Symbol yang akan ditradingkan
-const GRID_COUNT = 5; // Jumlah level grid di atas dan di bawah harga pasar saat ini
+const GRID_COUNT = 10; // Jumlah level grid di atas dan di bawah harga pasar saat ini
 const LEVERAGE = 50; // Leverage untuk trading
 const BASE_USDT = 0.2; // Nilai order per grid dalam USDT
 
@@ -94,7 +94,7 @@ async function calculateATR(candles, period) {
 // Fungsi untuk menentukan kondisi pasar
 async function determineMarketCondition(candles) {
   const closingPrices = candles.map(c => parseFloat(c.close));
-  const shortEMA = await calculateEMA(closingPrices.slice(-10), 10); // EMA pendek
+  const shortEMA = await calculateEMA(closingPrices.slice(-10), 5); // EMA pendek
   const longEMA = await calculateEMA(closingPrices.slice(-20), 20); // EMA panjang
   const rsi = await calculateRSI(candles, 14); // RSI
 
