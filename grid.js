@@ -44,44 +44,6 @@ async function getSymbolPrecision(symbol) {
   }
 }
 
-async function placeOCOOrder(symbol, side, quantity, takeProfitPrice, stopPrice, stopLimitPrice) {
-  try {
-    console.log(chalk.blue(`Menempatkan OCO order untuk ${symbol}...`));
-
-    // Pastikan harga dalam presisi yang tepat
-    const { pricePrecision } = await getSymbolPrecision(symbol);
-
-    // Bulatkan harga ke presisi simbol
-    const tpPriceRounded = parseFloat(takeProfitPrice.toFixed(pricePrecision));
-    const stopPriceRounded = parseFloat(stopPrice.toFixed(pricePrecision));
-    const stopLimitPriceRounded = parseFloat(stopLimitPrice.toFixed(pricePrecision));
-
-    // Buat OCO order
-    const result = await client.futuresOrder({
-      symbol: symbol,
-      side: side,
-      type: "STOP_MARKET",
-      quantity: quantity,
-      stopPrice: stopPriceRounded,
-      stopLimitPrice: stopLimitPriceRounded, // Stop-limit untuk SL jika diperlukan
-      price: tpPriceRounded, // Harga TP untuk Take Profit
-    });
-
-    console.log(
-      chalk.green(
-        `OCO order berhasil ditempatkan untuk ${symbol}: TP di ${tpPriceRounded}, SL di ${stopPriceRounded}`
-      )
-    );
-
-    return result;
-  } catch (error) {
-    console.error(
-      chalk.bgRed("Kesalahan saat membuat OCO order:"),
-      error.message || error
-    );
-    throw error;
-  }
-}
 
 // Fungsi untuk menutup semua order terbuka
 async function closeOpenOrders() {
@@ -272,16 +234,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-         // Tambahkan OCO untuk Take Profit dan Stop Loss
-      await placeOCOOrder(
-        SYMBOL,
-        direction === "LONG" ? "SELL" : "BUY",
-        roundedQuantity,
-        takeProfitPrice,
-        stopLossPrice,
-        stopLossPrice * 0.99 // Stop limit biasanya sedikit di bawah/atas stop price
-      );
-    }
+         
 
       console.log(
         chalk.green(
