@@ -272,15 +272,16 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-      // Tambahkan order OCO untuk take profit dan stop loss
-      await client.futuresOrderOco({
-        symbol: SYMBOL,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        quantity: roundedQuantity,
-        price: takeProfitPrice.toFixed(pricePrecision),
-        stopPrice: stopLossPrice.toFixed(pricePrecision),
-        stopLimitPrice: stopLossPrice.toFixed(pricePrecision), // Bisa disesuaikan untuk stop-limit
-      });
+         // Tambahkan OCO untuk Take Profit dan Stop Loss
+      await placeOCOOrder(
+        SYMBOL,
+        direction === "LONG" ? "SELL" : "BUY",
+        roundedQuantity,
+        takeProfitPrice,
+        stopLossPrice,
+        stopLossPrice * 0.99 // Stop limit biasanya sedikit di bawah/atas stop price
+      );
+    }
 
       console.log(
         chalk.green(
