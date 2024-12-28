@@ -182,7 +182,7 @@ async function determineMarketCondition(candles) {
   }
 }
 
-// Fungsi untuk menetapkan order grid dengan presisi
+// Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, direction) {
   try {
     console.log(chalk.blue(`Menutup semua order lama sebelum membuat order grid baru (${direction})...`));
@@ -204,6 +204,18 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const roundedPrice = parseFloat(price.toFixed(pricePrecision));
       const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
+      // Tentukan take profit dan stop loss
+      const takeProfitPrice = 
+        direction === "LONG" 
+          ? roundedPrice + atr 
+          : roundedPrice - atr;
+
+      const stopLossPrice = 
+        direction === "LONG" 
+          ? roundedPrice - atr 
+          : roundedPrice + atr;
+
+      // Buat order dengan take profit dan stop loss
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
@@ -218,6 +230,24 @@ async function placeGridOrders(currentPrice, atr, direction) {
           `Order ${
             direction === "LONG" ? "beli" : "jual"
           } ditempatkan di harga ${roundedPrice} dengan kuantitas ${roundedQuantity}`
+        )
+      );
+
+      // Tambahkan order OCO untuk take profit dan stop loss
+      await client.futuresOrderOco({
+        symbol: SYMBOL,
+        side: direction === "LONG" ? "SELL" : "BUY",
+        quantity: roundedQuantity,
+        price: takeProfitPrice.toFixed(pricePrecision),
+        stopPrice: stopLossPrice.toFixed(pricePrecision),
+        stopLimitPrice: stopLossPrice.toFixed(pricePrecision), // Bisa disesuaikan untuk stop-limit
+      });
+
+      console.log(
+        chalk.green(
+          `Take Profit di ${takeProfitPrice.toFixed(
+            pricePrecision
+          )} dan Stop Loss di ${stopLossPrice.toFixed(pricePrecision)}`
         )
       );
     }
