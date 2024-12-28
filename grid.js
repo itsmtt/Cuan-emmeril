@@ -185,11 +185,14 @@ async function determineMarketCondition(candles) {
 // Fungsi untuk menetapkan order grid dengan presisi
 async function placeGridOrders(currentPrice, atr, direction) {
   try {
-    console.log(chalk.blue(`Menempatkan order grid (${direction})...`));
+    console.log(chalk.blue(`Menutup semua order lama sebelum membuat order grid baru (${direction})...`));
+    
+    // Tutup semua order lama
+    await closeOpenOrders();
 
-    const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
-      SYMBOL
-    );
+    console.log(chalk.blue(`Menempatkan order grid baru (${direction})...`));
+
+    const { pricePrecision, quantityPrecision } = await getSymbolPrecision(SYMBOL);
 
     for (let i = 1; i <= GRID_COUNT; i++) {
       const price =
@@ -219,7 +222,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       );
     }
 
-    console.log(chalk.blue("Semua order grid berhasil ditempatkan."));
+    console.log(chalk.blue("Semua order grid baru berhasil ditempatkan."));
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan saat menempatkan order grid:"),
