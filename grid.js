@@ -190,6 +190,17 @@ function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
   };
 }
 
+// Fungsi untuk memeriksa kondisi pasar ekstrem
+async function checkExtremeMarketConditions(candles) {
+  const atr = await calculateATR(candles, 14);
+
+  if (atr > 0.05) { // Nilai ambang batas ATR disesuaikan
+    console.log(chalk.red("Pasar terlalu volatil. Menghentikan trading sementara."));
+    return true;
+  }
+  return false;
+}
+
 // Fungsi untuk menentukan kondisi pasar
 async function determineMarketCondition(candles) {
   const closingPrices = candles.map((c) => parseFloat(c.close));
