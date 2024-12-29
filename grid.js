@@ -285,6 +285,14 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const price =
         direction === "LONG" ? currentPrice - atr * i : currentPrice + atr * i;
 
+      if ((direction === "LONG" && price >= currentPrice) ||
+          (direction === "SHORT" && price <= currentPrice)) {
+        console.error(
+          chalk.bgRed(`Harga order invalid: ${price.toFixed(6)} untuk arah ${direction}.`)
+        );
+        continue;
+      }
+
       const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
 
       // Round price and quantity to proper precision
