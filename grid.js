@@ -340,6 +340,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
         stopPrice: takeProfitPrice.toFixed(pricePrecision),
         quantity: roundedQuantity,
         timeInForce: "GTC",
+        reduceOnly: true,
       });
 
       console.log(
@@ -356,6 +357,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
         stopPrice: stopLossPrice.toFixed(pricePrecision),
         quantity: roundedQuantity,
         timeInForce: "GTC",
+        reduceOnly: true,
       });
 
       console.log(
