@@ -403,6 +403,10 @@ async function trade() {
       limit: 20,
     });
 
+    if (await checkExtremeMarketConditions(candles)) {
+      return; // Berhenti jika pasar terlalu ekstrem
+    }
+
     if (candles.length < 20) {
       console.warn(
         chalk.bgYellow("Data candle tidak mencukupi untuk analisis.")
