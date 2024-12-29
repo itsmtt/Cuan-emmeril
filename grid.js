@@ -223,6 +223,35 @@ async function determineMarketCondition(candles) {
   }
 }
 
+// Fungsi untuk menambahkan trailing stop loss
+async function placeTrailingStop(symbol, direction, entryPrice, atr) {
+  const stopPrice =
+    direction === "LONG"
+      ? entryPrice - atr * 1.5
+      : entryPrice + atr * 1.5;
+
+  try {
+    await client.futuresOrder({
+      symbol,
+      side: direction === "LONG" ? "SELL" : "BUY",
+      type: "TRAILING_STOP_MARKET",
+      activationPrice: entryPrice.toFixed(2),
+      callbackRate: 1.0, // Persentase trailing stop
+      quantity: BASE_USDT * LEVERAGE / entryPrice,
+    });
+
+    console.log(
+      chalk.green(`Trailing Stop ditempatkan di sekitar harga ${stopPrice.toFixed(6)}`)
+    );
+  } catch (error) {
+    console.error(
+      chalk.bgRed("Gagal menempatkan trailing stop loss:"),
+      error.message || error
+    );
+  }
+}
+
+
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, direction) {
   try {
