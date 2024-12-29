@@ -400,7 +400,7 @@ async function trade() {
     const candles = await client.futuresCandles({
       symbol: SYMBOL,
       interval: "15m",
-      limit: 20,
+      limit: 50,
     });
 
     if (await checkExtremeMarketConditions(candles)) {
