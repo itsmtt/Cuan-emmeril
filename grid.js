@@ -336,6 +336,28 @@ async function placeGridOrders(currentPrice, atr, direction) {
           `Stop Loss di harga ${stopLossPrice.toFixed(pricePrecision)}`
         )
       );
+
+      // Tambahkan trailing stop loss untuk setiap grid
+      const trailingStopPrice =
+        direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
+
+      await client.futuresOrder({
+        symbol: SYMBOL,
+        side: direction === "LONG" ? "SELL" : "BUY",
+        type: "TRAILING_STOP_MARKET",
+        activationPrice: trailingStopPrice.toFixed(pricePrecision),
+        callbackRate: 1.0, // Sesuaikan callback rate trailing stop
+        quantity: roundedQuantity,
+      });
+
+      console.log(
+        chalk.green(
+          `Trailing Stop untuk ${
+            direction === "LONG" ? "jual" : "beli"
+          } ditempatkan di harga sekitar ${trailingStopPrice.toFixed(pricePrecision)}`
+        )
+      );
+      
     }
 
     console.log(chalk.blue("Semua order grid baru berhasil ditempatkan."));
