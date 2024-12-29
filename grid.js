@@ -298,6 +298,14 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const stopLossPrice =
         direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
 
+      if ((direction === "LONG" && (takeProfitPrice <= roundedPrice || stopLossPrice >= roundedPrice)) ||
+          (direction === "SHORT" && (takeProfitPrice >= roundedPrice || stopLossPrice <= roundedPrice))) {
+        console.error(
+          chalk.bgRed("Harga Take Profit atau Stop Loss tidak sesuai dengan arah order.")
+        );
+        continue;
+      }
+
       // Buat order grid
       await client.futuresOrder({
         symbol: SYMBOL,
