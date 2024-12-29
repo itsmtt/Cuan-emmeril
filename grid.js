@@ -158,6 +158,38 @@ async function calculateRSI(candles, period) {
   return rsi;
 }
 
+// Fungsi untuk menghitung MACD
+function calculateMACD(closingPrices, shortPeriod = 12, longPeriod = 26, signalPeriod = 9) {
+  const shortEMA = calculateEMA(closingPrices, shortPeriod);
+  const longEMA = calculateEMA(closingPrices, longPeriod);
+  const macdLine = shortEMA - longEMA;
+
+  const signalLine = calculateEMA(
+    closingPrices.slice(closingPrices.length - signalPeriod),
+    signalPeriod
+  );
+
+  return { macdLine, signalLine };
+}
+
+// Fungsi untuk menghitung Bollinger Bands
+function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
+  const avgPrice =
+    closingPrices.slice(-period).reduce((sum, price) => sum + price, 0) / period;
+
+  const stdDev = Math.sqrt(
+    closingPrices
+      .slice(-period)
+      .map((price) => Math.pow(price - avgPrice, 2))
+      .reduce((sum, sq) => sum + sq, 0) / period
+  );
+
+  return {
+    upperBand: avgPrice + multiplier * stdDev,
+    lowerBand: avgPrice - multiplier * stdDev,
+  };
+}
+
 // Fungsi untuk menentukan kondisi pasar
 async function determineMarketCondition(candles) {
   const closingPrices = candles.map((c) => parseFloat(c.close));
