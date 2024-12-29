@@ -193,22 +193,31 @@ function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
 // Fungsi untuk menentukan kondisi pasar
 async function determineMarketCondition(candles) {
   const closingPrices = candles.map((c) => parseFloat(c.close));
-  const shortEMA = calculateEMA(closingPrices.slice(-10), 5); // EMA pendek
-  const longEMA = calculateEMA(closingPrices.slice(-20), 20); // EMA panjang
-  const rsi = await calculateRSI(candles, 14); // RSI
+  const shortEMA = calculateEMA(closingPrices.slice(-10), 5);
+  const longEMA = calculateEMA(closingPrices.slice(-20), 20);
+  const rsi = await calculateRSI(candles, 14);
+
+  const { macdLine, signalLine } = calculateMACD(closingPrices);
+  const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
   console.log(
     chalk.yellow(
       `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
         6
-      )}, RSI: ${rsi.toFixed(2)}`
+      )}, RSI: ${rsi.toFixed(2)}, MACD: ${macdLine.toFixed(6)}, Signal: ${signalLine.toFixed(
+        6
+      )}`
     )
   );
 
-  if (shortEMA > longEMA && rsi < 70) {
+  if (shortEMA > longEMA && macdLine > signalLine && rsi < 70) {
     return "LONG";
-  } else if (shortEMA < longEMA && rsi > 30) {
+  } else if (shortEMA < longEMA && macdLine < signalLine && rsi > 30) {
     return "SHORT";
+  } else if (closingPrices[closingPrices.length - 1] > upperBand) {
+    return "OVERBOUGHT";
+  } else if (closingPrices[closingPrices.length - 1] < lowerBand) {
+    return "OVERSOLD";
   } else {
     return "NEUTRAL";
   }
