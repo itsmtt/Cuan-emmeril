@@ -429,31 +429,40 @@ async function checkOpenPositions() {
   return position && parseFloat(position.positionAmt) !== 0;
 }
 
-
-// Fungsi untuk memonitor posisi dan menutup order jika TP atau SL terpenuhi
+// Fungsi untuk memonitor posisi dan menghindari pembatalan grid order baru
 async function monitorAndHandlePositions() {
   try {
     console.log(chalk.blue("Memulai pemantauan posisi..."));
 
     while (true) {
-      // Jika grid order sedang ditempatkan, abaikan monitoring
       if (isPlacingGridOrders) {
-        await new Promise((resolve) => setTimeout(resolve, 5000)); // Tunggu 5 detik
+        // Jika grid order sedang ditempatkan, tunggu
+        await new Promise((resolve) => setTimeout(resolve, 5000));
         continue;
       }
 
       const positions = await client.futuresPositionRisk();
       const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
+      // Periksa posisi terbuka
       for (const position of positions.filter((p) => p.symbol === SYMBOL)) {
         const quantity = parseFloat(position.positionAmt);
         const unrealizedProfit = parseFloat(position.unrealizedProfit);
 
-        // Jika tidak ada posisi terbuka, hentikan monitoring
         if (quantity === 0) {
           console.log(chalk.yellow("Posisi sudah tertutup."));
-          // Tutup semua order jika posisi tertutup
-          await closeOpenOrders();
+          // Batalkan semua order yang bukan bagian dari grid order baru
+          for (const order of openOrders) {
+            if (!activeGridOrders.includes(order.orderId)) {
+              await client.futuresCancelOrder({
+                symbol: SYMBOL,
+                orderId: order.orderId,
+              });
+              console.log(
+                chalk.red(`Order ${order.orderId} dibatalkan karena posisi tertutup.`)
+              );
+            }
+          }
           return;
         }
 
@@ -465,29 +474,18 @@ async function monitorAndHandlePositions() {
           )
         );
 
-        // Jika ada Take Profit yang tercapai
-        if (unrealizedProfit > 0) {
-          console.log(chalk.green(`Take Profit tercapai: +${unrealizedProfit.toFixed(2)} USDT`));
-          await closeOpenPositions();
-          await closeOpenOrders();
-          return;
-        }
-
-        // Jika ada Stop Loss yang tercapai
-        if (unrealizedProfit < 0) {
-          console.log(chalk.red(`Stop Loss tercapai: ${unrealizedProfit.toFixed(2)} USDT`));
+        // Jika TP atau SL terpenuhi
+        if (unrealizedProfit > 0 || unrealizedProfit < 0) {
+          console.log(
+            chalk.green(`Posisi selesai dengan PnL: ${unrealizedProfit.toFixed(2)} USDT`)
+          );
           await closeOpenPositions();
           await closeOpenOrders();
           return;
         }
       }
 
-      // Cek apakah ada order tambahan yang perlu dibatalkan
-      if (openOrders.length === 0) {
-        console.log(chalk.green("Tidak ada order terbuka."));
-      }
-
-      // Tunggu 5 detik sebelum iterasi berikutnya
+      // Tunggu sebelum iterasi berikutnya
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   } catch (error) {
@@ -497,6 +495,7 @@ async function monitorAndHandlePositions() {
     );
   }
 }
+
 
 // Fungsi trading utama
 async function trade() {
