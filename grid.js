@@ -371,7 +371,14 @@ async function placeGridOrders(currentPrice, atr, direction) {
       );
 
       // Tambahkan trailing stop untuk setiap order grid
-      await placeTrailingStop(SYMBOL, direction, roundedPrice, atr);
+      await placeTrailingStop(
+        SYMBOL,
+        direction,
+        roundedPrice,
+        atr,
+        pricePrecision,
+        quantityPrecision
+      );
 
       // Tambahkan take profit
       await client.futuresOrder({
@@ -422,16 +429,18 @@ async function monitorProfitAndLoss() {
   const positions = await client.futuresPositionRisk();
   for (const position of positions.filter((p) => p.symbol === SYMBOL)) {
     const pnl = parseFloat(position.unrealizedProfit);
-    if (pnl > 0 || pnl < 0) {
-      console.log(
-        pnl > 0
-          ? `Take Profit tercapai: ${pnl} USDT`
-          : `Stop Loss tercapai: ${pnl} USDT`
-      );
+    if (pnl > 0) {
+      console.log(chalk.green(`Take Profit tercapai: ${pnl} USDT`));
       await closeOpenPositions();
       await closeOpenOrders();
-      if (pnl > 0) totalProfit += pnl;
-      else totalLoss += Math.abs(pnl);
+      totalProfit += pnl;
+      break; // Hentikan loop jika profit telah ditangani
+    } else if (pnl < 0) {
+      console.log(chalk.red(`Stop Loss tercapai: ${pnl} USDT`));
+      await closeOpenPositions();
+      await closeOpenOrders();
+      totalLoss += Math.abs(pnl);
+      break; // Hentikan loop jika loss telah ditangani
     }
   }
 }
