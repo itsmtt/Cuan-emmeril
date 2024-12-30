@@ -424,11 +424,20 @@ async function checkOpenPositions() {
 
 
 // Fungsi untuk memonitor posisi dan menutup order jika TP atau SL terpenuhi
+let isPlacingGridOrders = false; // Status untuk melacak proses penempatan grid order
+
+// Fungsi untuk memonitor posisi dan menutup order jika TP atau SL terpenuhi
 async function monitorAndHandlePositions() {
   try {
     console.log(chalk.blue("Memulai pemantauan posisi..."));
 
     while (true) {
+      // Jika grid order sedang ditempatkan, abaikan monitoring
+      if (isPlacingGridOrders) {
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Tunggu 5 detik
+        continue;
+      }
+
       const positions = await client.futuresPositionRisk();
       const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
@@ -436,6 +445,7 @@ async function monitorAndHandlePositions() {
         const quantity = parseFloat(position.positionAmt);
         const unrealizedProfit = parseFloat(position.unrealizedProfit);
 
+        // Jika tidak ada posisi terbuka, hentikan monitoring
         if (quantity === 0) {
           console.log(chalk.yellow("Posisi sudah tertutup."));
           // Tutup semua order jika posisi tertutup
