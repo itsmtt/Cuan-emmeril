@@ -331,52 +331,53 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-      // Tambahkan Take Profit
-      const takeProfitPrice =
-        direction === "LONG"
-          ? roundedPrice + atr + buffer
-          : roundedPrice - atr - buffer;
+      // Perhitungan harga Take Profit
+const takeProfitPrice =
+  direction === "LONG"
+    ? roundedPrice + atr + buffer
+    : roundedPrice - atr - buffer;
 
-      if (
-        takeProfitPrice <= 0 ||
-        takeProfitPrice > currentPrice * 2 ||
-        takeProfitPrice < currentPrice / 2
-      ) {
-        console.error(
-          `Harga Take Profit tidak valid: ${takeProfitPrice.toFixed(
-            pricePrecision
-          )}`
-        );
-        continue; // Lewati jika harga Take Profit tidak valid
-      }
+// Validasi harga Take Profit
+if (
+  (direction === "LONG" && takeProfitPrice <= currentPrice) ||
+  (direction === "SHORT" && takeProfitPrice >= currentPrice)
+) {
+  console.error(
+    `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
+      pricePrecision
+    )} (Harga pasar: ${currentPrice.toFixed(pricePrecision)})`
+  );
+  continue; // Lewati jika harga tidak valid
+}
 
-      try {
-        await client.futuresOrder({
-          symbol: SYMBOL,
-          side: direction === "LONG" ? "SELL" : "BUY",
-          type: "TAKE_PROFIT_MARKET",
-          stopPrice: takeProfitPrice.toFixed(pricePrecision),
-          quantity: roundedQuantity,
-          timeInForce: "GTC",
-          reduceOnly: true,
-        });
+// Membuat order Take Profit
+try {
+  await client.futuresOrder({
+    symbol: SYMBOL,
+    side: direction === "LONG" ? "SELL" : "BUY",
+    type: "TAKE_PROFIT_MARKET",
+    stopPrice: takeProfitPrice.toFixed(pricePrecision),
+    quantity: roundedQuantity,
+    timeInForce: "GTC",
+    reduceOnly: true,
+  });
 
-        console.log(
-          chalk.green(
-            `Take Profit di harga ${takeProfitPrice.toFixed(
-              pricePrecision
-            )} berhasil dibuat.`
-          )
-        );
-      } catch (error) {
-        console.error(
-          chalk.red(
-            `Gagal membuat Take Profit di harga ${takeProfitPrice.toFixed(
-              pricePrecision
-            )}: ${error.body || error.message}`
-          )
-        );
-      }
+  console.log(
+    chalk.green(
+      `Take Profit di harga ${takeProfitPrice.toFixed(
+        pricePrecision
+      )} berhasil dibuat.`
+    )
+  );
+} catch (error) {
+  console.error(
+    chalk.red(
+      `Gagal membuat Take Profit di harga ${takeProfitPrice.toFixed(
+        pricePrecision
+      )}: ${error.body || error.message}`
+    )
+  );
+}
 
       // Tambahkan Trailing Stop
       const activationPrice =
