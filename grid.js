@@ -345,23 +345,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const roundedPrice = parseFloat(price.toFixed(pricePrecision));
       const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
-      // Tambahkan trailing stop untuk setiap order grid
-      // await placeTrailingStop(
-      //   SYMBOL,
-      //   direction,
-      //   roundedPrice,
-      //   atr,
-      //   roundedPrice,
-      //   roundedQuantity
-      // );
-
-      // Tentukan take profit dan stop loss
-      const takeProfitPrice =
-        direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
-
-      const stopLossPrice =
-        direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
-
       // Buat order grid
       await client.futuresOrder({
         symbol: SYMBOL,
@@ -379,6 +362,23 @@ async function placeGridOrders(currentPrice, atr, direction) {
           } ditempatkan di harga ${roundedPrice} dengan kuantitas ${roundedQuantity}`
         )
       );
+
+      // Tambahkan trailing stop untuk setiap order grid
+      await placeTrailingStop(
+        SYMBOL,
+        direction,
+        roundedPrice,
+        atr,
+        roundedPrice,
+        roundedQuantity
+      );
+
+      // Tentukan take profit dan stop loss
+      const takeProfitPrice =
+        direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
+
+      const stopLossPrice =
+        direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
 
       // Tambahkan take profit
       await client.futuresOrder({
