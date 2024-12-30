@@ -70,6 +70,37 @@ async function closeOpenOrders() {
   }
 }
 
+// Fungsi untuk menutup semua posisi terbuka
+async function closeOpenPositions() {
+  try {
+    console.log(chalk.blue("Memeriksa dan menutup semua posisi terbuka..."));
+    const positions = await client.futuresPositionRisk();
+    for (const position of positions) {
+      if (parseFloat(position.positionAmt) !== 0) {
+        const side = parseFloat(position.positionAmt) > 0 ? "SELL" : "BUY";
+        const quantity = Math.abs(parseFloat(position.positionAmt));
+        await client.futuresOrder({
+          symbol: position.symbol,
+          side,
+          type: "MARKET",
+          quantity,
+        });
+        console.log(
+          chalk.green(
+            `Posisi pada ${position.symbol} berhasil ditutup dengan kuantitas ${quantity}.`
+          )
+        );
+      }
+    }
+  } catch (error) {
+    console.error(
+      chalk.bgRed("Kesalahan saat menutup posisi terbuka:"),
+      error.message || error
+    );
+  }
+}
+
+
 // Fungsi untuk memeriksa apakah semua order telah selesai
 async function waitForOrdersToComplete() {
   try {
@@ -281,6 +312,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
     );
 
     // Tutup semua order lama
+    await closeOpenPositions();
     await closeOpenOrders();
 
     console.log(chalk.blue(`Menempatkan order grid baru (${direction})...`));
@@ -461,6 +493,7 @@ async function trade() {
 
 // Loop utama untuk menjalankan bot
 async function runBot() {
+  await closeOpenPositions();
   await closeOpenOrders(); // Tutup order terbuka sebelum memulai trading
   while (true) {
     await trade();
