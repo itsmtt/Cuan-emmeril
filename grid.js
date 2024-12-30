@@ -415,6 +415,14 @@ async function placeGridOrders(currentPrice, atr, direction) {
   }
 }
 
+// Fungsi untuk memeriksa apakah ada posisi terbuka
+async function checkOpenPositions() {
+  const positions = await client.futuresPositionRisk();
+  const position = positions.find((p) => p.symbol === SYMBOL);
+  return position && parseFloat(position.positionAmt) !== 0;
+}
+
+
 // Fungsi untuk memonitor posisi dan menutup order jika TP atau SL terpenuhi
 async function monitorAndHandlePositions() {
   try {
