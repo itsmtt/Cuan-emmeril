@@ -159,7 +159,12 @@ async function calculateRSI(candles, period) {
 }
 
 // Fungsi untuk menghitung MACD
-function calculateMACD(closingPrices, shortPeriod = 12, longPeriod = 26, signalPeriod = 9) {
+function calculateMACD(
+  closingPrices,
+  shortPeriod = 12,
+  longPeriod = 26,
+  signalPeriod = 9
+) {
   const shortEMA = calculateEMA(closingPrices, shortPeriod);
   const longEMA = calculateEMA(closingPrices, longPeriod);
   const macdLine = shortEMA - longEMA;
@@ -175,7 +180,8 @@ function calculateMACD(closingPrices, shortPeriod = 12, longPeriod = 26, signalP
 // Fungsi untuk menghitung Bollinger Bands
 function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
   const avgPrice =
-    closingPrices.slice(-period).reduce((sum, price) => sum + price, 0) / period;
+    closingPrices.slice(-period).reduce((sum, price) => sum + price, 0) /
+    period;
 
   const stdDev = Math.sqrt(
     closingPrices
@@ -194,8 +200,11 @@ function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
 async function checkExtremeMarketConditions(candles) {
   const atr = await calculateATR(candles, 14);
 
-  if (atr > 0.05) { // Nilai ambang batas ATR disesuaikan
-    console.log(chalk.red("Pasar terlalu volatil. Menghentikan trading sementara."));
+  if (atr > 0.05) {
+    // Nilai ambang batas ATR disesuaikan
+    console.log(
+      chalk.red("Pasar terlalu volatil. Menghentikan trading sementara.")
+    );
     return true;
   }
   return false;
@@ -215,9 +224,9 @@ async function determineMarketCondition(candles) {
     chalk.yellow(
       `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
         6
-      )}, RSI: ${rsi.toFixed(2)}, MACD: ${macdLine.toFixed(6)}, Signal: ${signalLine.toFixed(
+      )}, RSI: ${rsi.toFixed(2)}, MACD: ${macdLine.toFixed(
         6
-      )}`
+      )}, Signal: ${signalLine.toFixed(6)}`
     )
   );
 
@@ -237,9 +246,7 @@ async function determineMarketCondition(candles) {
 // Fungsi untuk menambahkan trailing stop loss
 async function placeTrailingStop(symbol, direction, entryPrice, atr) {
   const stopPrice =
-    direction === "LONG"
-      ? entryPrice - atr * 1.5
-      : entryPrice + atr * 1.5;
+    direction === "LONG" ? entryPrice - atr * 1.5 : entryPrice + atr * 1.5;
 
   try {
     await client.futuresOrder({
@@ -248,11 +255,13 @@ async function placeTrailingStop(symbol, direction, entryPrice, atr) {
       type: "TRAILING_STOP_MARKET",
       activationPrice: entryPrice.toFixed(2),
       callbackRate: 1.0, // Persentase trailing stop
-      quantity: BASE_USDT * LEVERAGE / entryPrice,
+      quantity: (BASE_USDT * LEVERAGE) / entryPrice,
     });
 
     console.log(
-      chalk.green(`Trailing Stop ditempatkan di sekitar harga ${stopPrice.toFixed(6)}`)
+      chalk.green(
+        `Trailing Stop ditempatkan di sekitar harga ${stopPrice.toFixed(6)}`
+      )
     );
   } catch (error) {
     console.error(
@@ -261,7 +270,6 @@ async function placeTrailingStop(symbol, direction, entryPrice, atr) {
     );
   }
 }
-
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, direction) {
@@ -285,10 +293,14 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const price =
         direction === "LONG" ? currentPrice - atr * i : currentPrice + atr * i;
 
-      if ((direction === "LONG" && price >= currentPrice) ||
-          (direction === "SHORT" && price <= currentPrice)) {
+      if (
+        (direction === "LONG" && price >= currentPrice) ||
+        (direction === "SHORT" && price <= currentPrice)
+      ) {
         console.error(
-          chalk.bgRed(`Harga order invalid: ${price.toFixed(6)} untuk arah ${direction}.`)
+          chalk.bgRed(
+            `Harga order invalid: ${price.toFixed(6)} untuk arah ${direction}.`
+          )
         );
         continue;
       }
@@ -306,10 +318,16 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const stopLossPrice =
         direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
 
-      if ((direction === "LONG" && (takeProfitPrice <= roundedPrice || stopLossPrice >= roundedPrice)) ||
-          (direction === "SHORT" && (takeProfitPrice >= roundedPrice || stopLossPrice <= roundedPrice))) {
+      if (
+        (direction === "LONG" &&
+          (takeProfitPrice <= roundedPrice || stopLossPrice >= roundedPrice)) ||
+        (direction === "SHORT" &&
+          (takeProfitPrice >= roundedPrice || stopLossPrice <= roundedPrice))
+      ) {
         console.error(
-          chalk.bgRed("Harga Take Profit atau Stop Loss tidak sesuai dengan arah order.")
+          chalk.bgRed(
+            "Harga Take Profit atau Stop Loss tidak sesuai dengan arah order."
+          )
         );
         continue;
       }
@@ -367,26 +385,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       );
 
       // Tambahkan trailing stop loss untuk setiap grid
-      const trailingStopPrice =
-        direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
-
-      await client.futuresOrder({
-        symbol: SYMBOL,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        type: "TRAILING_STOP_MARKET",
-        activationPrice: trailingStopPrice.toFixed(pricePrecision),
-        callbackRate: 1.0, // Sesuaikan callback rate trailing stop
-        quantity: roundedQuantity,
-      });
-
-      console.log(
-        chalk.green(
-          `Trailing Stop untuk ${
-            direction === "LONG" ? "jual" : "beli"
-          } ditempatkan di harga sekitar ${trailingStopPrice.toFixed(pricePrecision)}`
-        )
-      );
-      
+      await placeTrailingStop();
     }
 
     console.log(chalk.blue("Semua order grid baru berhasil ditempatkan."));
