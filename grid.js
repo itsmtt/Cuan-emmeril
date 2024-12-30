@@ -562,13 +562,9 @@ async function runBot() {
   await closeOpenOrders(); // Tutup order terbuka sebelum memulai trading
   while (true) {
     await trade();
-    console.log(
-      chalk.magenta(
-        `Total Profit: ${totalProfit.toFixed(
-          2
-        )} USDT, Total Loss: ${totalLoss.toFixed(2)} USDT`
-      )
-    );
+        // Berikan jeda sebelum loop berikutnya
+    console.log(chalk.magenta("Menunggu sebelum memulai iterasi berikutnya..."));
+    await new Promise((resolve) => setTimeout(resolve, 10000)); // Jeda 10 detik
   }
 }
 
