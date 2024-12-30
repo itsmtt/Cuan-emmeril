@@ -390,7 +390,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       );
 
       // Tambahkan trailing stop loss untuk setiap grid
-      await placeTrailingStop(SYMBOL, direction, currentPrice, atr);
+      await placeTrailingStop(SYMBOL, direction, roundedPrice, atr);
     }
 
     console.log(chalk.blue("Semua order grid baru berhasil ditempatkan."));
