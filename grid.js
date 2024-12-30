@@ -416,22 +416,13 @@ async function placeGridOrders(currentPrice, atr, direction) {
 }
 
 // Fungsi untuk memonitor profit dan loss
-async function monitorProfitAndLoss() {
+async function monitorAndCancelOrders() {
   const positions = await client.futuresPositionRisk();
   for (const position of positions.filter((p) => p.symbol === SYMBOL)) {
-    const pnl = parseFloat(position.unrealizedProfit);
-    if (pnl > 0) {
-      console.log(chalk.green(`Take Profit tercapai: ${pnl} USDT`));
-      await closeOpenPositions();
+    if (parseFloat(position.positionAmt) === 0) {
+      console.log(chalk.yellow("Posisi sudah tertutup. Membatalkan semua order tambahan."));
       await closeOpenOrders();
-      totalProfit += pnl;
-      break; // Hentikan loop jika profit telah ditangani
-    } else if (pnl < 0) {
-      console.log(chalk.red(`Stop Loss tercapai: ${pnl} USDT`));
-      await closeOpenPositions();
-      await closeOpenOrders();
-      totalLoss += Math.abs(pnl);
-      break; // Hentikan loop jika loss telah ditangani
+      break;
     }
   }
 }
@@ -488,7 +479,7 @@ async function trade() {
       );
     }
 
-    await monitorProfitAndLoss();
+    await monitorOrder();
     // Tunggu semua order selesai sebelum melanjutkan
     await waitForOrdersToComplete();
   } catch (error) {
