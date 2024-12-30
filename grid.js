@@ -413,6 +413,8 @@ isPlacingGridOrders = true; // Tandai proses sedang berlangsung
       chalk.bgRed("Kesalahan saat menempatkan order grid:"),
       error.message || error
     );
+  } finally {
+    isPlacingGridOrders = false; // Reset flag setelah selesai
   }
 }
 
