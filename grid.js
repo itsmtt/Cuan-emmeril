@@ -320,10 +320,19 @@ async function placeGridOrders(currentPrice, atr, direction) {
       SYMBOL
     );
 
+    const buffer = atr * 0.1; // Tambahkan buffer untuk menghindari pemicu langsung
+
     for (let i = 1; i <= GRID_COUNT; i++) {
       const price =
-        direction === "LONG" ? currentPrice - atr * i : currentPrice + atr * i;
-
+        direction === "LONG"
+          ? currentPrice - atr * i - buffer
+          : currentPrice + atr * i + buffer;
+  
+      if (price <= 0 || price >= currentPrice * 2) {
+        console.error(`Harga order tidak valid: ${price}`);
+        continue; // Lewati order ini jika harga tidak valid
+      }
+    
       const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
 
       // Round price and quantity to proper precision
