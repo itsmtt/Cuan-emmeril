@@ -273,7 +273,7 @@ async function determineMarketCondition(candles) {
   }
 }
 
-// Fungsi untuk menambahkan trailing stop loss
+// Fungsi untuk menambahkan trailing stop
 async function placeTrailingStop(symbol, direction, entryPrice, atr) {
   const stopPrice =
     direction === "LONG" ? entryPrice - atr * 1.5 : entryPrice + atr * 1.5;
@@ -364,6 +364,9 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
+      // Tambahkan trailing stop untuk setiap order grid
+      await placeTrailingStop(SYMBOL, direction, roundedPrice, atr);
+
       // Tambahkan take profit
       await client.futuresOrder({
         symbol: SYMBOL,
@@ -397,9 +400,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
           `Stop Loss di harga ${stopLossPrice.toFixed(pricePrecision)}`
         )
       );
-
-      // Tambahkan trailing stop loss untuk setiap grid
-      await placeTrailingStop(SYMBOL, direction, roundedPrice, atr);
     }
 
     console.log(chalk.blue("Semua order grid baru berhasil ditempatkan."));
@@ -408,6 +408,28 @@ async function placeGridOrders(currentPrice, atr, direction) {
       chalk.bgRed("Kesalahan saat menempatkan order grid:"),
       error.message || error
     );
+  }
+}
+
+// Fungsi untuk memonitor profit dan loss
+async function monitorProfitAndLoss() {
+  const accountInfo = await client.futuresAccount();
+  const positions = accountInfo.positions.filter((p) => p.symbol === SYMBOL);
+
+  for (const position of positions) {
+    const pnl = parseFloat(position.unrealizedProfit);
+
+    if (pnl > 0) {
+      console.log(chalk.green(`Take Profit tercapai: ${pnl} USDT`));
+      await closeOpenPositions();
+      await closeOpenOrders();
+      totalProfit += pnl;
+    } else if (pnl < 0) {
+      console.log(chalk.red(`Stop Loss tercapai: ${pnl} USDT`));
+      await closeOpenPositions();
+      await closeOpenOrders();
+      totalLoss += Math.abs(pnl);
+    }
   }
 }
 
@@ -479,6 +501,7 @@ async function runBot() {
   await closeOpenOrders(); // Tutup order terbuka sebelum memulai trading
   while (true) {
     await trade();
+    await monitorProfitAndLoss();
     console.log(
       chalk.magenta(
         `Total Profit: ${totalProfit.toFixed(
