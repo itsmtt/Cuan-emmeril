@@ -307,9 +307,13 @@ async function placeTrailingStop(
   }
 }
 
+let isPlacingGridOrders = false; // Status untuk melacak proses grid order
+let activeGridOrders = []; // Daftar order ID untuk grid yang baru ditempatkan
+
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, direction) {
-isPlacingGridOrders = true; // Tandai proses sedang berlangsung
+let isPlacingGridOrders = true; // Status untuk melacak proses grid order
+let activeGridOrders = []; // Daftar order ID untuk grid yang baru ditempatkan
   try {
     console.log(
       chalk.blue(
@@ -425,9 +429,6 @@ async function checkOpenPositions() {
   return position && parseFloat(position.positionAmt) !== 0;
 }
 
-
-// Fungsi untuk memonitor posisi dan menutup order jika TP atau SL terpenuhi
-let isPlacingGridOrders = false; // Status untuk melacak proses penempatan grid order
 
 // Fungsi untuk memonitor posisi dan menutup order jika TP atau SL terpenuhi
 async function monitorAndHandlePositions() {
