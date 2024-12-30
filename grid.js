@@ -415,15 +415,64 @@ async function placeGridOrders(currentPrice, atr, direction) {
   }
 }
 
-// Fungsi untuk memonitor profit dan loss
-async function monitorAndCancelOrders() {
-  const positions = await client.futuresPositionRisk();
-  for (const position of positions.filter((p) => p.symbol === SYMBOL)) {
-    if (parseFloat(position.positionAmt) === 0) {
-      console.log(chalk.yellow("Posisi sudah tertutup. Membatalkan semua order tambahan."));
-      await closeOpenOrders();
-      break;
+// Fungsi untuk memonitor posisi dan menutup order jika TP atau SL terpenuhi
+async function monitorAndHandlePositions() {
+  try {
+    console.log(chalk.blue("Memulai pemantauan posisi..."));
+
+    while (true) {
+      const positions = await client.futuresPositionRisk();
+      const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+
+      for (const position of positions.filter((p) => p.symbol === SYMBOL)) {
+        const quantity = parseFloat(position.positionAmt);
+        const unrealizedProfit = parseFloat(position.unrealizedProfit);
+
+        if (quantity === 0) {
+          console.log(chalk.yellow("Posisi sudah tertutup."));
+          // Tutup semua order jika posisi tertutup
+          await closeOpenOrders();
+          return;
+        }
+
+        console.log(
+          chalk.green(
+            `Posisi terbuka pada ${SYMBOL}: Kuantitas: ${quantity}, PnL: ${unrealizedProfit.toFixed(
+              2
+            )} USDT`
+          )
+        );
+
+        // Jika ada Take Profit yang tercapai
+        if (unrealizedProfit > 0) {
+          console.log(chalk.green(`Take Profit tercapai: +${unrealizedProfit.toFixed(2)} USDT`));
+          await closeOpenPositions();
+          await closeOpenOrders();
+          return;
+        }
+
+        // Jika ada Stop Loss yang tercapai
+        if (unrealizedProfit < 0) {
+          console.log(chalk.red(`Stop Loss tercapai: ${unrealizedProfit.toFixed(2)} USDT`));
+          await closeOpenPositions();
+          await closeOpenOrders();
+          return;
+        }
+      }
+
+      // Cek apakah ada order tambahan yang perlu dibatalkan
+      if (openOrders.length === 0) {
+        console.log(chalk.green("Tidak ada order terbuka."));
+      }
+
+      // Tunggu 5 detik sebelum iterasi berikutnya
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
+  } catch (error) {
+    console.error(
+      chalk.bgRed("Kesalahan saat memonitor posisi:"),
+      error.message || error
+    );
   }
 }
 
@@ -479,7 +528,7 @@ async function trade() {
       );
     }
 
-    await monitorAndCancelOrders();
+    await monitorAndHandlePositions();
     // Tunggu semua order selesai sebelum melanjutkan
     await waitForOrdersToComplete();
   } catch (error) {
