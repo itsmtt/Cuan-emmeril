@@ -273,48 +273,10 @@ async function determineMarketCondition(candles) {
   }
 }
 
-// Fungsi untuk menambahkan trailing stop
-async function placeTrailingStop(
-  symbol,
-  direction,
-  entryPrice,
-  atr,
-  pricePrecision,
-  quantityPrecision
-) {
-  const stopPrice =
-    direction === "LONG" ? entryPrice - atr * 1.5 : entryPrice + atr * 1.5;
-  const roundedStopPrice = parseFloat(stopPrice.toFixed(pricePrecision));
-  const roundedQuantity = parseFloat(
-    ((BASE_USDT * LEVERAGE) / entryPrice).toFixed(quantityPrecision)
-  );
-
-  try {
-    await client.futuresOrder({
-      symbol,
-      side: direction === "LONG" ? "SELL" : "BUY",
-      type: "TRAILING_STOP_MARKET",
-      activationPrice: roundedStopPrice,
-      callbackRate: 1.0,
-      quantity: roundedQuantity,
-    });
-
-    console.log(`Trailing Stop ditempatkan di harga ${roundedStopPrice}`);
-  } catch (error) {
-    console.error(
-      `Gagal menempatkan trailing stop loss: ${error.message || error}`
-    );
-  }
-}
-
-let isPlacingGridOrders = false; // Status untuk melacak proses grid order
-let activeGridOrders = []; // Daftar order ID untuk grid yang baru ditempatkan
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, direction) {
-let isPlacingGridOrders = true; // Status untuk melacak proses grid order
-let activeGridOrders = []; // Daftar order ID untuk grid yang baru ditempatkan
-  try {
+try {
     console.log(
       chalk.blue(
         `Menutup semua order lama sebelum membuat order grid baru (${direction})...`
@@ -351,7 +313,7 @@ let activeGridOrders = []; // Daftar order ID untuk grid yang baru ditempatkan
       const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
       // Buat order grid
-     const order = await client.futuresOrder({
+      await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
         type: "LIMIT",
@@ -360,9 +322,6 @@ let activeGridOrders = []; // Daftar order ID untuk grid yang baru ditempatkan
         timeInForce: "GTC",
       });
       
-      activeGridOrders.push(order.orderId); // Simpan ID order grid
-      
-
       console.log(
         chalk.green(
           `Order ${
@@ -420,83 +379,7 @@ let activeGridOrders = []; // Daftar order ID untuk grid yang baru ditempatkan
       chalk.bgRed("Kesalahan saat menempatkan order grid:"),
       error.message || error
     );
-  } finally {
-    isPlacingGridOrders = false; // Reset flag setelah selesai
-  }
-}
-
-// Fungsi untuk memeriksa apakah ada posisi terbuka
-async function checkOpenPositions() {
-  const positions = await client.futuresPositionRisk();
-  const position = positions.find((p) => p.symbol === SYMBOL);
-  return position && parseFloat(position.positionAmt) !== 0;
-}
-
-// Fungsi untuk memonitor posisi dan menghindari pembatalan grid order baru
-async function monitorAndHandlePositions() {
-  try {
-    console.log(chalk.blue("Memulai pemantauan posisi..."));
-
-    while (true) {
-      if (isPlacingGridOrders) {
-        // Jika grid order sedang ditempatkan, tunggu
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        continue;
-      }
-
-      const positions = await client.futuresPositionRisk();
-      const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-
-      // Periksa posisi terbuka
-      for (const position of positions.filter((p) => p.symbol === SYMBOL)) {
-        const quantity = parseFloat(position.positionAmt);
-        const unrealizedProfit = parseFloat(position.unrealizedProfit);
-
-        if (quantity === 0) {
-          console.log(chalk.yellow("Posisi sudah tertutup."));
-          // Batalkan semua order yang bukan bagian dari grid order baru
-          for (const order of openOrders) {
-            if (!activeGridOrders.includes(order.orderId)) {
-              await client.futuresCancelOrder({
-                symbol: SYMBOL,
-                orderId: order.orderId,
-              });
-              console.log(
-                chalk.red(`Order ${order.orderId} dibatalkan karena posisi tertutup.`)
-              );
-            }
-          }
-          return;
-        }
-
-        console.log(
-          chalk.green(
-            `Posisi terbuka pada ${SYMBOL}: Kuantitas: ${quantity}, PnL: ${unrealizedProfit.toFixed(
-              2
-            )} USDT`
-          )
-        );
-
-        // Jika TP atau SL terpenuhi
-        if (unrealizedProfit > 0 || unrealizedProfit < 0) {
-          console.log(
-            chalk.green(`Posisi selesai dengan PnL: ${unrealizedProfit.toFixed(2)} USDT`)
-          );
-          await closeOpenPositions();
-          await closeOpenOrders();
-          return;
-        }
-      }
-
-      // Tunggu sebelum iterasi berikutnya
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-  } catch (error) {
-    console.error(
-      chalk.bgRed("Kesalahan saat memonitor posisi:"),
-      error.message || error
-    );
-  }
+  } 
 }
 
 
@@ -516,14 +399,6 @@ async function trade() {
     // Set leverage untuk trading
     await client.futuresLeverage({ symbol: SYMBOL, leverage: LEVERAGE });
 
-    // Periksa apakah ada posisi terbuka
-    const hasOpenPosition = await checkOpenPositions();
-    if (hasOpenPosition) {
-      console.log(chalk.blue("Posisi terbuka ditemukan. Memulai monitoring..."));
-      await monitorAndHandlePositions();
-      return; // Hentikan trading jika ada posisi terbuka
-    }
-    
     // Mengambil data candle
     const candles = await client.futuresCandles({
       symbol: SYMBOL,
@@ -552,7 +427,7 @@ async function trade() {
     // Tempatkan order grid berdasarkan kondisi pasar
     if (marketCondition === "LONG" || marketCondition === "SHORT") {
       await placeGridOrders(currentPrice, atr, marketCondition);
-      await monitorAndHandlePositions();
+      
     } else {
       console.log(
         chalk.blue(
