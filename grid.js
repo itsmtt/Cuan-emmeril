@@ -274,29 +274,35 @@ async function determineMarketCondition(candles) {
 }
 
 // Fungsi untuk menambahkan trailing stop
-async function placeTrailingStop(symbol, direction, entryPrice, atr) {
+async function placeTrailingStop(
+  symbol,
+  direction,
+  entryPrice,
+  atr,
+  pricePrecision,
+  quantityPrecision
+) {
   const stopPrice =
     direction === "LONG" ? entryPrice - atr * 1.5 : entryPrice + atr * 1.5;
+  const roundedStopPrice = parseFloat(stopPrice.toFixed(pricePrecision));
+  const roundedQuantity = parseFloat(
+    ((BASE_USDT * LEVERAGE) / entryPrice).toFixed(quantityPrecision)
+  );
 
   try {
     await client.futuresOrder({
       symbol,
       side: direction === "LONG" ? "SELL" : "BUY",
       type: "TRAILING_STOP_MARKET",
-      activationPrice: entryPrice.toFixed(2),
-      callbackRate: 1.0, // Persentase trailing stop
-      quantity: (BASE_USDT * LEVERAGE) / entryPrice,
+      activationPrice: roundedStopPrice,
+      callbackRate: 1.0,
+      quantity: roundedQuantity,
     });
 
-    console.log(
-      chalk.green(
-        `Trailing Stop ditempatkan di sekitar harga ${stopPrice.toFixed(6)}`
-      )
-    );
+    console.log(`Trailing Stop ditempatkan di harga ${roundedStopPrice}`);
   } catch (error) {
     console.error(
-      chalk.bgRed("Gagal menempatkan trailing stop loss:"),
-      error.message || error
+      `Gagal menempatkan trailing stop loss: ${error.message || error}`
     );
   }
 }
@@ -413,22 +419,19 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
 // Fungsi untuk memonitor profit dan loss
 async function monitorProfitAndLoss() {
-  const accountInfo = await client.futuresAccount();
-  const positions = accountInfo.positions.filter((p) => p.symbol === SYMBOL);
-
-  for (const position of positions) {
+  const positions = await client.futuresPositionRisk();
+  for (const position of positions.filter((p) => p.symbol === SYMBOL)) {
     const pnl = parseFloat(position.unrealizedProfit);
-
-    if (pnl > 0) {
-      console.log(chalk.green(`Take Profit tercapai: ${pnl} USDT`));
+    if (pnl > 0 || pnl < 0) {
+      console.log(
+        pnl > 0
+          ? `Take Profit tercapai: ${pnl} USDT`
+          : `Stop Loss tercapai: ${pnl} USDT`
+      );
       await closeOpenPositions();
       await closeOpenOrders();
-      totalProfit += pnl;
-    } else if (pnl < 0) {
-      console.log(chalk.red(`Stop Loss tercapai: ${pnl} USDT`));
-      await closeOpenPositions();
-      await closeOpenOrders();
-      totalLoss += Math.abs(pnl);
+      if (pnl > 0) totalProfit += pnl;
+      else totalLoss += Math.abs(pnl);
     }
   }
 }
