@@ -351,7 +351,7 @@ let activeGridOrders = []; // Daftar order ID untuk grid yang baru ditempatkan
       const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
       // Buat order grid
-      await client.futuresOrder({
+     const order = await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
         type: "LIMIT",
