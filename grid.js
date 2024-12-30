@@ -485,6 +485,7 @@ async function trade() {
       );
     }
 
+    await monitorProfitAndLoss();
     // Tunggu semua order selesai sebelum melanjutkan
     await waitForOrdersToComplete();
   } catch (error) {
@@ -501,7 +502,6 @@ async function runBot() {
   await closeOpenOrders(); // Tutup order terbuka sebelum memulai trading
   while (true) {
     await trade();
-    await monitorProfitAndLoss();
     console.log(
       chalk.magenta(
         `Total Profit: ${totalProfit.toFixed(
