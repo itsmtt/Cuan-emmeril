@@ -479,7 +479,7 @@ async function trade() {
       );
     }
 
-    await monitorOrder();
+    await monitorAndCancelOrders();
     // Tunggu semua order selesai sebelum melanjutkan
     await waitForOrdersToComplete();
   } catch (error) {
