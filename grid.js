@@ -330,16 +330,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const roundedPrice = parseFloat(price.toFixed(pricePrecision));
       const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
-      if (
-        (direction === "LONG" && roundedPrice >= currentPrice) ||
-        (direction === "SHORT" && roundedPrice <= currentPrice)
-      ) {
-        console.error(
-          chalk.bgRed(`Harga order invalid: ${roundedPrice.toFixed(pricePrecision)} untuk arah ${direction}.`)
-        );
-        continue;
-      }
-
       // Tentukan take profit dan stop loss
       const takeProfitPrice =
         direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
@@ -347,21 +337,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const stopLossPrice =
         direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
 
-      if (
-        (direction === "LONG" &&
-          (takeProfitPrice <= roundedPrice || stopLossPrice >= roundedPrice)) ||
-        (direction === "SHORT" &&
-          (takeProfitPrice >= roundedPrice || stopLossPrice <= roundedPrice))
-      ) {
-        console.error(
-          chalk.bgRed(
-            "Harga Take Profit atau Stop Loss tidak sesuai dengan arah order."
-          )
-        );
-        continue;
-      }
-
-      // Buat order grid
+     // Buat order grid
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
