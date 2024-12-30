@@ -19,8 +19,8 @@ const client = Binance({
 
 // Parameter trading untuk grid
 const SYMBOL = "DOGEUSDT"; // Symbol yang akan ditradingkan
-const GRID_COUNT = 3; // Jumlah level grid di atas dan di bawah harga pasar saat ini
-const LEVERAGE = 1; // Leverage untuk trading
+const GRID_COUNT = 5; // Jumlah level grid di atas dan di bawah harga pasar saat ini
+const LEVERAGE = 2; // Leverage untuk trading
 const BASE_USDT = 0.4; // Nilai order per grid dalam USDT
 
 let totalProfit = 0;
