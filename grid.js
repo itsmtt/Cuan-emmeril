@@ -536,6 +536,7 @@ async function trade() {
     // Tempatkan order grid berdasarkan kondisi pasar
     if (marketCondition === "LONG" || marketCondition === "SHORT") {
       await placeGridOrders(currentPrice, atr, marketCondition);
+      await monitorAndHandlePositions();
     } else {
       console.log(
         chalk.blue(
@@ -544,7 +545,7 @@ async function trade() {
       );
     }
 
-    await monitorAndHandlePositions();
+    
     // Tunggu semua order selesai sebelum melanjutkan
     await waitForOrdersToComplete();
   } catch (error) {
