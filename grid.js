@@ -327,12 +327,12 @@ async function placeGridOrders(currentPrice, atr, direction) {
         direction === "LONG"
           ? currentPrice - atr * i - buffer
           : currentPrice + atr * i + buffer;
-  
+
       if (price <= 0 || price >= currentPrice * 2) {
         console.error(`Harga order tidak valid: ${price}`);
         continue; // Lewati order ini jika harga tidak valid
       }
-    
+
       const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
 
       // Round price and quantity to proper precision
@@ -346,7 +346,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const stopLossPrice =
         direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
 
-     // Buat order grid
+      // Buat order grid
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
