@@ -275,8 +275,9 @@ async function determineMarketCondition(candles) {
 
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
+// Fungsi untuk menetapkan order grid dengan take profit dan trailing stop
 async function placeGridOrders(currentPrice, atr, direction) {
-try {
+  try {
     console.log(
       chalk.blue(
         `Menutup semua order lama sebelum membuat order grid baru (${direction})...`
@@ -313,7 +314,7 @@ try {
       const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
       // Buat order grid
-      await client.futuresOrder({
+      const gridOrder = await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
         type: "LIMIT",
@@ -321,7 +322,7 @@ try {
         quantity: roundedQuantity,
         timeInForce: "GTC",
       });
-      
+
       console.log(
         chalk.green(
           `Order ${
@@ -334,43 +335,65 @@ try {
       const takeProfitPrice =
         direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
 
-      await client.futuresOrder({
-        symbol: SYMBOL,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        type: "TAKE_PROFIT_MARKET",
-        stopPrice: takeProfitPrice.toFixed(pricePrecision),
-        quantity: roundedQuantity,
-        timeInForce: "GTC",
-        reduceOnly: true,
-      });
+      try {
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TAKE_PROFIT_MARKET",
+          stopPrice: takeProfitPrice.toFixed(pricePrecision),
+          quantity: roundedQuantity,
+          timeInForce: "GTC",
+          reduceOnly: true,
+        });
 
-      console.log(
-        chalk.green(
-          `Take Profit di harga ${takeProfitPrice.toFixed(pricePrecision)}`
-        )
-      );
+        console.log(
+          chalk.green(
+            `Take Profit di harga ${takeProfitPrice.toFixed(pricePrecision)}`
+          )
+        );
+      } catch (error) {
+        console.error(
+          chalk.red(
+            `Gagal membuat Take Profit di harga ${takeProfitPrice.toFixed(
+              pricePrecision
+            )}: ${error.body || error.message}`
+          )
+        );
+      }
 
       // Tambahkan Trailing Stop
       const activationPrice =
         direction === "LONG" ? roundedPrice + atr * 0.5 : roundedPrice - atr * 0.5;
 
-      await client.futuresOrder({
-        symbol: SYMBOL,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        type: "TRAILING_STOP_MARKET",
-        activationPrice: activationPrice.toFixed(pricePrecision),
-        callbackRate: 1.0, // Callback rate dalam persentase
-        quantity: roundedQuantity,
-        reduceOnly: true,
-      });
+      try {
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TRAILING_STOP_MARKET",
+          callbackRate: 1.0, // Callback rate dalam persentase
+          quantity: roundedQuantity,
+          reduceOnly: true,
+        });
 
-      console.log(
-        chalk.green(
-          `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
-            pricePrecision
-          )} dengan callback rate 1%`
-        )
-      );
+        console.log(
+          chalk.green(
+            `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
+              pricePrecision
+            )} dengan callback rate 1%`
+          )
+        );
+      } catch (error) {
+        console.error(
+          chalk.red(
+            `Gagal membuat Trailing Stop di harga ${activationPrice.toFixed(
+              pricePrecision
+            )}: ${error.body || error.message}`
+          )
+        );
+      }
+
+      // Tambahkan jeda untuk menghindari konflik API
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     console.log(chalk.blue("Semua order grid baru berhasil ditempatkan."));
@@ -379,7 +402,7 @@ try {
       chalk.bgRed("Kesalahan saat menempatkan order grid:"),
       error.message || error
     );
-  } 
+  }
 }
 
 
