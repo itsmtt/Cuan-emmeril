@@ -359,6 +359,9 @@ let activeGridOrders = []; // Daftar order ID untuk grid yang baru ditempatkan
         quantity: roundedQuantity,
         timeInForce: "GTC",
       });
+      
+      activeGridOrders.push(order.orderId); // Simpan ID order grid
+      
 
       console.log(
         chalk.green(
