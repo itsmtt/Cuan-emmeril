@@ -294,7 +294,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       SYMBOL
     );
 
-    const buffer = atr * 0.1; // Tambahkan buffer untuk menghindari pemicu langsung
+    const buffer = currentPrice * 0.005; // Tambahkan buffer 0.5% untuk menghindari konflik harga
 
     for (let i = 1; i <= GRID_COUNT; i++) {
       const price =
@@ -304,7 +304,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       if (price <= 0 || price >= currentPrice * 2) {
         console.error(`Harga order tidak valid: ${price}`);
-        continue; // Lewati order ini jika harga tidak valid
+        continue; // Lewati jika harga tidak valid
       }
 
       const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
@@ -333,7 +333,22 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       // Tambahkan Take Profit
       const takeProfitPrice =
-        direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
+        direction === "LONG"
+          ? roundedPrice + atr + buffer
+          : roundedPrice - atr - buffer;
+
+      if (
+        takeProfitPrice <= 0 ||
+        takeProfitPrice > currentPrice * 2 ||
+        takeProfitPrice < currentPrice / 2
+      ) {
+        console.error(
+          `Harga Take Profit tidak valid: ${takeProfitPrice.toFixed(
+            pricePrecision
+          )}`
+        );
+        continue; // Lewati jika harga Take Profit tidak valid
+      }
 
       try {
         await client.futuresOrder({
@@ -348,7 +363,9 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
         console.log(
           chalk.green(
-            `Take Profit di harga ${takeProfitPrice.toFixed(pricePrecision)}`
+            `Take Profit di harga ${takeProfitPrice.toFixed(
+              pricePrecision
+            )} berhasil dibuat.`
           )
         );
       } catch (error) {
