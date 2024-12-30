@@ -316,7 +316,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       )
     );
 
-    // Tutup semua order lama
+    // Tutup semua posisi dan order lama
     await closeOpenPositions();
     await closeOpenOrders();
 
@@ -363,24 +363,10 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-      // Tambahkan trailing stop untuk setiap order grid
-      await placeTrailingStop(
-        SYMBOL,
-        direction,
-        roundedPrice,
-        atr,
-        roundedPrice,
-        roundedQuantity
-      );
-
-      // Tentukan take profit dan stop loss
+      // Tambahkan Take Profit
       const takeProfitPrice =
         direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
 
-      const stopLossPrice =
-        direction === "LONG" ? roundedPrice - atr : roundedPrice + atr;
-
-      // Tambahkan take profit
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "SELL" : "BUY",
@@ -397,20 +383,25 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-      // Tambahkan stop loss
+      // Tambahkan Trailing Stop
+      const activationPrice =
+        direction === "LONG" ? roundedPrice + atr * 0.5 : roundedPrice - atr * 0.5;
+
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "SELL" : "BUY",
-        type: "STOP_MARKET",
-        stopPrice: stopLossPrice.toFixed(pricePrecision),
+        type: "TRAILING_STOP_MARKET",
+        activationPrice: activationPrice.toFixed(pricePrecision),
+        callbackRate: 1.0, // Callback rate dalam persentase
         quantity: roundedQuantity,
-        timeInForce: "GTC",
         reduceOnly: true,
       });
 
       console.log(
         chalk.green(
-          `Stop Loss di harga ${stopLossPrice.toFixed(pricePrecision)}`
+          `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
+            pricePrecision
+          )} dengan callback rate 1%`
         )
       );
     }
