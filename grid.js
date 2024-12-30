@@ -309,6 +309,7 @@ async function placeTrailingStop(
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, direction) {
+isPlacingGridOrders = true; // Tandai proses sedang berlangsung
   try {
     console.log(
       chalk.blue(
