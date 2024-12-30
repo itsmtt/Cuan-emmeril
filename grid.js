@@ -500,6 +500,14 @@ async function trade() {
     // Set leverage untuk trading
     await client.futuresLeverage({ symbol: SYMBOL, leverage: LEVERAGE });
 
+    // Periksa apakah ada posisi terbuka
+    const hasOpenPosition = await checkOpenPositions();
+    if (hasOpenPosition) {
+      console.log(chalk.blue("Posisi terbuka ditemukan. Memulai monitoring..."));
+      await monitorAndHandlePositions();
+      return; // Hentikan trading jika ada posisi terbuka
+    }
+    
     // Mengambil data candle
     const candles = await client.futuresCandles({
       symbol: SYMBOL,
