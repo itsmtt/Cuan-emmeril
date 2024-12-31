@@ -322,44 +322,40 @@ async function placeGridOrders(currentPrice, atr, direction) {
           quantity: roundedQuantity,
           timeInForce: "GTC",
         });
-  
-        const takeProfitPrice = direction === "LONG"
-          ? Math.max(roundedPrice + atr + buffer, currentPrice + buffer)
-          : Math.min(roundedPrice - atr - buffer, roundedPrice - buffer);
-  
-        if (
-          (direction === "LONG" && takeProfitPrice <= currentPrice) ||
-          (direction === "SHORT" && takeProfitPrice >= roundedPrice)
-        ) {
-          console.error(
-            `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
-              pricePrecision
-            )} (Harga pasar: ${currentPrice.toFixed(pricePrecision)})`
-          );
-          continue; // Lewati jika tidak valid
-        }
-  
+
+        console.log(`Order grid berhasil ditempatkan di harga ${roundedPrice}`);
+
+        // Buat Take Profit
+        const takeProfitPrice =
+          direction === "LONG" ? roundedPrice + atr : roundedPrice - atr;
+
         await client.futuresOrder({
           symbol: SYMBOL,
           side: direction === "LONG" ? "SELL" : "BUY",
           type: "TAKE_PROFIT_MARKET",
           stopPrice: takeProfitPrice.toFixed(pricePrecision),
           quantity: roundedQuantity,
-          timeInForce: "GTC",
           reduceOnly: true,
         });
-        console.log(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`);
+
+        console.log(
+          `Take Profit berhasil dibuat di harga ${takeProfitPrice.toFixed(
+            pricePrecision
+          )}`
+        );
       } catch (error) {
-        console.error(`Kesalahan saat menempatkan order grid: ${error.message}`);
+        console.error(
+          chalk.red(
+            `Kesalahan saat menempatkan order grid atau Take Profit: ${error.message}`
+          )
+        );
       }
-    
 
       // Tambahkan Trailing Stop
       const activationPrice =
         direction === "LONG"
           ? roundedPrice + atr * 0.5
           : roundedPrice - atr * 0.5;
-          
 
       try {
         await client.futuresOrder({
