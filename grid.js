@@ -325,11 +325,11 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
         const takeProfitPrice =
           direction === "LONG"
-            ? Math.max(roundedPrice + atr + buffer, currentPrice + buffer)
+            ? Math.max(roundedPrice + atr + buffer, roundedPrice + buffer)
             : Math.min(roundedPrice - atr - buffer, roundedPrice - buffer);
 
         if (
-          (direction === "LONG" && takeProfitPrice <= currentPrice) ||
+          (direction === "LONG" && takeProfitPrice <= roundedPrice) ||
           (direction === "SHORT" && takeProfitPrice >= roundedPrice)
         ) {
           console.error(
