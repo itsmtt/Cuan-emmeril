@@ -382,7 +382,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
         type: "TAKE_PROFIT_MARKET",
         stopPrice: takeProfitPrice.toFixed(pricePrecision),
         quantity: roundedQuantity,
-        timeInForce: "GTC",
+        // timeInForce: "GTC",
         reduceOnly: true,
       });
       console.log(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`);
