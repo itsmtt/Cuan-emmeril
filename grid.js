@@ -333,20 +333,20 @@ async function placeGridOrders(currentPrice, atr, direction) {
       // Perhitungan harga Take Profit
       const takeProfitPrice =
         direction === "LONG"
-          ? roundedPrice + atr + buffer
-          : roundedPrice - atr - buffer;
+          ? Math.max(roundedPrice + atr + buffer, currentPrice + buffer)
+          : Math.min(roundedPrice - atr - buffer, currentPrice - buffer);
 
       // Validasi harga Take Profit
       if (
         (direction === "LONG" && takeProfitPrice <= currentPrice) ||
-        (direction === "SHORT" && takeProfitPrice >= currentPrice)
+        (direction === "SHORT" && takeProfitPrice >= currentPrice - buffer)
       ) {
         console.error(
           `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
             pricePrecision
-          )} (Harga pasar: ${currentPrice.toFixed(pricePrecision)})`
+          )}`
         );
-        continue; // Lewati jika harga tidak valid
+        continue;
       }
 
       // Membuat order Take Profit
@@ -362,11 +362,16 @@ async function placeGridOrders(currentPrice, atr, direction) {
             timeInForce: "GTC",
             reduceOnly: true,
           });
-          console.log(`Take Profit di harga ${roundedTakeProfitPrice} berhasil dibuat.`);
+          console.log(
+            `Take Profit di harga ${roundedTakeProfitPrice} berhasil dibuat.`
+          );
           break;
         } catch (error) {
           retryCount++;
-          console.error(`Gagal membuat Take Profit, percobaan ${retryCount}:`, error.message);
+          console.error(
+            `Gagal membuat Take Profit, percobaan ${retryCount}:`,
+            error.message
+          );
         }
       }
 
