@@ -21,7 +21,7 @@ const client = Binance({
 const SYMBOL = "XRPUSDT"; // Symbol yang akan ditradingkan
 const GRID_COUNT = 2; // Jumlah level grid di atas dan di bawah harga pasar saat ini
 const LEVERAGE = 10; // Leverage untuk trading
-const BASE_USDT = 1; // Nilai order per grid dalam USDT
+const BASE_USDT = 0.5; // Nilai order per grid dalam USDT
 
 let totalProfit = 0;
 let totalLoss = 0;
@@ -336,7 +336,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
-        type: "LIMIT",
+        type: "MARKET",
         price: roundedPrice,
         quantity: roundedQuantity,
         timeInForce: "GTC",
