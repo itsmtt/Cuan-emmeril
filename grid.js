@@ -281,7 +281,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
   const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
     SYMBOL
   );
-  const buffer = currentPrice * 0.01; // Buffer 1%
+  const buffer = currentPrice * 0.005; // Buffer 0.5%
 
   for (let i = 1; i <= GRID_COUNT; i++) {
     const price =
@@ -340,11 +340,11 @@ async function placeGridOrders(currentPrice, atr, direction) {
       // Hitung Harga Trailing Stop
       const activationPrice =
         direction === "LONG"
-          ? roundedPrice + atr * 1.5
-          : roundedPrice - atr * 1.5;
+          ? roundedPrice + atr * 0.5
+          : roundedPrice - atr * 0.5;
 
       const callbackRate = Math.min(
-        Math.max((atr / currentPrice) * 100, 2.0),
+        Math.max((atr / currentPrice) * 100, 1.0),
         5.0
       );
 
