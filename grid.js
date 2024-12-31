@@ -336,8 +336,10 @@ async function placeGridOrders(currentPrice, atr, direction) {
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
-        type: "MARKET",
+        type: "LIMIT",
+        price: roundedPrice,
         quantity: roundedQuantity,
+        timeInForce: "GTC",
       });
       console.log(`Order grid berhasil ditempatkan di harga ${roundedPrice}`);
 
@@ -380,6 +382,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
         type: "TAKE_PROFIT_MARKET",
         stopPrice: takeProfitPrice.toFixed(pricePrecision),
         quantity: roundedQuantity,
+        timeInForce: "GTC",
         reduceOnly: true,
       });
       console.log(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`);
@@ -416,130 +419,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
     }
   }
 }
-
-
-// async function placeGridOrders(currentPrice, atr, direction) {
-//   await closeOpenPositions();
-//   await closeOpenOrders();
-
-//   const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
-//     SYMBOL
-//   );
-//   const buffer = currentPrice * 0.005; // Buffer 0.5%
-
-  // const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-
-  // for (let i = 1; i <= GRID_COUNT; i++) {
-  //   const price =
-  //     direction === "LONG"
-  //       ? currentPrice - atr * i - buffer
-  //       : currentPrice + atr * i + buffer;
-
-  //   if (price <= 0 || price >= currentPrice * 2) continue;
-
-  //   const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
-  //   const roundedPrice = parseFloat(price.toFixed(pricePrecision));
-  //   const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
-
-  //   const duplicateOrder = existingOrders.find(
-  //     (order) => parseFloat(order.price) === roundedPrice
-  //   );
-
-  //   if (duplicateOrder) {
-  //     console.log(
-  //       chalk.yellow(`Order di harga ${roundedPrice} sudah ada, melewati.`)
-  //     );
-  //     continue;
-  //   }
-
-  //   try {
-      // Tempatkan Order Grid
-      // await client.futuresOrder({
-      //   symbol: SYMBOL,
-      //   side: direction === "LONG" ? "BUY" : "SELL",
-      //   type: "LIMIT",
-      //   price: roundedPrice,
-      //   quantity: roundedQuantity,
-      //   timeInForce: "GTC",
-      // });
-      // console.log(`Order grid berhasil ditempatkan di harga ${roundedPrice}`);
-
-      // Hitung Harga Take Profit
-      // const takeProfitPrice =
-      //   direction === "LONG"
-      //     ? Math.max(roundedPrice + atr + buffer, currentPrice + 2 * buffer)
-      //     : Math.min(roundedPrice - atr - buffer, currentPrice - 2 * buffer);
-
-      // if (
-      //   (direction === "LONG" && takeProfitPrice <= currentPrice) ||
-      //   (direction === "SHORT" && takeProfitPrice >= currentPrice)
-      // ) {
-      //   console.error(
-      //     `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
-      //       pricePrecision
-      //     )}`
-      //   );
-      //   continue;
-      // }
-
-      // Periksa apakah ada Take Profit yang sama
-      // const duplicateTakeProfit = existingOrders.find(
-      //   (order) => parseFloat(order.stopPrice) === parseFloat(takeProfitPrice.toFixed(pricePrecision))
-      // );
-
-      // if (duplicateTakeProfit) {
-      //   console.log(
-      //     chalk.yellow(
-      //       `Take Profit di harga ${takeProfitPrice.toFixed(pricePrecision)} sudah ada, melewati.`
-      //     )
-      //   );
-      //   continue;
-      // }
-
-      // Buat Order Take Profit
-      // await client.futuresOrder({
-      //   symbol: SYMBOL,
-      //   side: direction === "LONG" ? "SELL" : "BUY",
-      //   type: "TAKE_PROFIT_MARKET",
-      //   stopPrice: takeProfitPrice.toFixed(pricePrecision),
-      //   quantity: roundedQuantity,
-      //   timeInForce: "GTC",
-      //   reduceOnly: true,
-      // });
-      // console.log(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`);
-
-      // Hitung Harga Trailing Stop
-      // const activationPrice =
-      //   direction === "LONG"
-      //     ? roundedPrice + atr * 0.5
-      //     : roundedPrice - atr * 0.5;
-
-      // const callbackRate = Math.min(
-      //   Math.max((atr / currentPrice) * 100, 1.0),
-      //   5.0
-      // );
-
-      // Buat Order Trailing Stop
-//       await client.futuresOrder({
-//         symbol: SYMBOL,
-//         side: direction === "LONG" ? "SELL" : "BUY",
-//         type: "TRAILING_STOP_MARKET",
-//         callbackRate,
-//         quantity: roundedQuantity,
-//         reduceOnly: true,
-//       });
-//       console.log(
-//         `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
-//           pricePrecision
-//         )} dengan callback rate ${callbackRate}%`
-//       );
-//     } catch (error) {
-//       console.error(
-//         `Kesalahan saat menempatkan order grid atau Take Profit: ${error.message}`
-//       );
-//     }
-//   }
-// }
 
 // Fungsi trading utama
 async function trade() {
