@@ -350,42 +350,42 @@ async function placeGridOrders(currentPrice, atr, direction) {
           reduceOnly: true,
         });
         console.log(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`);
+
+        // Tambahkan Trailing Stop
+        const activationPrice =
+          direction === "LONG"
+            ? roundedPrice + atr * 0.5
+            : roundedPrice - atr * 0.5;
+
+        try {
+          await client.futuresOrder({
+            symbol: SYMBOL,
+            side: direction === "LONG" ? "SELL" : "BUY",
+            type: "TRAILING_STOP_MARKET",
+            callbackRate: 1.0, // Callback rate dalam persentase
+            quantity: roundedQuantity,
+            reduceOnly: true,
+          });
+
+          console.log(
+            chalk.green(
+              `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
+                pricePrecision
+              )} dengan callback rate 1%`
+            )
+          );
+        } catch (error) {
+          console.error(
+            chalk.red(
+              `Gagal membuat Trailing Stop di harga ${activationPrice.toFixed(
+                pricePrecision
+              )}: ${error.body || error.message}`
+            )
+          );
+        }
       } catch (error) {
         console.error(
           `Kesalahan saat menempatkan order grid: ${error.message}`
-        );
-      }
-
-      // Tambahkan Trailing Stop
-      const activationPrice =
-        direction === "LONG"
-          ? roundedPrice + atr * 0.5
-          : roundedPrice - atr * 0.5;
-
-      try {
-        await client.futuresOrder({
-          symbol: SYMBOL,
-          side: direction === "LONG" ? "SELL" : "BUY",
-          type: "TRAILING_STOP_MARKET",
-          callbackRate: 1.0, // Callback rate dalam persentase
-          quantity: roundedQuantity,
-          reduceOnly: true,
-        });
-
-        console.log(
-          chalk.green(
-            `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
-              pricePrecision
-            )} dengan callback rate 1%`
-          )
-        );
-      } catch (error) {
-        console.error(
-          chalk.red(
-            `Gagal membuat Trailing Stop di harga ${activationPrice.toFixed(
-              pricePrecision
-            )}: ${error.body || error.message}`
-          )
         );
       }
 
