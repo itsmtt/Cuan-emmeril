@@ -126,19 +126,19 @@ async function closeOpenPositions() {
 // Fungsi untuk memeriksa apakah semua order telah selesai
 async function waitForOrdersToComplete() {
   try {
-    console.log(chalk.blue("Menunggu semua order selesai..."));
-    let openOrders;
-    do {
-      openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+    //console.log(chalk.blue("Menunggu semua order selesai..."));
+    //let openOrders;
+    //do {
+      let openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
       if (openOrders.length > 0) {
         console.log(
           chalk.yellow(
             `Masih ada ${openOrders.length} order terbuka, menunggu...`
           )
         );
-        await new Promise((resolve) => setTimeout(resolve, 5000)); // Tunggu 5 detik sebelum memeriksa lagi
-      }
-    } while (openOrders.length > 0);
+        //await new Promise((resolve) => setTimeout(resolve, 5000)); // Tunggu 5 detik sebelum memeriksa lagi
+      } else (openOrders.length = 0) {
+    //} while (openOrders.length > 0);
     console.log(chalk.green("Semua order telah selesai."));
   } catch (error) {
     console.error(
