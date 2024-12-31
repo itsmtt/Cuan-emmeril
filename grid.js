@@ -313,66 +313,47 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
       // Buat order grid
-      const gridOrder = await client.futuresOrder({
-        symbol: SYMBOL,
-        side: direction === "LONG" ? "BUY" : "SELL",
-        type: "LIMIT",
-        price: roundedPrice,
-        quantity: roundedQuantity,
-        timeInForce: "GTC",
-      });
+      try {
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "BUY" : "SELL",
+          type: "LIMIT",
+          price: roundedPrice,
+          quantity: roundedQuantity,
+          timeInForce: "GTC",
+        });
 
-      console.log(
-        chalk.green(
-          `Order ${
-            direction === "LONG" ? "beli" : "jual"
-          } ditempatkan di harga ${roundedPrice} dengan kuantitas ${roundedQuantity}`
-        )
-      );
+        const takeProfitPrice =
+          direction === "LONG"
+            ? Math.max(roundedPrice + atr + buffer, currentPrice + buffer)
+            : Math.min(roundedPrice - atr - buffer, roundedPrice - buffer);
 
-      // Perhitungan harga Take Profit
-      const takeProfitPrice =
-        direction === "LONG"
-          ? Math.max(roundedPrice + atr + buffer, currentPrice + buffer)
-          : Math.min(roundedPrice - atr - buffer, currentPrice - buffer);
-
-      // Validasi harga Take Profit
-      if (
-        (direction === "LONG" && takeProfitPrice <= currentPrice) ||
-        (direction === "SHORT" && takeProfitPrice >= currentPrice - buffer)
-      ) {
-        console.error(
-          `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
-            pricePrecision
-          )}`
-        );
-        continue;
-      }
-
-      // Membuat order Take Profit
-      let retryCount = 0;
-      while (retryCount < 5) {
-        try {
-          await client.futuresOrder({
-            symbol: SYMBOL,
-            side: direction === "LONG" ? "SELL" : "BUY",
-            type: "TAKE_PROFIT_MARKET",
-            stopPrice: roundedTakeProfitPrice,
-            quantity: roundedQuantity,
-            timeInForce: "GTC",
-            reduceOnly: true,
-          });
-          console.log(
-            `Take Profit di harga ${roundedTakeProfitPrice} berhasil dibuat.`
-          );
-          break;
-        } catch (error) {
-          retryCount++;
+        if (
+          (direction === "LONG" && takeProfitPrice <= currentPrice) ||
+          (direction === "SHORT" && takeProfitPrice >= roundedPrice)
+        ) {
           console.error(
-            `Gagal membuat Take Profit, percobaan ${retryCount}:`,
-            error.message
+            `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
+              pricePrecision
+            )} (Harga pasar: ${currentPrice.toFixed(pricePrecision)})`
           );
+          continue; // Lewati jika tidak valid
         }
+
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TAKE_PROFIT_MARKET",
+          stopPrice: takeProfitPrice.toFixed(pricePrecision),
+          quantity: roundedQuantity,
+          timeInForce: "GTC",
+          reduceOnly: true,
+        });
+        console.log(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`);
+      } catch (error) {
+        console.error(
+          `Kesalahan saat menempatkan order grid: ${error.message}`
+        );
       }
 
       // Tambahkan Trailing Stop
