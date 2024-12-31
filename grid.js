@@ -457,7 +457,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       // await client.futuresOrder({
       //   symbol: SYMBOL,
       //   side: direction === "LONG" ? "BUY" : "SELL",
-      //   type: "MARKET",
+      //   type: "LIMIT",
       //   price: roundedPrice,
       //   quantity: roundedQuantity,
       //   timeInForce: "GTC",
