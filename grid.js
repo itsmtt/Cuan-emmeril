@@ -337,7 +337,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
         symbol: SYMBOL,
         side: direction === "LONG" ? "BUY" : "SELL",
         type: "MARKET",
-        price: roundedPrice,
+        // price: roundedPrice,
         quantity: roundedQuantity,
         timeInForce: "GTC",
       });
