@@ -273,7 +273,6 @@ async function determineMarketCondition(candles) {
   }
 }
 
-
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 // Fungsi untuk menetapkan order grid dengan take profit dan trailing stop
 async function placeGridOrders(currentPrice, atr, direction) {
@@ -332,56 +331,50 @@ async function placeGridOrders(currentPrice, atr, direction) {
       );
 
       // Perhitungan harga Take Profit
-const takeProfitPrice =
-  direction === "LONG"
-    ? roundedPrice + atr + buffer
-    : roundedPrice - atr - buffer;
+      const takeProfitPrice =
+        direction === "LONG"
+          ? roundedPrice + atr + buffer
+          : roundedPrice - atr - buffer;
 
-// Validasi harga Take Profit
-if (
-  (direction === "LONG" && takeProfitPrice <= currentPrice) ||
-  (direction === "SHORT" && takeProfitPrice >= currentPrice)
-) {
-  console.error(
-    `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
-      pricePrecision
-    )} (Harga pasar: ${currentPrice.toFixed(pricePrecision)})`
-  );
-  continue; // Lewati jika harga tidak valid
-}
+      // Validasi harga Take Profit
+      if (
+        (direction === "LONG" && takeProfitPrice <= currentPrice) ||
+        (direction === "SHORT" && takeProfitPrice >= currentPrice)
+      ) {
+        console.error(
+          `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
+            pricePrecision
+          )} (Harga pasar: ${currentPrice.toFixed(pricePrecision)})`
+        );
+        continue; // Lewati jika harga tidak valid
+      }
 
-// Membuat order Take Profit
-try {
-  await client.futuresOrder({
-    symbol: SYMBOL,
-    side: direction === "LONG" ? "SELL" : "BUY",
-    type: "TAKE_PROFIT_MARKET",
-    stopPrice: takeProfitPrice.toFixed(pricePrecision),
-    quantity: roundedQuantity,
-    timeInForce: "GTC",
-    reduceOnly: true,
-  });
-
-  console.log(
-    chalk.green(
-      `Take Profit di harga ${takeProfitPrice.toFixed(
-        pricePrecision
-      )} berhasil dibuat.`
-    )
-  );
-} catch (error) {
-  console.error(
-    chalk.red(
-      `Gagal membuat Take Profit di harga ${takeProfitPrice.toFixed(
-        pricePrecision
-      )}: ${error.body || error.message}`
-    )
-  );
-}
+      // Membuat order Take Profit
+      let retryCount = 0;
+      while (retryCount < 5) {
+        try {
+          await client.futuresOrder({
+            symbol: SYMBOL,
+            side: direction === "LONG" ? "SELL" : "BUY",
+            type: "TAKE_PROFIT_MARKET",
+            stopPrice: roundedTakeProfitPrice,
+            quantity: roundedQuantity,
+            timeInForce: "GTC",
+            reduceOnly: true,
+          });
+          console.log(`Take Profit di harga ${roundedTakeProfitPrice} berhasil dibuat.`);
+          break;
+        } catch (error) {
+          retryCount++;
+          console.error(`Gagal membuat Take Profit, percobaan ${retryCount}:`, error.message);
+        }
+      }
 
       // Tambahkan Trailing Stop
       const activationPrice =
-        direction === "LONG" ? roundedPrice + atr * 0.5 : roundedPrice - atr * 0.5;
+        direction === "LONG"
+          ? roundedPrice + atr * 0.5
+          : roundedPrice - atr * 0.5;
 
       try {
         await client.futuresOrder({
@@ -422,7 +415,6 @@ try {
     );
   }
 }
-
 
 // Fungsi trading utama
 async function trade() {
@@ -468,7 +460,6 @@ async function trade() {
     // Tempatkan order grid berdasarkan kondisi pasar
     if (marketCondition === "LONG" || marketCondition === "SHORT") {
       await placeGridOrders(currentPrice, atr, marketCondition);
-      
     } else {
       console.log(
         chalk.blue(
@@ -477,7 +468,6 @@ async function trade() {
       );
     }
 
-    
     // Tunggu semua order selesai sebelum melanjutkan
     await waitForOrdersToComplete();
   } catch (error) {
@@ -494,8 +484,10 @@ async function runBot() {
   await closeOpenOrders(); // Tutup order terbuka sebelum memulai trading
   while (true) {
     await trade();
-        // Berikan jeda sebelum loop berikutnya
-    console.log(chalk.magenta("Menunggu sebelum memulai iterasi berikutnya..."));
+    // Berikan jeda sebelum loop berikutnya
+    console.log(
+      chalk.magenta("Menunggu sebelum memulai iterasi berikutnya...")
+    );
     await new Promise((resolve) => setTimeout(resolve, 10000)); // Jeda 10 detik
   }
 }
