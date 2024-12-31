@@ -306,6 +306,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
   );
   const buffer = currentPrice * 0.005; // Buffer 0.5%
 
+  const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+
   for (let i = 1; i <= GRID_COUNT; i++) {
     const price =
       direction === "LONG"
@@ -317,6 +319,17 @@ async function placeGridOrders(currentPrice, atr, direction) {
     const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
     const roundedPrice = parseFloat(price.toFixed(pricePrecision));
     const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
+
+    const duplicateOrder = existingOrders.find(
+      (order) => parseFloat(order.price) === roundedPrice
+    );
+
+    if (duplicateOrder) {
+      console.log(
+        chalk.yellow(`Order di harga ${roundedPrice} sudah ada, melewati.`)
+      );
+      continue;
+    }
 
     try {
       // Tempatkan Order Grid
@@ -344,6 +357,20 @@ async function placeGridOrders(currentPrice, atr, direction) {
           `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
             pricePrecision
           )}`
+        );
+        continue;
+      }
+
+      // Periksa apakah ada Take Profit yang sama
+      const duplicateTakeProfit = existingOrders.find(
+        (order) => parseFloat(order.stopPrice) === parseFloat(takeProfitPrice.toFixed(pricePrecision))
+      );
+
+      if (duplicateTakeProfit) {
+        console.log(
+          chalk.yellow(
+            `Take Profit di harga ${takeProfitPrice.toFixed(pricePrecision)} sudah ada, melewati.`
+          )
         );
         continue;
       }
