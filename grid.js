@@ -362,12 +362,17 @@ async function placeGridOrders(currentPrice, atr, direction) {
           ? roundedPrice + atr * 0.5
           : roundedPrice - atr * 0.5;
 
+      const callbackRate = Math.min(
+        Math.max((atr / currentPrice) * 100, 1.5),
+        5.0
+      );
+
       try {
         await client.futuresOrder({
           symbol: SYMBOL,
           side: direction === "LONG" ? "SELL" : "BUY",
           type: "TRAILING_STOP_MARKET",
-          callbackRate: 1.0, // Callback rate dalam persentase
+          callbackRate,
           quantity: roundedQuantity,
           reduceOnly: true,
         });
