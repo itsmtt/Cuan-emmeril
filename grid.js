@@ -137,7 +137,7 @@ async function waitForOrdersToComplete() {
           )
         );
         //await new Promise((resolve) => setTimeout(resolve, 5000)); // Tunggu 5 detik sebelum memeriksa lagi
-      } else (openOrders.length = 0) {
+      } else { openOrders.length = 0;
     //} while (openOrders.length > 0);
     console.log(chalk.green("Semua order telah selesai."));
   } catch (error) {
