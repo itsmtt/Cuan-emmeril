@@ -491,7 +491,7 @@ async function runBot() {
     console.log(
       chalk.magenta("Menunggu sebelum memulai iterasi berikutnya...")
     );
-    await new Promise((resolve) => setTimeout(resolve, 10000)); // Jeda 10 detik
+    await new Promise((resolve) => setTimeout(resolve, 5000)); // Jeda 10 detik
   }
 }
 
