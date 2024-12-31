@@ -90,6 +90,29 @@ async function closeOpenPositions() {
             `Posisi pada ${position.symbol} berhasil ditutup dengan kuantitas ${quantity}.`
           )
         );
+        // Hitung profit atau loss
+        const pnl =
+          side === "SELL"
+            ? (entryPrice - currentPrice) * quantity
+            : (currentPrice - entryPrice) * quantity;
+
+        if (pnl > 0) {
+          totalProfit += pnl;
+          console.log(
+            chalk.green(
+              `Profit dari posisi pada ${position.symbol}: ${pnl.toFixed(2)}`
+            )
+          );
+        } else {
+          totalLoss += Math.abs(pnl);
+          console.log(
+            chalk.red(
+              `Loss dari posisi pada ${position.symbol}: ${Math.abs(
+                pnl
+              ).toFixed(2)}`
+            )
+          );
+        }
       }
     }
   } catch (error) {
@@ -421,6 +444,10 @@ async function trade() {
         )
       );
     }
+
+    // Log total profit dan loss saat ini
+    console.log(chalk.yellow(`Total Profit: ${totalProfit.toFixed(2)} USDT`));
+    console.log(chalk.yellow(`Total Loss: ${totalLoss.toFixed(2)} USDT`));
 
     // Tunggu semua order selesai sebelum melanjutkan
     await waitForOrdersToComplete();
