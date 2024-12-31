@@ -293,7 +293,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
       SYMBOL
     );
 
-    const buffer = currentPrice * 0.005; // Tambahkan buffer 0.5% untuk menghindari konflik harga
+    const buffer = currentPrice * 0.01; // Tambahkan buffer 0.5% untuk menghindari konflik harga
 
     for (let i = 1; i <= GRID_COUNT; i++) {
       const price =
@@ -322,14 +322,13 @@ async function placeGridOrders(currentPrice, atr, direction) {
           quantity: roundedQuantity,
           timeInForce: "GTC",
         });
-
-        const takeProfitPrice =
-          direction === "LONG"
-            ? Math.max(roundedPrice + atr + buffer, roundedPrice + buffer)
-            : Math.min(roundedPrice - atr - buffer, roundedPrice - buffer);
-
+  
+        const takeProfitPrice = direction === "LONG"
+          ? Math.max(roundedPrice + atr + buffer, currentPrice + buffer)
+          : Math.min(roundedPrice - atr - buffer, roundedPrice - buffer);
+  
         if (
-          (direction === "LONG" && takeProfitPrice <= roundedPrice) ||
+          (direction === "LONG" && takeProfitPrice <= currentPrice) ||
           (direction === "SHORT" && takeProfitPrice >= roundedPrice)
         ) {
           console.error(
@@ -339,7 +338,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
           );
           continue; // Lewati jika tidak valid
         }
-
+  
         await client.futuresOrder({
           symbol: SYMBOL,
           side: direction === "LONG" ? "SELL" : "BUY",
@@ -351,10 +350,9 @@ async function placeGridOrders(currentPrice, atr, direction) {
         });
         console.log(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`);
       } catch (error) {
-        console.error(
-          `Kesalahan saat menempatkan order grid: ${error.message}`
-        );
+        console.error(`Kesalahan saat menempatkan order grid: ${error.message}`);
       }
+    
 
       // Tambahkan Trailing Stop
       const activationPrice =
