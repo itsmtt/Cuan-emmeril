@@ -295,28 +295,28 @@ async function determineMarketCondition(candles) {
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, direction) {
-  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
-    SYMBOL
-  );
-  const buffer = currentPrice * 0.005; // Buffer 0.5%
+  // Pastikan semua posisi dan order terbuka ditutup sebelum membuat order baru
+  await closeOpenPositions();
+  await closeOpenOrders();
+
+  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(SYMBOL);
+  const buffer = currentPrice * 0.005; // Buffer sebesar 0.5%
 
   for (let i = 1; i <= GRID_COUNT; i++) {
+    // Hitung harga grid
     const price =
       direction === "LONG"
         ? currentPrice - atr * i - buffer
         : currentPrice + atr * i + buffer;
 
-      // Validasi apakah harga grid logis
-  const isPriceValid = price > currentPrice * 0.8 && price < currentPrice * 1.2; // Kisaran 20% dari harga sekarang
-  if (!isPriceValid) {
-    console.warn(`Harga grid ${price} tidak logis, melewati iterasi.`);
-    continue;
-  }
-
-    if (price <= 0 || price >= currentPrice * 2) {
-  console.warn(`Harga grid ${price} tidak valid, melewati iterasi.`);
-  continue;
+    // Validasi apakah harga grid logis
+    const isPriceValid = price > currentPrice * 0.8 && price < currentPrice * 1.2; // Kisaran 20% dari harga sekarang
+    if (!isPriceValid) {
+      console.warn(`Harga grid ${price} tidak logis, melewati iterasi.`);
+      continue;
     }
+
+    // Hitung kuantitas dan pembulatan harga/kuantitas
     const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
     const roundedPrice = parseFloat(price.toFixed(pricePrecision));
     const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
@@ -331,7 +331,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
         quantity: roundedQuantity,
         timeInForce: "GTC",
       });
-       console.log(
+      console.log(
         chalk.green(
           `Order grid berhasil ditempatkan di harga ${roundedPrice}, kuantitas ${roundedQuantity}, arah ${direction}`
         )
@@ -360,8 +360,10 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const duplicateTP = existingOrders.some(
         (order) =>
           order.type === "TAKE_PROFIT_MARKET" &&
-          parseFloat(order.stopPrice).toFixed(pricePrecision) === takeProfitPrice.toFixed(pricePrecision)
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            takeProfitPrice.toFixed(pricePrecision)
       );
+
       if (!duplicateTP) {
         // Buat Order Take Profit
         await client.futuresOrder({
@@ -373,67 +375,67 @@ async function placeGridOrders(currentPrice, atr, direction) {
           timeInForce: "GTC",
           reduceOnly: true,
         });
-        console.log(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`);
+        console.log(
+          chalk.green(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`)
+        );
       } else {
         console.log(`Take Profit di harga ${takeProfitPrice} sudah ada.`);
       }
 
       // Hitung Harga Trailing Stop
-    // Hitung harga trailing stop
-  const activationPrice =
-    direction === "LONG"
-      ? roundedPrice + atr * 0.5
-      : roundedPrice - atr * 0.5;
+      const activationPrice =
+        direction === "LONG"
+          ? roundedPrice + atr * 0.5
+          : roundedPrice - atr * 0.5;
 
-  const callbackRate = Math.min(
-    Math.max((atr / currentPrice) * 100, 1.0),
-    5.0
-  );
-
-  // Cek duplikasi trailing stop
-  const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-  const duplicateTS = existingOrders.some((order) => {
-    return (
-      order.type === "TRAILING_STOP_MARKET" &&
-      parseFloat(order.stopPrice).toFixed(pricePrecision) ===
-        activationPrice.toFixed(pricePrecision) &&
-      parseFloat(order.callbackRate) === callbackRate
-    );
-  });
-
-  if (!duplicateTS) {
-    try {
-      // Buat Order Trailing Stop
-      await client.futuresOrder({
-        symbol: SYMBOL,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        type: "TRAILING_STOP_MARKET",
-        callbackRate,
-        quantity: roundedQuantity,
-        reduceOnly: true,
-      });
-      console.log(
-        chalk.green(
-          `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
-            pricePrecision
-          )} dengan callback rate ${callbackRate}%`
-        )
+      const callbackRate = Math.min(
+        Math.max((atr / currentPrice) * 100, 1.0),
+        5.0
       );
+
+      // Cegah Duplicate Trailing Stop
+      const duplicateTS = existingOrders.some(
+        (order) =>
+          order.type === "TRAILING_STOP_MARKET" &&
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            activationPrice.toFixed(pricePrecision) &&
+          parseFloat(order.callbackRate) === callbackRate
+      );
+
+      if (!duplicateTS) {
+        // Buat Order Trailing Stop
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TRAILING_STOP_MARKET",
+          callbackRate,
+          quantity: roundedQuantity,
+          reduceOnly: true,
+        });
+        console.log(
+          chalk.green(
+            `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
+              pricePrecision
+            )} dengan callback rate ${callbackRate}%`
+          )
+        );
+      } else {
+        console.log(
+          chalk.yellow(
+            `Trailing Stop dengan harga ${activationPrice.toFixed(
+              pricePrecision
+            )} dan callback rate ${callbackRate}% sudah ada.`
+          )
+        );
+      }
     } catch (error) {
       console.error(
-        `Kesalahan saat menempatkan trailing stop: ${error.message}`
+        `Kesalahan saat menempatkan order grid atau Take Profit: ${error.message}`
       );
     }
-  } else {
-    console.log(
-      chalk.yellow(
-        `Trailing Stop dengan harga ${activationPrice.toFixed(
-          pricePrecision
-        )} dan callback rate ${callbackRate}% sudah ada.`
-      )
-    );
   }
 }
+
 
 
 // Fungsi trading utama
