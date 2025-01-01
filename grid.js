@@ -249,6 +249,32 @@ function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
   };
 }
 
+// Fungsi untuk menghitung keanggotaan fuzzy
+function fuzzyMembership(value, low, high) {
+  if (value <= low) return 1; // Penuh keanggotaan
+  if (value >= high) return 0; // Tidak ada keanggotaan
+  return (high - value) / (high - low); // Linear
+}
+
+// Fungsi untuk menghitung VWAP
+function calculateVWAP(candles) {
+  let cumulativeVolume = 0;
+  let cumulativePriceVolume = 0;
+
+  for (const candle of candles) {
+    const high = parseFloat(candle.high);
+    const low = parseFloat(candle.low);
+    const close = parseFloat(candle.close);
+    const volume = parseFloat(candle.volume);
+
+    const typicalPrice = (high + low + close) / 3; // Harga tipikal
+    cumulativeVolume += volume;
+    cumulativePriceVolume += typicalPrice * volume;
+  }
+
+  return cumulativePriceVolume / cumulativeVolume; // Rumus VWAP
+}
+
 // Fungsi untuk memeriksa kondisi pasar ekstrem
 async function checkExtremeMarketConditions(candles) {
   const atr = await calculateATR(candles, 14);
