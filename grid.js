@@ -435,6 +435,29 @@ async function trade() {
       )
     );
 
+    // Periksa apakah masih ada order terbuka
+    const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+    if (openOrders.length > 0) {
+      console.log(
+        chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
+      );
+      return; // Keluar dari fungsi jika masih ada order terbuka
+    }
+
+    // Periksa apakah masih ada posisi terbuka
+    const positions = await client.futuresPositionRisk();
+    const openPosition = positions.find(
+      (position) => parseFloat(position.positionAmt) !== 0
+    );
+    if (openPosition) {
+      console.log(
+        chalk.blue(
+          `Masih ada posisi terbuka pada ${openPosition.symbol}. Menunggu...`
+        )
+      );
+      return; // Keluar dari fungsi jika masih ada posisi terbuka
+    }
+
     // Set leverage untuk trading
     await client.futuresLeverage({ symbol: SYMBOL, leverage: LEVERAGE });
 
@@ -461,19 +484,13 @@ async function trade() {
     // Tentukan kondisi pasar
     const marketCondition = await determineMarketCondition(candles);
 
-    // Jika ada sinyal order baru, lakukan penutupan open orders dan positions
+    // Tempatkan order grid jika ada sinyal trading
     if (marketCondition === "LONG" || marketCondition === "SHORT") {
       console.log(
         chalk.blue(
-          `Sinyal order baru terdeteksi: ${marketCondition}. Menutup semua posisi dan order terbuka.`
+          `Sinyal order baru terdeteksi: ${marketCondition}. Menempatkan order grid.`
         )
       );
-
-      // Tutup semua posisi dan order terbuka
-      await closeOpenPositions();
-      await closeOpenOrders();
-
-      // Tempatkan order grid berdasarkan kondisi pasar
       await placeGridOrders(currentPrice, atr, marketCondition);
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
@@ -482,9 +499,6 @@ async function trade() {
     // Log total profit dan loss saat ini
     console.log(chalk.yellow(`Total Profit: ${totalProfit.toFixed(2)} USDT`));
     console.log(chalk.yellow(`Total Loss: ${totalLoss.toFixed(2)} USDT`));
-
-    // Tunggu semua order selesai sebelum melanjutkan
-    await waitForOrdersToComplete();
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan utama dalam trading:"),
