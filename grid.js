@@ -509,7 +509,7 @@ if (!duplicateTS) {
   );
 }
 
- catch (error) {
+    } catch (error) {
       console.error(
         `Kesalahan saat menempatkan order grid atau Take Profit: ${error.message}`
       );
