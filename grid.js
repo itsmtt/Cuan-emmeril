@@ -427,23 +427,26 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-      // Hitung Harga Take Profit
-      const takeProfitPrice =
-        direction === "LONG"
-          ? Math.max(roundedPrice + atr + buffer, currentPrice + 2 * buffer)
-          : Math.min(roundedPrice - atr - buffer, currentPrice - 2 * buffer);
+    // Hitung takeProfitPrice menggunakan fuzzy logic dan VWAP
+    const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
+    const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
+    const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1; // Tambahkan bobot jika harga di bawah VWAP
 
-      if (
-        (direction === "LONG" && takeProfitPrice <= currentPrice) ||
-        (direction === "SHORT" && takeProfitPrice >= currentPrice)
-      ) {
-        console.error(
-          `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
-            pricePrecision
-          )}`
-        );
-        continue;
-      }
+    const takeProfitPrice =
+      direction === "LONG"
+        ? roundedPrice + (fuzzyMultiplier * atr) + buffer
+        : roundedPrice - (fuzzyMultiplier * atr) - buffer;
+
+    // Validasi takeProfitPrice
+    if (
+      (direction === "LONG" && takeProfitPrice <= currentPrice) ||
+      (direction === "SHORT" && takeProfitPrice >= currentPrice)
+    ) {
+      console.error(
+        `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(pricePrecision)}`
+      );
+      continue;
+    }
         // Validasi dan cegah duplikasi Take Profit
 const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 const duplicateTP = existingOrders.some(
