@@ -1,6 +1,7 @@
 require("dotenv").config(); // Load .env file
 const Binance = require("binance-api-node").default;
 const chalk = require("chalk");
+const fs = require("fs");
 
 // Validasi API Key
 if (!process.env.API_KEY || !process.env.API_SECRET) {
