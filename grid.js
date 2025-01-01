@@ -334,7 +334,11 @@ async function placeGridOrders(currentPrice, atr, direction) {
         quantity: roundedQuantity,
         timeInForce: "GTC",
       });
-      console.log(`Order grid berhasil ditempatkan di harga ${roundedPrice}`);
+       console.log(
+        chalk.green(
+          `Order grid berhasil ditempatkan di harga ${roundedPrice}, kuantitas ${roundedQuantity}, arah ${direction}`
+        )
+      );
 
       // Hitung Harga Take Profit
       const takeProfitPrice =
