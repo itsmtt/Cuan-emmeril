@@ -281,24 +281,25 @@ async function checkExtremeMarketConditions(candles) {
   const lastPrice = parseFloat(candles[candles.length - 1].close);
   const vwap = calculateVWAP(candles);
 
+  // Keanggotaan fuzzy untuk ATR
+  const highVolatility = fuzzyMembership(atr, 0.05, 0.1); // ATR > 5% dianggap volatil
+  const extremeVolatility = fuzzyMembership(atr, 0.1, 0.2); // ATR > 10% dianggap sangat volatil
+
+  // Keanggotaan fuzzy untuk volume ekstrem
   const volumes = candles.map(c => parseFloat(c.volume));
   const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+  const volumeMembership = fuzzyMembership(volumes[volumes.length - 1], avgVolume * 1.5, avgVolume * 3);
 
-  // Keanggotaan fuzzy dengan rentang yang disesuaikan
-  const highVolatility = fuzzyMembership(atr, 0.03, 0.1); 
-  const extremeVolatility = fuzzyMembership(atr, 0.1, 0.2); 
-  const volumeMembership = fuzzyMembership(volumes[volumes.length - 1], avgVolume * 1.2, avgVolume * 2);
-  const priceFarBelowVWAP = fuzzyMembership(lastPrice, vwap * 0.85, vwap * 0.95);
-  const priceFarAboveVWAP = fuzzyMembership(lastPrice, vwap * 1.05, vwap * 1.15);
+  // Keanggotaan fuzzy untuk harga jauh dari VWAP
+  const priceFarBelowVWAP = fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9);
+  const priceFarAboveVWAP = fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2);
 
   // Gabungkan aturan fuzzy
-  const isExtreme = Math.max(highVolatility, extremeVolatility, volumeMembership, priceFarBelowVWAP, priceFarAboveVWAP);
+  const isExtreme = Math.max(highVolatility, extremeVolatility, volumeMembership);
 
-  console.log(`Keanggotaan Fuzzy: Volatility=${highVolatility}, Volume=${volumeMembership}, VWAP=${priceFarBelowVWAP}, ${priceFarAboveVWAP}`);
-  
-  if (isExtreme > 0.8) {
+  if (isExtreme > 0.7) { // Threshold 0.7 untuk kondisi ekstrem
     console.log(chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara."));
-    await closeOpenPositions(); 
+    await closeOpenPositions(); // Menutup semua posisi terbuka
     await closeOpenOrders();
     return true;
   }
