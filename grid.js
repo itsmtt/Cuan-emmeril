@@ -206,23 +206,16 @@ async function calculateRSI(candles, period) {
 }
 
 // Fungsi untuk menghitung MACD
-function calculateMACD(
-  closingPrices,
-  shortPeriod = 12,
-  longPeriod = 26,
-  signalPeriod = 9
-) {
-  const shortEMA = calculateEMA(closingPrices, shortPeriod);
-  const longEMA = calculateEMA(closingPrices, longPeriod);
-  const macdLine = shortEMA - longEMA;
+function calculateMACD(closingPrices, shortPeriod = 12, longPeriod = 26, signalPeriod = 9) {
+  const macdLine = closingPrices.map((_, i) => i >= longPeriod 
+    ? calculateEMA(closingPrices.slice(i - shortPeriod, i), shortPeriod) -
+      calculateEMA(closingPrices.slice(i - longPeriod, i), longPeriod)
+    : null).filter(v => v !== null);
 
-  const signalLine = calculateEMA(
-    closingPrices.slice(closingPrices.length - signalPeriod),
-    signalPeriod
-  );
-
-  return { macdLine, signalLine };
+  const signalLine = calculateEMA(macdLine, signalPeriod);
+  return { macdLine: macdLine[macdLine.length - 1], signalLine };
 }
+
 
 // Fungsi untuk menghitung Bollinger Bands
 function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
