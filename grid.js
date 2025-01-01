@@ -444,49 +444,72 @@ async function placeGridOrders(currentPrice, atr, direction) {
         );
         continue;
       }
+        // Validasi dan cegah duplikasi Take Profit
+const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+const duplicateTP = existingOrders.some(
+  (order) =>
+    order.type === "TAKE_PROFIT_MARKET" &&
+    parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+      takeProfitPrice.toFixed(pricePrecision)
+);
 
-      // Buat Order Take Profit
-      await client.futuresOrder({
-        symbol: SYMBOL,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        type: "TAKE_PROFIT_MARKET",
-        stopPrice: takeProfitPrice.toFixed(pricePrecision),
-        quantity: roundedQuantity,
-        timeInForce: "GTC",
-        reduceOnly: true,
-      });
-      console.log(
-        chalk.green(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`)
-      );
+if (!duplicateTP) {
+  // Buat Order Take Profit
+  await client.futuresOrder({
+    symbol: SYMBOL,
+    side: direction === "LONG" ? "SELL" : "BUY",
+    type: "TAKE_PROFIT_MARKET",
+    stopPrice: takeProfitPrice.toFixed(pricePrecision),
+    quantity: roundedQuantity,
+    timeInForce: "GTC",
+    reduceOnly: true,
+  });
+  console.log(
+    chalk.green(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`)
+  );
+} else {
+  console.log(
+    chalk.yellow(`Take Profit di harga ${takeProfitPrice} sudah ada.`)
+  );
+}
 
-      // Hitung Harga Trailing Stop
-      const activationPrice =
-        direction === "LONG"
-          ? roundedPrice + atr * 0.5
-          : roundedPrice - atr * 0.5;
+// Validasi dan cegah duplikasi Trailing Stop
+const duplicateTS = existingOrders.some(
+  (order) =>
+    order.type === "TRAILING_STOP_MARKET" &&
+    parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+      activationPrice.toFixed(pricePrecision) &&
+    parseFloat(order.callbackRate) === callbackRate
+);
 
-      const callbackRate = Math.min(
-        Math.max((atr / currentPrice) * 100, 1.0),
-        5.0
-      );
+if (!duplicateTS) {
+  // Buat Order Trailing Stop
+  await client.futuresOrder({
+    symbol: SYMBOL,
+    side: direction === "LONG" ? "SELL" : "BUY",
+    type: "TRAILING_STOP_MARKET",
+    callbackRate,
+    quantity: roundedQuantity,
+    reduceOnly: true,
+  });
+  console.log(
+    chalk.green(
+      `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
+        pricePrecision
+      )} dengan callback rate ${callbackRate}%`
+    )
+  );
+} else {
+  console.log(
+    chalk.yellow(
+      `Trailing Stop dengan harga ${activationPrice.toFixed(
+        pricePrecision
+      )} dan callback rate ${callbackRate}% sudah ada.`
+    )
+  );
+}
 
-      // Buat Order Trailing Stop
-      await client.futuresOrder({
-        symbol: SYMBOL,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        type: "TRAILING_STOP_MARKET",
-        callbackRate,
-        quantity: roundedQuantity,
-        reduceOnly: true,
-      });
-      console.log(
-        chalk.green(
-          `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
-            pricePrecision
-          )} dengan callback rate ${callbackRate}%`
-        )
-      );
-    } catch (error) {
+ catch (error) {
       console.error(
         `Kesalahan saat menempatkan order grid atau Take Profit: ${error.message}`
       );
