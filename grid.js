@@ -293,10 +293,10 @@ async function determineMarketCondition(candles) {
   } else if (closingPrices[closingPrices.length - 1] < lowerBand) {
     console.log(`Posisi sekarang OVERSOLD`);   
     return "OVERSOLD";
-  } else {
-    console.log(`Posisi sekarang NEUTRAL`);   
-    return "NEUTRAL";
-  }
+  } else if (!shortEMA || !longEMA || !rsi || !macdLine) {
+  console.log(chalk.red("Data analisis tidak mencukupi. Kondisi pasar NEUTRAL."));
+  return "NEUTRAL";
+}
 }
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
