@@ -241,12 +241,17 @@ async function checkExtremeMarketConditions(candles) {
   const atr = await calculateATR(candles, 14);
 
   if (atr > 0.05) {
-    // Nilai ambang batas ATR disesuaikan
-    console.log(
-      chalk.red("Pasar terlalu volatil. Menghentikan trading sementara.")
-    );
+    console.log(chalk.red("Pasar terlalu volatil. Menghentikan trading sementara."));
     return true;
   }
+
+  const volumes = candles.map(c => parseFloat(c.volume));
+  const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+  if (parseFloat(candles[candles.length - 1].volume) > avgVolume * 2) {
+    console.log(chalk.red("Volume pasar sangat tinggi, pertimbangkan untuk menghentikan trading sementara."));
+    return true;
+  }
+
   return false;
 }
 
