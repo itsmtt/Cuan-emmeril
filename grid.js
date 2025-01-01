@@ -450,9 +450,7 @@ async function trade() {
     }
 
     if (candles.length < 20) {
-      console.warn(
-        chalk.bgYellow("Data candle tidak mencukupi untuk analisis.")
-      );
+      console.warn(chalk.bgYellow("Data candle tidak mencukupi untuk analisis."));
       return;
     }
 
@@ -463,15 +461,22 @@ async function trade() {
     // Tentukan kondisi pasar
     const marketCondition = await determineMarketCondition(candles);
 
-    // Tempatkan order grid berdasarkan kondisi pasar
+    // Jika ada sinyal order baru, lakukan penutupan open orders dan positions
     if (marketCondition === "LONG" || marketCondition === "SHORT") {
-      await placeGridOrders(currentPrice, atr, marketCondition);
-    } else {
       console.log(
         chalk.blue(
-          "Tidak ada Signal Trading untuk membuat Order."
+          `Sinyal order baru terdeteksi: ${marketCondition}. Menutup semua posisi dan order terbuka.`
         )
       );
+
+      // Tutup semua posisi dan order terbuka
+      await closeOpenPositions();
+      await closeOpenOrders();
+
+      // Tempatkan order grid berdasarkan kondisi pasar
+      await placeGridOrders(currentPrice, atr, marketCondition);
+    } else {
+      console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
 
     // Log total profit dan loss saat ini
