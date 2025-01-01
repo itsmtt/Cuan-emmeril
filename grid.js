@@ -443,6 +443,27 @@ async function placeGridOrders(currentPrice, atr, direction) {
   }
 }
 
+// memantau kondisi Take profit 
+async function monitorOrders() {
+  try {
+    const orders = await client.futuresAllOrders({ symbol: SYMBOL });
+
+    const takeProfitOrder = orders.find(
+      (order) =>
+        order.type === "TAKE_PROFIT_MARKET" && order.status === "FILLED"
+    );
+
+    if (takeProfitOrder) {
+      console.log("Take Profit tercapai. Menutup semua posisi dan order.");
+      await closeOpenPositions(); // Menutup semua posisi terbuka
+      await closeOpenOrders();    // Menutup semua order terbuka
+    } else {
+      console.log("Take Profit belum tercapai. Memeriksa lagi...");
+    }
+  } catch (error) {
+    console.error("Kesalahan saat memantau order:", error.message);
+  }
+}
 
 
 // Fungsi trading utama
