@@ -255,6 +255,8 @@ async function checkExtremeMarketConditions(candles) {
 
   if (atr > 0.05) {
     console.log(chalk.red("Pasar terlalu volatil. Menghentikan trading sementara."));
+    await closeOpenPositions(); // Menutup semua posisi terbuka
+    await closeOpenOrders();
     return true;
   }
 
@@ -262,6 +264,8 @@ async function checkExtremeMarketConditions(candles) {
   const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
   if (parseFloat(candles[candles.length - 1].volume) > avgVolume * 2) {
     console.log(chalk.red("Volume pasar sangat tinggi, pertimbangkan untuk menghentikan trading sementara."));
+    await closeOpenPositions(); // Menutup semua posisi terbuka
+    await closeOpenOrders();
     return true;
   }
 
