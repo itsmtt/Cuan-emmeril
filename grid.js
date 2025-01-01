@@ -433,7 +433,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
       )
     );
   }
-  }
 }
 
 
