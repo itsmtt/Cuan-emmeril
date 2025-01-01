@@ -1,6 +1,6 @@
 {
-  "SYMBOL": "XRPUSDT",
-  "GRID_COUNT": 2,
+  "SYMBOL": "DOGEUSDT",
+  "GRID_COUNT": 5,
   "LEVERAGE": 10,
-  "BASE_USDT": 0.5
+  "BASE_USDT": 0.4
 }
