@@ -63,10 +63,8 @@ async function closeOpenOrders() {
       console.log(chalk.green("Tidak ada order terbuka yang perlu ditutup."));
     }
   } catch (error) {
-    console.error(
-      chalk.bgRed("Kesalahan saat menutup order terbuka:"),
-      error.message || error
-    );
+    console.error(chalk.bgRed("Kesalahan saat menutup order terbuka:"), error);
+    throw error; // Bubble up the error for higher-level handling
   }
 }
 
