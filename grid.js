@@ -446,19 +446,31 @@ async function placeGridOrders(currentPrice, atr, direction) {
 // memantau kondisi Take profit 
 async function monitorOrders() {
   try {
+    // Ambil semua order sebelumnya
     const orders = await client.futuresAllOrders({ symbol: SYMBOL });
 
+    // Periksa apakah ada Take Profit yang telah selesai
     const takeProfitOrder = orders.find(
       (order) =>
         order.type === "TAKE_PROFIT_MARKET" && order.status === "FILLED"
+    );
+
+    // Periksa apakah ada Trailing Stop yang telah selesai
+    const trailingStopOrder = orders.find(
+      (order) =>
+        order.type === "TRAILING_STOP_MARKET" && order.status === "FILLED"
     );
 
     if (takeProfitOrder) {
       console.log("Take Profit tercapai. Menutup semua posisi dan order.");
       await closeOpenPositions(); // Menutup semua posisi terbuka
       await closeOpenOrders();    // Menutup semua order terbuka
+    } else if (trailingStopOrder) {
+      console.log("Trailing Stop tercapai. Menutup semua posisi dan order.");
+      await closeOpenPositions(); // Menutup semua posisi terbuka
+      await closeOpenOrders();    // Menutup semua order terbuka
     } else {
-      console.log("Take Profit belum tercapai. Memeriksa lagi...");
+      console.log("Take Profit atau Trailing Stop belum tercapai. Memeriksa lagi...");
     }
   } catch (error) {
     console.error("Kesalahan saat memantau order:", error.message);
