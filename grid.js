@@ -125,14 +125,7 @@ async function closeOpenPositions() {
 async function waitForOrdersToComplete() {
   try {
       let openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-      if (openOrders.length > 0) {
-        console.log(
-          chalk.yellow(
-            `Masih ada ${openOrders.length} order terbuka, menunggu...`
-          )
-        );
-        
-      } else if (openOrders.length === 0) {
+      if (openOrders.length === 0) {
   console.log(chalk.green("Semua order telah selesai."));
 } else {
   console.log(chalk.yellow(`Masih ada ${openOrders.length} order terbuka.`));
