@@ -309,6 +309,13 @@ async function placeGridOrders(currentPrice, atr, direction) {
         ? currentPrice - atr * i - buffer
         : currentPrice + atr * i + buffer;
 
+      // Validasi apakah harga grid logis
+  const isPriceValid = price > currentPrice * 0.8 && price < currentPrice * 1.2; // Kisaran 20% dari harga sekarang
+  if (!isPriceValid) {
+    console.warn(`Harga grid ${price} tidak logis, melewati iterasi.`);
+    continue;
+  }
+
     if (price <= 0 || price >= currentPrice * 2) {
   console.warn(`Harga grid ${price} tidak valid, melewati iterasi.`);
   continue;
