@@ -18,10 +18,22 @@ const client = Binance({
 });
 
 // Parameter trading untuk grid
-const SYMBOL = "XRPUSDT"; // Symbol yang akan ditradingkan
-const GRID_COUNT = 2; // Jumlah level grid di atas dan di bawah harga pasar saat ini
-const LEVERAGE = 10; // Leverage untuk trading
-const BASE_USDT = 0.5; // Nilai order per grid dalam USDT
+let config;
+try {
+  config = JSON.parse(fs.readFileSync("config.json", "utf8"));
+} catch (error) {
+  console.error(
+    chalk.bgRed(
+      "Gagal memuat file konfigurasi. Pastikan 'config.json' tersedia dan valid."
+    )
+  );
+  process.exit(1);
+}
+
+const SYMBOL = config.SYMBOL; // Symbol yang akan ditradingkan
+const GRID_COUNT = config.GRID_COUNT; // Jumlah level grid
+const LEVERAGE = config.LEVERAGE; // Leverage untuk trading
+const BASE_USDT = config.BASE_USDT; // Nilai order per grid dalam USDT
 
 let totalProfit = 0;
 let totalLoss = 0;
