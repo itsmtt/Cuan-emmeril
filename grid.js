@@ -132,9 +132,12 @@ async function waitForOrdersToComplete() {
           )
         );
         
-      } else { openOrders.length = 0;
-    console.log(chalk.green("Semua order telah selesai."));
-  } 
+      } else if (openOrders.length === 0) {
+  console.log(chalk.green("Semua order telah selesai."));
+} else {
+  console.log(chalk.yellow(`Masih ada ${openOrders.length} order terbuka.`));
+}
+  }
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan saat memeriksa status order:"),
