@@ -137,6 +137,10 @@ async function waitForOrdersToComplete() {
 
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
+  if (!candles.every(c => c.high && c.low && c.close)) {
+    throw new Error("Format candle tidak valid. Pastikan data memiliki high, low, dan close.");
+  }
+
   if (candles.length < period) {
     throw new Error("Jumlah candle tidak mencukupi untuk menghitung ATR.");
   }
