@@ -464,7 +464,7 @@ async function trade() {
     } else {
       console.log(
         chalk.blue(
-          "Kondisi pasar netral, tidak ada order grid yang ditempatkan."
+          "Tidak ada Signal Trading untuk membuat Order."
         )
       );
     }
