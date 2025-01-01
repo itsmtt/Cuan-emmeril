@@ -261,9 +261,10 @@ async function determineMarketCondition(candles) {
   const shortEMA = calculateEMA(closingPrices.slice(-10), 5);
   const longEMA = calculateEMA(closingPrices.slice(-20), 20);
   const rsi = await calculateRSI(candles, 14);
-
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
+
+  const lastPrice = closingPrices[closingPrices.length - 1];
 
   console.log(
     chalk.yellow(
@@ -271,26 +272,32 @@ async function determineMarketCondition(candles) {
         6
       )}, RSI: ${rsi.toFixed(2)}, MACD: ${macdLine.toFixed(
         6
-      )}, Signal: ${signalLine.toFixed(6)}`
+      )}, Signal: ${signalLine.toFixed(6)}, Upper Band: ${upperBand.toFixed(
+        6
+      )}, Lower Band: ${lowerBand.toFixed(6)}, Closing Price: ${lastPrice.toFixed(6)}`
     )
   );
 
-  if (shortEMA > longEMA && macdLine > signalLine && rsi < 70) {
-   console.log(`Posisi sekarang LONG`);   
+  if (
+    shortEMA > longEMA &&
+    macdLine > signalLine &&
+    rsi < 70 &&
+    lastPrice <= lowerBand
+  ) {
+    console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
-  } else if (shortEMA < longEMA && macdLine < signalLine && rsi > 30) {
-    console.log(`Posisi sekarang SHORT`);   
+  } else if (
+    shortEMA < longEMA &&
+    macdLine < signalLine &&
+    rsi > 30 &&
+    lastPrice >= upperBand
+  ) {
+    console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
     return "SHORT";
-  } else if (closingPrices[closingPrices.length - 1] > upperBand) {
-    console.log(`Posisi sekarang OVERBOUGHT`);   
-    return "OVERBOUGHT";
-  } else if (closingPrices[closingPrices.length - 1] < lowerBand) {
-    console.log(`Posisi sekarang OVERSOLD`);   
-    return "OVERSOLD";
   } else {
-  console.log(`Posisi sekarang NEUTRAL`);
-  return "NEUTRAL";
-}
+    console.log(`Posisi sekarang NEUTRAL. Menunggu.`);
+    return "NEUTRAL"; // Tidak ada sinyal yang jelas
+  }
 }
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
