@@ -295,9 +295,6 @@ async function determineMarketCondition(candles) {
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, direction) {
-  await closeOpenPositions();
-  await closeOpenOrders();
-
   const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
     SYMBOL
   );
