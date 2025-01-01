@@ -281,14 +281,19 @@ async function determineMarketCondition(candles) {
   );
 
   if (shortEMA > longEMA && macdLine > signalLine && rsi < 70) {
+   console.log(`Posisi sekarang LONG`);   
     return "LONG";
   } else if (shortEMA < longEMA && macdLine < signalLine && rsi > 30) {
+    console.log(`Posisi sekarang SHORT`);   
     return "SHORT";
   } else if (closingPrices[closingPrices.length - 1] > upperBand) {
+    console.log(`Posisi sekarang OVERBOUGHT`);   
     return "OVERBOUGHT";
   } else if (closingPrices[closingPrices.length - 1] < lowerBand) {
+    console.log(`Posisi sekarang OVERSOLD`);   
     return "OVERSOLD";
   } else {
+    console.log(`Posisi sekarang NEUTRAL`);   
     return "NEUTRAL";
   }
 }
