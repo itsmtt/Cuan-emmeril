@@ -88,6 +88,9 @@ async function closeOpenPositions() {
             `Posisi pada ${position.symbol} berhasil ditutup dengan kuantitas ${quantity}.`
           )
         );
+
+        const currentPrice = parseFloat(position.markPrice || position.entryPrice); // Gunakan markPrice jika ada
+        const entryPrice = parseFloat(position.entryPrice);
         // Hitung profit atau loss
         const pnl =
           side === "SELL"
