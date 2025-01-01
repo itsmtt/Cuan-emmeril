@@ -306,40 +306,59 @@ async function determineMarketCondition(candles) {
   const rsi = await calculateRSI(candles, 14);
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
+  const vwap = calculateVWAP(candles);
 
   const lastPrice = closingPrices[closingPrices.length - 1];
 
+  // Log indikator
   console.log(
     chalk.yellow(
       `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
         6
       )}, RSI: ${rsi.toFixed(2)}, MACD: ${macdLine.toFixed(
         6
-      )}, Signal: ${signalLine.toFixed(6)}, Upper Band: ${upperBand.toFixed(
+      )}, Signal: ${signalLine.toFixed(6)}, VWAP: ${vwap.toFixed(
         6
-      )}, Lower Band: ${lowerBand.toFixed(6)}, Closing Price: ${lastPrice.toFixed(6)}`
+      )}, Upper Band: ${upperBand.toFixed(6)}, Lower Band: ${lowerBand.toFixed(
+        6
+      )}, Closing Price: ${lastPrice.toFixed(6)}`
     )
   );
 
-  if (
-    shortEMA > longEMA &&
-    macdLine > signalLine &&
-    rsi < 70 &&
-    lastPrice <= lowerBand
-  ) {
+  // Keanggotaan fuzzy untuk kondisi pasar
+  const rsiBuy = fuzzyMembership(rsi, 30, 50); // RSI rendah (oversold)
+  const rsiSell = fuzzyMembership(rsi, 50, 70); // RSI tinggi (overbought)
+  const macdBuy = macdLine > signalLine ? 1 : 0; // MACD positif
+  const macdSell = macdLine < signalLine ? 1 : 0; // MACD negatif
+  const priceNearLowerBand = fuzzyMembership(lastPrice, lowerBand, lowerBand * 1.02); // Dekat lower band
+  const priceNearUpperBand = fuzzyMembership(lastPrice, upperBand * 0.98, upperBand); // Dekat upper band
+
+  // Logika berbasis VWAP
+  const priceBelowVWAP = lastPrice < vwap ? 1 : 0; // Harga di bawah VWAP
+  const priceAboveVWAP = lastPrice > vwap ? 1 : 0; // Harga di atas VWAP
+
+  // Gabungkan aturan fuzzy
+  const buySignal = Math.min(rsiBuy, macdBuy, priceNearLowerBand, priceBelowVWAP); // Logika AND untuk BUY
+  const sellSignal = Math.min(rsiSell, macdSell, priceNearUpperBand, priceAboveVWAP); // Logika AND untuk SELL
+
+  console.log(
+    chalk.yellow(
+      `Fuzzy Signals: BUY = ${buySignal.toFixed(
+        2
+      )}, SELL = ${sellSignal.toFixed(2)}`
+    )
+  );
+
+  // Tentukan sinyal berdasarkan nilai keanggotaan tertinggi
+  if (buySignal > sellSignal && buySignal > 0.5) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
-  } else if (
-    shortEMA < longEMA &&
-    macdLine < signalLine &&
-    rsi > 30 &&
-    lastPrice >= upperBand
-  ) {
+  } else if (sellSignal > buySignal && sellSignal > 0.5) {
     console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
     return "SHORT";
   } else {
     console.log(`Posisi sekarang NEUTRAL. Menunggu.`);
-    return "NEUTRAL"; // Tidak ada sinyal yang jelas
+    return "NEUTRAL";
   }
 }
 
