@@ -479,6 +479,8 @@ async function trade() {
       )
     );
 
+    await monitorOrders(); // Memantau status take profit
+
     // Periksa apakah masih ada order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
     if (openOrders.length > 0) {
