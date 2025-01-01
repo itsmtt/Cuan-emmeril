@@ -379,45 +379,60 @@ async function placeGridOrders(currentPrice, atr, direction) {
       }
 
       // Hitung Harga Trailing Stop
-      const activationPrice =
-        direction === "LONG"
-          ? roundedPrice + atr * 0.5
-          : roundedPrice - atr * 0.5;
+    // Hitung harga trailing stop
+  const activationPrice =
+    direction === "LONG"
+      ? roundedPrice + atr * 0.5
+      : roundedPrice - atr * 0.5;
 
-      const callbackRate = Math.min(
-        Math.max((atr / currentPrice) * 100, 1.0),
-        5.0
-      );
+  const callbackRate = Math.min(
+    Math.max((atr / currentPrice) * 100, 1.0),
+    5.0
+  );
 
-      // Cegah Duplicate Trailing Stop
-      const duplicateTS = existingOrders.some(
-        (order) =>
-          order.type === "TRAILING_STOP_MARKET" &&
-          parseFloat(order.stopPrice).toFixed(pricePrecision) === activationPrice.toFixed(pricePrecision)
-      );
-      if (!duplicateTS) {
-        // Buat Order Trailing Stop
-        await client.futuresOrder({
-          symbol: SYMBOL,
-          side: direction === "LONG" ? "SELL" : "BUY",
-          type: "TRAILING_STOP_MARKET",
-          callbackRate,
-          quantity: roundedQuantity,
-          reduceOnly: true,
-        });
-        console.log(
+  // Cek duplikasi trailing stop
+  const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+  const duplicateTS = existingOrders.some((order) => {
+    return (
+      order.type === "TRAILING_STOP_MARKET" &&
+      parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+        activationPrice.toFixed(pricePrecision) &&
+      parseFloat(order.callbackRate) === callbackRate
+    );
+  });
+
+  if (!duplicateTS) {
+    try {
+      // Buat Order Trailing Stop
+      await client.futuresOrder({
+        symbol: SYMBOL,
+        side: direction === "LONG" ? "SELL" : "BUY",
+        type: "TRAILING_STOP_MARKET",
+        callbackRate,
+        quantity: roundedQuantity,
+        reduceOnly: true,
+      });
+      console.log(
+        chalk.green(
           `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
             pricePrecision
           )} dengan callback rate ${callbackRate}%`
-        );
-      } else {
-        console.log(`Trailing Stop di harga ${activationPrice} sudah ada.`);
-      }
+        )
+      );
     } catch (error) {
       console.error(
-        `Kesalahan saat menempatkan order grid atau Take Profit: ${error.message}`
+        `Kesalahan saat menempatkan trailing stop: ${error.message}`
       );
     }
+  } else {
+    console.log(
+      chalk.yellow(
+        `Trailing Stop dengan harga ${activationPrice.toFixed(
+          pricePrecision
+        )} dan callback rate ${callbackRate}% sudah ada.`
+      )
+    );
+  }
   }
 }
 
