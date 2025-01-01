@@ -512,9 +512,6 @@ async function trade() {
     // Periksa apakah masih ada order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
     if (openOrders.length > 0) {
-      if (await checkExtremeMarketConditions(candles)) {
-      return; // Berhenti jika pasar terlalu ekstrem
-      }
       await monitorOrders(); // Memantau status take profit
       console.log(
         chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
@@ -528,9 +525,6 @@ async function trade() {
       (position) => parseFloat(position.positionAmt) !== 0
     );
     if (openPosition) {
-      if (await checkExtremeMarketConditions(candles)) {
-      return; // Berhenti jika pasar terlalu ekstrem
-    }
       await monitorOrders(); // Memantau status take profit
       console.log(
         chalk.blue(
