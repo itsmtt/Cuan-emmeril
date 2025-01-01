@@ -315,8 +315,10 @@ async function placeGridOrders(currentPrice, atr, direction) {
         ? currentPrice - atr * i - buffer
         : currentPrice + atr * i + buffer;
 
-    if (price <= 0 || price >= currentPrice * 2) continue;
-
+    if (price <= 0 || price >= currentPrice * 2) {
+  console.warn(`Harga grid ${price} tidak valid, melewati iterasi.`);
+  continue;
+    }
     const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
     const roundedPrice = parseFloat(price.toFixed(pricePrecision));
     const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
