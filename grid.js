@@ -442,7 +442,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
   );
 
   const buffer = currentPrice * 0.005; // Buffer sebesar 0.5%
-  const additionalBuffer = currentPrice * 0.01; // Buffer tambahan untuk validasi
+  const additionalBuffer = currentPrice * 0.02; // Buffer tambahan untuk validasi
 
   // Hitung VWAP dari data candle
   const candles = await client.futuresCandles({
