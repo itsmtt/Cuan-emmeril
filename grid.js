@@ -517,43 +517,42 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
       const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
       const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1; // Tambahkan bobot jika harga di bawah VWAP
-      const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-
 
       const takeProfitPrice =
         direction === "LONG"
           ? roundedPrice + fuzzyMultiplier * atr + buffer
           : roundedPrice - fuzzyMultiplier * atr - buffer;
-
-      // Validasi takeProfitPrice
       const roundedTakeProfitPrice = parseFloat(
         (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
           pricePrecision
         )
       );
 
-      if (
-        (direction === "LONG" && roundedTakeProfitPrice <= currentPrice) ||
-        (direction === "SHORT" && roundedTakeProfitPrice >= currentPrice)
-      ) {
-        console.error(
-          `Harga Take Profit tidak valid untuk ${direction}: ${roundedTakeProfitPrice.toFixed(
-            pricePrecision
-          )}`
-        );
-        continue;
-      }
+      const stopLossPrice =
+        direction === "LONG"
+          ? roundedPrice - fuzzyMultiplier * atr - buffer
+          : roundedPrice + fuzzyMultiplier * atr + buffer;
+      const roundedStopLossPrice = parseFloat(
+        (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
+          pricePrecision
+        )
+      );
 
-      // Validasi dan cegah duplikasi Take Profit
+      const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
       const duplicateTP = existingOrders.some(
         (order) =>
           order.type === "TAKE_PROFIT_MARKET" &&
           parseFloat(order.stopPrice).toFixed(pricePrecision) ===
             roundedTakeProfitPrice.toFixed(pricePrecision)
       );
+      const duplicateSL = existingOrders.some(
+        (order) =>
+          order.type === "STOP_MARKET" &&
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            roundedStopLossPrice.toFixed(pricePrecision)
+      );
 
       if (!duplicateTP) {
-        // Buat Order Take Profit
         await client.futuresOrder({
           symbol: SYMBOL,
           side: direction === "LONG" ? "SELL" : "BUY",
@@ -575,39 +574,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
           )
         );
       }
-
-      const stopLossPrice =
-        direction === "LONG"
-          ? roundedPrice - fuzzyMultiplier * atr - buffer
-          : roundedPrice + fuzzyMultiplier * atr + buffer;
-
-      // Validasi stopLossPrice
-      const roundedStopLossPrice = parseFloat(
-        (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
-          pricePrecision
-        )
-      );
-
-      if (
-        (direction === "LONG" && roundedStopLossPrice <= currentPrice) ||
-        (direction === "SHORT" && roundedStopLossPrice >= currentPrice)
-      ) {
-        console.error(
-          `Harga Stop Loss tidak valid untuk ${direction}: ${roundedStopLossPrice.toFixed(
-            pricePrecision
-          )}`
-        );
-        continue;
-      }
-
-
-      // Validasi dan cegah duplikasi Stop Loss
-      const duplicateSL = existingOrders.some(
-        (order) =>
-          order.type === "STOP_MARKET" &&
-          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
-            roundedStopLossPrice.toFixed(pricePrecision)
-      );
 
       if (!duplicateSL) {
         await client.futuresOrder({
@@ -651,8 +617,7 @@ async function monitorOrders() {
 
     // Periksa apakah ada Trailing Stop yang telah selesai
     const StopLossOrder = orders.find(
-      (order) =>
-        order.type === "STOP_MARKET" && order.status === "FILLED"
+      (order) => order.type === "STOP_MARKET" && order.status === "FILLED"
     );
 
     if (takeProfitOrder) {
