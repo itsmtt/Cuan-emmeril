@@ -614,37 +614,53 @@ async function placeGridOrders(currentPrice, atr, direction) {
 }
 
 // memantau kondisi Take profit
+// Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
   try {
-    // Ambil semua order sebelumnya
-    const orders = await client.futuresAllOrders({ symbol: SYMBOL });
+    console.log(chalk.blue("Memeriksa status order terbuka..."));
 
-    // Periksa apakah ada Take Profit yang telah selesai
-    const takeProfitOrder = orders.find(
+    // Ambil semua order terbuka
+    const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+
+    // Periksa apakah ada order dengan status FILLED
+    const allOrders = await client.futuresAllOrders({ symbol: SYMBOL });
+
+    const takeProfitOrder = allOrders.find(
       (order) =>
         order.type === "TAKE_PROFIT_MARKET" && order.status === "FILLED"
     );
 
-    // Periksa apakah ada Trailing Stop yang telah selesai
-    const StopLossOrder = orders.find(
+    const stopLossOrder = allOrders.find(
       (order) => order.type === "STOP_MARKET" && order.status === "FILLED"
     );
 
-    if (takeProfitOrder) {
-      console.log("Take Profit tercapai. Menutup semua posisi dan order.");
-      await closeOpenPositions(); // Menutup semua posisi terbuka
-      await closeOpenOrders(); // Menutup semua order terbuka
-    } else if (StopLossOrder) {
-      console.log("Stop Loss tercapai. Menutup semua posisi dan order.");
-      await closeOpenPositions(); // Menutup semua posisi terbuka
-      await closeOpenOrders(); // Menutup semua order terbuka
+    if (takeProfitOrder || stopLossOrder) {
+      console.log(
+        chalk.green(
+          `Order ${takeProfitOrder ? "Take Profit" : "Stop Loss"} tercapai.`
+        )
+      );
+      console.log(chalk.blue("Menutup semua posisi dan order..."));
+      await closeOpenPositions();
+      await closeOpenOrders();
+    } else if (openOrders.length > 0) {
+      console.log(
+        chalk.blue(
+          `Masih ada ${openOrders.length} order terbuka. Memantau kembali...`
+        )
+      );
     } else {
       console.log(
-        "Take Profit atau Stop Loss belum tercapai. Memeriksa lagi..."
+        chalk.blue(
+          "Tidak ada order terbuka yang membutuhkan tindakan saat ini."
+        )
       );
     }
   } catch (error) {
-    console.error("Kesalahan saat memantau order:", error.message);
+    console.error(
+      chalk.bgRed("Kesalahan saat memantau order terbuka:"),
+      error.message || error
+    );
   }
 }
 
