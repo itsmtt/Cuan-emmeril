@@ -321,11 +321,7 @@ async function checkExtremeMarketConditions(candles) {
     valuesisExtreme.reduce((sum, value) => sum + value, 0) /
     valuesisExtreme.length;
 
-  console.log(
-    chalk.yellow(
-      `isExtreme: ${isExtreme}`
-    )
-  );
+  console.log(chalk.yellow(`isExtreme: ${isExtreme}`));
 
   if (isExtreme >= 0.9) {
     // Threshold 0.9 untuk kondisi ekstrem
@@ -430,7 +426,9 @@ async function placeGridOrders(currentPrice, atr, direction) {
   await closeOpenPositions();
   await closeOpenOrders();
 
-  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(SYMBOL);
+  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
+    SYMBOL
+  );
 
   // Ambil tickSize dari Binance API
   const exchangeInfo = await client.futuresExchangeInfo();
@@ -439,7 +437,9 @@ async function placeGridOrders(currentPrice, atr, direction) {
     console.error(`Symbol ${SYMBOL} tidak ditemukan di Binance.`);
     return;
   }
-  const tickSize = parseFloat(symbolInfo.filters.find((f) => f.tickSize).tickSize);
+  const tickSize = parseFloat(
+    symbolInfo.filters.find((f) => f.tickSize).tickSize
+  );
 
   const buffer = currentPrice * 0.005; // Buffer sebesar 0.5%
 
@@ -481,14 +481,18 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
     // Hitung kuantitas dan pembulatan harga/kuantitas
     const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
-    const roundedPrice = parseFloat((Math.round(price / tickSize) * tickSize).toFixed(pricePrecision));
+    const roundedPrice = parseFloat(
+      (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
+    );
     const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
     // Validasi notional value
     const notional = roundedPrice * roundedQuantity;
     if (notional < 5) {
       console.error(
-        `Notional value terlalu kecil: ${notional.toFixed(2)} (minimal 5). Melewati order.`
+        `Notional value terlalu kecil: ${notional.toFixed(
+          2
+        )} (minimal 5). Melewati order.`
       );
       continue;
     }
@@ -513,6 +517,12 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
       const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
       const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1; // Tambahkan bobot jika harga di bawah VWAP
+      const trailingDistance = fuzzyMultiplier * atr;
+      const roundedTrailingDistance = parseFloat(
+        (Math.round(trailingDistance / tickSize) * tickSize).toFixed(
+          pricePrecision
+        )
+      );
 
       const takeProfitPrice =
         direction === "LONG"
@@ -521,7 +531,9 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       // Validasi takeProfitPrice
       const roundedTakeProfitPrice = parseFloat(
-        (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(pricePrecision)
+        (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
+          pricePrecision
+        )
       );
 
       if (
@@ -563,7 +575,45 @@ async function placeGridOrders(currentPrice, atr, direction) {
         );
       } else {
         console.log(
-          chalk.yellow(`Take Profit di harga ${roundedTakeProfitPrice} sudah ada.`)
+          chalk.yellow(
+            `Take Profit di harga ${roundedTakeProfitPrice} sudah ada.`
+          )
+        );
+      }
+
+      // Cegah duplikasi Trailing Stop
+      const existingTs = await client.futuresOpenOrders({ symbol: SYMBOL });
+      const duplicateTrailingStop = existingTs.some(
+        (order) =>
+          order.type === "TRAILING_STOP_MARKET" &&
+          parseFloat(order.callbackRate).toFixed(pricePrecision) ===
+            roundedTrailingDistance.toFixed(pricePrecision)
+      );
+
+      if (!duplicateTrailingStop) {
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TRAILING_STOP_MARKET",
+          activationPrice: (direction === "LONG"
+            ? roundedPrice + buffer
+            : roundedPrice - buffer
+          ).toFixed(pricePrecision),
+          callbackRate: roundedTrailingDistance,
+          quantity: roundedQuantity,
+          reduceOnly: true,
+        });
+
+        console.log(
+          chalk.green(
+            `Trailing Stop dengan jarak ${roundedTrailingDistance} berhasil dibuat.`
+          )
+        );
+      } else {
+        console.log(
+          chalk.yellow(
+            `Trailing Stop dengan jarak ${roundedTrailingDistance} sudah ada, melewati pembuatan.`
+          )
         );
       }
     } catch (error) {
@@ -573,8 +623,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
     }
   }
 }
-
-
 
 // memantau kondisi Take profit
 async function monitorOrders() {
