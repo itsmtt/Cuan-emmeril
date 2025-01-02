@@ -517,14 +517,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
       const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
       const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1; // Tambahkan bobot jika harga di bawah VWAP
-      const trailingDistance = fuzzyMultiplier * atr;
-      const activationPrice =
-        direction === "LONG" ? roundedPrice + buffer : roundedPrice - buffer;
-      const roundedTrailingDistance = parseFloat(
-        (Math.round(trailingDistance / tickSize) * tickSize).toFixed(
-          pricePrecision
-        )
-      );
+      const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+
 
       const takeProfitPrice =
         direction === "LONG"
@@ -551,7 +545,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
       }
 
       // Validasi dan cegah duplikasi Take Profit
-      const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
       const duplicateTP = existingOrders.some(
         (order) =>
           order.type === "TAKE_PROFIT_MARKET" &&
@@ -583,36 +576,57 @@ async function placeGridOrders(currentPrice, atr, direction) {
         );
       }
 
-      // Cegah duplikasi Trailing Stop
-      const existingTs = await client.futuresOpenOrders({ symbol: SYMBOL });
-      const duplicateTrailingStop = existingTs.some(
-        (order) =>
-          order.type === "TRAILING_STOP_MARKET" &&
-          parseFloat(order.callbackRate).toFixed(pricePrecision) ===
-            roundedTrailingDistance.toFixed(pricePrecision)
+      const stopLossPrice =
+        direction === "LONG"
+          ? roundedPrice - fuzzyMultiplier * atr - buffer
+          : roundedPrice + fuzzyMultiplier * atr + buffer;
+
+      // Validasi stopLossPrice
+      const roundedStopLossPrice = parseFloat(
+        (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
+          pricePrecision
+        )
       );
 
-      if (!duplicateTrailingStop) {
+      if (
+        (direction === "LONG" && roundedStopLossPrice <= currentPrice) ||
+        (direction === "SHORT" && roundedStopLossPrice >= currentPrice)
+      ) {
+        console.error(
+          `Harga Stop Loss tidak valid untuk ${direction}: ${roundedStopLossPrice.toFixed(
+            pricePrecision
+          )}`
+        );
+        continue;
+      }
+
+
+      // Validasi dan cegah duplikasi Stop Loss
+      const duplicateSL = existingOrders.some(
+        (order) =>
+          order.type === "STOP_MARKET" &&
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            roundedStopLossPrice.toFixed(pricePrecision)
+      );
+
+      if (!duplicateSL) {
         await client.futuresOrder({
           symbol: SYMBOL,
           side: direction === "LONG" ? "SELL" : "BUY",
-          type: "TRAILING_STOP_MARKET",
-          activationPrice: parseFloat(
-            (Math.round(activationPrice / tickSize) * tickSize).toFixed(
-              pricePrecision
-            )
-          ),
-          callbackRate: roundedTrailingDistance,
+          type: "STOP_MARKET",
+          stopPrice: roundedStopLossPrice,
           quantity: roundedQuantity,
+          timeInForce: "GTC",
           reduceOnly: true,
         });
-
         console.log(
-          `Trailing Stop dibuat: Jarak ${roundedTrailingDistance}, Aktivasi ${activationPrice}`
+          chalk.green(
+            `Stop Loss di harga ${roundedStopLossPrice} berhasil dibuat.`
+          )
         );
       } else {
         console.log(
-          `Trailing Stop dengan jarak ${roundedTrailingDistance} sudah ada.`
+          chalk.yellow(`Stop Loss di harga ${roundedStopLossPrice} sudah ada.`)
         );
       }
     } catch (error) {
@@ -636,22 +650,22 @@ async function monitorOrders() {
     );
 
     // Periksa apakah ada Trailing Stop yang telah selesai
-    const trailingStopOrder = orders.find(
+    const StopLossOrder = orders.find(
       (order) =>
-        order.type === "TRAILING_STOP_MARKET" && order.status === "FILLED"
+        order.type === "STOP_MARKET" && order.status === "FILLED"
     );
 
     if (takeProfitOrder) {
       console.log("Take Profit tercapai. Menutup semua posisi dan order.");
       await closeOpenPositions(); // Menutup semua posisi terbuka
       await closeOpenOrders(); // Menutup semua order terbuka
-    } else if (trailingStopOrder) {
-      console.log("Trailing Stop tercapai. Menutup semua posisi dan order.");
+    } else if (StopLossOrder) {
+      console.log("Stop Loss tercapai. Menutup semua posisi dan order.");
       await closeOpenPositions(); // Menutup semua posisi terbuka
       await closeOpenOrders(); // Menutup semua order terbuka
     } else {
       console.log(
-        "Take Profit atau Trailing Stop belum tercapai. Memeriksa lagi..."
+        "Take Profit atau Stop Loss belum tercapai. Memeriksa lagi..."
       );
     }
   } catch (error) {
