@@ -477,15 +477,15 @@ async function placeGridOrders(currentPrice, atr, direction) {
     const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
     // Validasi notional value
-    const notional = roundedPrice * roundedQuantity;
-    if (notional < 5) {
-      console.error(
-        `Notional value terlalu kecil: ${notional.toFixed(
-          2
-        )} (minimal 5). Melewati order.`
-      );
-      continue;
-    }
+    // const notional = roundedPrice * roundedQuantity;
+    // if (notional < 5) {
+    //   console.error(
+    //     `Notional value terlalu kecil: ${notional.toFixed(
+    //       2
+    //     )} (minimal 5). Melewati order.`
+    //   );
+    //   continue;
+    // }
 
     try {
       // Tempatkan Order Grid
