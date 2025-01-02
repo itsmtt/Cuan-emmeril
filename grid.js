@@ -289,23 +289,42 @@ function calculateVWAP(candles) {
 // Fungsi untuk memeriksa kondisi pasar ekstrem
 async function checkExtremeMarketConditions(candles) {
   const atr = await calculateATR(candles, 14);
+  const lastPrice = parseFloat(candles[candles.length - 1].close);
+  const vwap = calculateVWAP(candles);
 
-  if (atr > 0.05) {
-    console.log(
-      chalk.red("Pasar terlalu volatil. Menghentikan trading sementara.")
-    );
-    await closeOpenPositions(); // Menutup semua posisi terbuka
-    await closeOpenOrders();
-    return true;
-  }
+  // Keanggotaan fuzzy untuk ATR
+  const highVolatility = fuzzyMembership(atr, 0.05, 0.1); // ATR > 5% dianggap volatil
+  const extremeVolatility = fuzzyMembership(atr, 0.1, 0.2); // ATR > 10% dianggap sangat volatil
 
+  // Keanggotaan fuzzy untuk volume ekstrem
   const volumes = candles.map((c) => parseFloat(c.volume));
   const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
-  if (parseFloat(candles[candles.length - 1].volume) > avgVolume * 2) {
+  const volumeMembership = fuzzyMembership(
+    volumes[volumes.length - 1],
+    avgVolume * 1.5,
+    avgVolume * 3
+  );
+
+  // Keanggotaan fuzzy untuk harga jauh dari VWAP
+  const priceFarBelowVWAP = fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9);
+  const priceFarAboveVWAP = fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2);
+
+  // Gabungkan aturan fuzzy
+  const valuesisExtreme = [
+    highVolatility,
+    extremeVolatility,
+    volumeMembership,
+    priceFarBelowVWAP,
+    priceFarAboveVWAP,
+  ]; // Array nilai
+  const isExtreme =
+    valuesisExtreme.reduce((sum, value) => sum + value, 0) /
+    valuesisExtreme.length;
+
+  if (isExtreme > 0.7) {
+    // Threshold 0.7 untuk kondisi ekstrem
     console.log(
-      chalk.red(
-        "Volume pasar sangat tinggi, pertimbangkan untuk menghentikan trading sementara."
-      )
+      chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.")
     );
     await closeOpenPositions(); // Menutup semua posisi terbuka
     await closeOpenOrders();
@@ -362,13 +381,18 @@ async function determineMarketCondition(candles) {
   const priceBelowVWAP = lastPrice < vwap ? 1 : 0; // Harga di bawah VWAP
   const priceAboveVWAP = lastPrice > vwap ? 1 : 0; // Harga di atas VWAP
 
- // Logika untuk BUY
+  // Logika untuk BUY
   const valuesBuySignal = [rsiBuy, macdBuy, priceNearLowerBand, priceBelowVWAP]; // Array nilai
   const buySignal =
     valuesBuySignal.reduce((sum, value) => sum + value, 0) /
     valuesBuySignal.length;
- // Logika untuk SELL
-  const valuesSellSignal = [rsiSell, macdSell, priceNearUpperBand, priceAboveVWAP]; // Array nilai
+  // Logika untuk SELL
+  const valuesSellSignal = [
+    rsiSell,
+    macdSell,
+    priceNearUpperBand,
+    priceAboveVWAP,
+  ]; // Array nilai
   const sellSignal =
     valuesSellSignal.reduce((sum, value) => sum + value, 0) /
     valuesSellSignal.length;
