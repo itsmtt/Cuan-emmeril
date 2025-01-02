@@ -441,9 +441,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const buffer = currentPrice * 0.005; // Buffer sebesar 0.5%
-  const additionalBuffer = currentPrice * 0.02; // Buffer tambahan untuk validasi
-
+  const buffer = currentPrice * 0.015; // Buffer sebesar 1.5%
+ 
   // Hitung VWAP dari data candle
   const candles = await client.futuresCandles({
     symbol: SYMBOL,
@@ -521,8 +520,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       const takeProfitPrice =
         direction === "LONG"
-          ? roundedPrice + fuzzyMultiplier * atr + buffer + additionalBuffer
-          : roundedPrice - fuzzyMultiplier * atr - buffer - additionalBuffer;
+          ? roundedPrice + fuzzyMultiplier * atr + buffer
+          : roundedPrice - fuzzyMultiplier * atr - buffer;
       const roundedTakeProfitPrice = parseFloat(
         (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
           pricePrecision
@@ -531,8 +530,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       const stopLossPrice =
         direction === "LONG"
-          ? roundedPrice - fuzzyMultiplier * atr - buffer - additionalBuffer
-          : roundedPrice + fuzzyMultiplier * atr + buffer + additionalBuffer;
+          ? roundedPrice - fuzzyMultiplier * atr - buffer
+          : roundedPrice + fuzzyMultiplier * atr + buffer;
       const roundedStopLossPrice = parseFloat(
         (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
           pricePrecision
