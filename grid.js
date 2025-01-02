@@ -372,6 +372,12 @@ async function determineMarketCondition(candles) {
 
   console.log(
     chalk.yellow(
+      `Fuzzy Logika: BUY = ${buySignal}, SELL = ${sellSignal}`
+    )
+  );
+
+  console.log(
+    chalk.yellow(
       `Fuzzy Signals: BUY = ${buySignal.toFixed(
         2
       )}, SELL = ${sellSignal.toFixed(2)}`
