@@ -294,9 +294,10 @@ async function checkExtremeMarketConditions(candles) {
   const priceFarBelowVWAP = fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9);
   const priceFarAboveVWAP = fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2);
 
-  // Gabungkan aturan fuzzy
-  const isExtreme = Math.max(highVolatility, extremeVolatility, volumeMembership);
-
+    // Gabungkan aturan fuzzy
+  const isExtreme = Math.max(highVolatility, extremeVolatility, volumeMembership, priceFarBelowVWAP, priceFarAboveVWAP);
+  
+console.log('data: ${isExtreme}');
   if (isExtreme > 0.7) { // Threshold 0.7 untuk kondisi ekstrem
     console.log(chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara."));
     await closeOpenPositions(); // Menutup semua posisi terbuka
