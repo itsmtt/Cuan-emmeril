@@ -320,7 +320,7 @@ async function checkExtremeMarketConditions(candles) {
 
   console.log(
     chalk.yellow(
-      `Short EMA: ${isExtreme}`
+      `isExtreme: ${isExtreme}`
     )
   );
  
