@@ -432,7 +432,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
   );
 
   const buffer = currentPrice * 0.005; // Buffer sebesar 0.5%
- 
+
   // Hitung VWAP dari data candle
   const candles = await client.futuresCandles({
     symbol: SYMBOL,
@@ -453,6 +453,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
       )}, Grid Count: ${gridCount}, Grid Spacing: ${gridSpacing.toFixed(6)}`
     )
   );
+
+  const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
   for (let i = 1; i <= gridCount; i++) {
     // Hitung harga grid
@@ -483,6 +485,21 @@ async function placeGridOrders(currentPrice, atr, direction) {
         `Notional value terlalu kecil: ${notional.toFixed(
           2
         )} (minimal 5). Melewati order.`
+      );
+      continue;
+    }
+
+    const duplicateOrder = existingOrders.some(
+      (order) =>
+        parseFloat(order.price).toFixed(pricePrecision) ===
+        roundedPrice.toFixed(pricePrecision)
+    );
+
+    if (duplicateOrder) {
+      console.log(
+        chalk.yellow(
+          `Order di harga ${roundedPrice} sudah ada. Melewati iterasi.`
+        )
       );
       continue;
     }
