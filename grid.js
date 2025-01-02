@@ -412,10 +412,10 @@ async function determineMarketCondition(candles) {
   );
 
   // Tentukan sinyal berdasarkan nilai keanggotaan tertinggi
-  if (buySignal > sellSignal && buySignal > 0.5) {
+  if (buySignal > sellSignal && buySignal >= 0.5) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
-  } else if (sellSignal > buySignal && sellSignal > 0.5) {
+  } else if (sellSignal > buySignal && sellSignal >= 0.5) {
     console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
     return "SHORT";
   } else {
