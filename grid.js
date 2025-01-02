@@ -291,16 +291,22 @@ async function checkExtremeMarketConditions(candles) {
   const atr = await calculateATR(candles, 14);
 
   if (atr > 0.05) {
-    console.log(chalk.red("Pasar terlalu volatil. Menghentikan trading sementara."));
+    console.log(
+      chalk.red("Pasar terlalu volatil. Menghentikan trading sementara.")
+    );
     await closeOpenPositions(); // Menutup semua posisi terbuka
     await closeOpenOrders();
     return true;
   }
 
-  const volumes = candles.map(c => parseFloat(c.volume));
+  const volumes = candles.map((c) => parseFloat(c.volume));
   const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
   if (parseFloat(candles[candles.length - 1].volume) > avgVolume * 2) {
-    console.log(chalk.red("Volume pasar sangat tinggi, pertimbangkan untuk menghentikan trading sementara."));
+    console.log(
+      chalk.red(
+        "Volume pasar sangat tinggi, pertimbangkan untuk menghentikan trading sementara."
+      )
+    );
     await closeOpenPositions(); // Menutup semua posisi terbuka
     await closeOpenOrders();
     return true;
@@ -357,23 +363,29 @@ async function determineMarketCondition(candles) {
   const priceAboveVWAP = lastPrice > vwap ? 1 : 0; // Harga di atas VWAP
 
   // Gabungkan aturan fuzzy
-  const buySignal = Math.min(
-    rsiBuy,
-    macdBuy,
-    priceNearLowerBand,
-    priceBelowVWAP
-  ); // Logika AND untuk BUY
-  const sellSignal = Math.min(
-    rsiSell,
-    macdSell,
-    priceNearUpperBand,
-    priceAboveVWAP
-  ); // Logika AND untuk SELL
+  const valuesBuySignal = [rsiBuy, macdBuy, priceNearLowerBand, priceBelowVWAP]; // Array nilai
+  const buySignal =
+    valuesBuySignal.reduce((sum, value) => sum + value, 0) /
+    valuesBuySignal.length;
+  const valuesSellSignal = [rsiSell, macdSell, priceNearUpperBand, priceAboveVWAP]; // Array nilai
+  const sellSignal =
+    valuesSellSignal.reduce((sum, value) => sum + value, 0) /
+    valuesSellSignal.length;
+  // const buySignal = Math.min(
+  //   rsiBuy,
+  //   macdBuy,
+  //   priceNearLowerBand,
+  //   priceBelowVWAP
+  // ); // Logika AND untuk BUY
+  // const sellSignal = Math.min(
+  //   rsiSell,
+  //   macdSell,
+  //   priceNearUpperBand,
+  //   priceAboveVWAP
+  // ); // Logika AND untuk SELL
 
   console.log(
-    chalk.yellow(
-      `Fuzzy Logika: BUY = ${buySignal}, SELL = ${sellSignal}`
-    )
+    chalk.yellow(`Fuzzy Logika: BUY = ${buySignal}, SELL = ${sellSignal}`)
   );
 
   console.log(
