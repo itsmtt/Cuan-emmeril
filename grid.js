@@ -362,31 +362,16 @@ async function determineMarketCondition(candles) {
   const priceBelowVWAP = lastPrice < vwap ? 1 : 0; // Harga di bawah VWAP
   const priceAboveVWAP = lastPrice > vwap ? 1 : 0; // Harga di atas VWAP
 
-  // Gabungkan aturan fuzzy
+ // Logika untuk BUY
   const valuesBuySignal = [rsiBuy, macdBuy, priceNearLowerBand, priceBelowVWAP]; // Array nilai
   const buySignal =
     valuesBuySignal.reduce((sum, value) => sum + value, 0) /
     valuesBuySignal.length;
+ // Logika untuk SELL
   const valuesSellSignal = [rsiSell, macdSell, priceNearUpperBand, priceAboveVWAP]; // Array nilai
   const sellSignal =
     valuesSellSignal.reduce((sum, value) => sum + value, 0) /
     valuesSellSignal.length;
-  // const buySignal = Math.min(
-  //   rsiBuy,
-  //   macdBuy,
-  //   priceNearLowerBand,
-  //   priceBelowVWAP
-  // ); // Logika AND untuk BUY
-  // const sellSignal = Math.min(
-  //   rsiSell,
-  //   macdSell,
-  //   priceNearUpperBand,
-  //   priceAboveVWAP
-  // ); // Logika AND untuk SELL
-
-  console.log(
-    chalk.yellow(`Fuzzy Logika: BUY = ${buySignal}, SELL = ${sellSignal}`)
-  );
 
   console.log(
     chalk.yellow(
