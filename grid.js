@@ -324,7 +324,7 @@ async function checkExtremeMarketConditions(candles) {
     )
   );
  
-  if (isExtreme >= 0.9) {
+  if (isExtreme === 1) {
     console.log(
       chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.")
     );
