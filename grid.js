@@ -321,7 +321,7 @@ async function checkExtremeMarketConditions(candles) {
     valuesisExtreme.reduce((sum, value) => sum + value, 0) /
     valuesisExtreme.length;
 
-  console.log(chalk.yellow(`isExtreme: ${isExtreme}`));
+  // console.log(chalk.yellow(`isExtreme: ${isExtreme}`));
 
   if (isExtreme >= 0.9) {
     // Threshold 0.9 untuk kondisi ekstrem
@@ -453,7 +453,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
   // Gunakan fuzzy logic untuk menyesuaikan level grid
   const volatility = atr / currentPrice; // Volatilitas relatif
-  const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT; // Fuzzy: lebih sedikit grid jika volatilitas tinggi
+  const gridCount = volatility > 0.03 ? GRID_COUNT - 5 : GRID_COUNT; // Fuzzy: lebih sedikit grid jika volatilitas tinggi
   const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr; // Fuzzy: jarak lebih lebar jika volatilitas tinggi
 
   console.log(
@@ -676,6 +676,16 @@ async function trade() {
     // Periksa apakah masih ada order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
     if (openOrders.length > 0) {
+      // Mengambil data candle
+      const candles = await client.futuresCandles({
+        symbol: SYMBOL,
+        interval: "15m",
+        limit: 50,
+      });
+
+      if (await checkExtremeMarketConditions(candles)) {
+        return; // Berhenti jika pasar terlalu ekstrem
+      }
       await monitorOrders(); // Memantau status take profit
       console.log(
         chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
@@ -689,6 +699,16 @@ async function trade() {
       (position) => parseFloat(position.positionAmt) !== 0
     );
     if (openPosition) {
+      // Mengambil data candle
+      const candles = await client.futuresCandles({
+        symbol: SYMBOL,
+        interval: "15m",
+        limit: 50,
+      });
+
+      if (await checkExtremeMarketConditions(candles)) {
+        return; // Berhenti jika pasar terlalu ekstrem
+      }
       await monitorOrders(); // Memantau status take profit
       console.log(
         chalk.blue(
