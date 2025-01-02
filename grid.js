@@ -518,6 +518,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
       const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
       const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1; // Tambahkan bobot jika harga di bawah VWAP
       const trailingDistance = fuzzyMultiplier * atr;
+      const activationPrice =
+        direction === "LONG" ? roundedPrice + buffer : roundedPrice - buffer;
       const roundedTrailingDistance = parseFloat(
         (Math.round(trailingDistance / tickSize) * tickSize).toFixed(
           pricePrecision
@@ -595,25 +597,22 @@ async function placeGridOrders(currentPrice, atr, direction) {
           symbol: SYMBOL,
           side: direction === "LONG" ? "SELL" : "BUY",
           type: "TRAILING_STOP_MARKET",
-          activationPrice: (direction === "LONG"
-            ? roundedPrice + buffer
-            : roundedPrice - buffer
-          ).toFixed(pricePrecision),
+          activationPrice: parseFloat(
+            (Math.round(activationPrice / tickSize) * tickSize).toFixed(
+              pricePrecision
+            )
+          ),
           callbackRate: roundedTrailingDistance,
           quantity: roundedQuantity,
           reduceOnly: true,
         });
 
         console.log(
-          chalk.green(
-            `Trailing Stop dengan jarak ${roundedTrailingDistance} berhasil dibuat.`
-          )
+          `Trailing Stop dibuat: Jarak ${roundedTrailingDistance}, Aktivasi ${activationPrice}`
         );
       } else {
         console.log(
-          chalk.yellow(
-            `Trailing Stop dengan jarak ${roundedTrailingDistance} sudah ada, melewati pembuatan.`
-          )
+          `Trailing Stop dengan jarak ${roundedTrailingDistance} sudah ada.`
         );
       }
     } catch (error) {
