@@ -443,7 +443,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
   // Gunakan fuzzy logic untuk menyesuaikan level grid
   const volatility = atr / currentPrice; // Volatilitas relatif
-  const gridCount = volatility > 0.03 ? GRID_COUNT - 5 : GRID_COUNT; // Fuzzy: lebih sedikit grid jika volatilitas tinggi
+  const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT; // Fuzzy: lebih sedikit grid jika volatilitas tinggi
   const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr; // Fuzzy: jarak lebih lebar jika volatilitas tinggi
 
   console.log(
