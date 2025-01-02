@@ -139,16 +139,6 @@ async function closeOpenPositions() {
   }
 }
 
-// Fungsi untuk memeriksa apakah semua order telah selesai
-async function waitForOrdersToComplete() {
-  let openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-  if (openOrders.length === 0) {
-    console.log(chalk.green("Semua order telah selesai."));
-  } else {
-    console.log(chalk.yellow(`Masih ada ${openOrders.length} order terbuka.`));
-  }
-}
-
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
   if (!candles.every((c) => c.high && c.low && c.close)) {
