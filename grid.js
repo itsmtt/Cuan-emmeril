@@ -391,11 +391,12 @@ async function determineMarketCondition(candles) {
     valuesSellSignal.reduce((sum, value) => sum + value, 0) /
     valuesSellSignal.length;
 
+  const logBuySignal = buySignal.toFixed(2) * 100;
+  const logSellSignal = sellSignal.toFixed(2) * 100;
+
   console.log(
     chalk.yellow(
-      `Fuzzy Signals: BUY = ${buySignal.toFixed(
-        2
-      )}, SELL = ${sellSignal.toFixed(2)}`
+      `Fuzzy Signals: BUY = ${logBuySignal} % Jika lebih dari 50 %, SELL = ${logSellSignal} % Jika lebih dari 50 % `
     )
   );
 
