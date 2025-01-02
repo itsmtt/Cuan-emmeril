@@ -42,3 +42,5 @@ Pastikan semua konfigurasi sudah benar, lalu jalankan bot dengan perintah:
 
 node grid.js
 
+Note*
+Risiko Trading: Trading futures melibatkan risiko besar. Pastikan Anda memahami risiko sebelum menggunakan bot ini.
