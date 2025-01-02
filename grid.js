@@ -341,19 +341,19 @@ async function determineMarketCondition(candles) {
   const lastPrice = closingPrices[closingPrices.length - 1];
 
   // Log indikator
-  console.log(
-    chalk.yellow(
-      `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
-        6
-      )}, RSI: ${rsi.toFixed(2)}, MACD: ${macdLine.toFixed(
-        6
-      )}, Signal: ${signalLine.toFixed(6)}, VWAP: ${vwap.toFixed(
-        6
-      )}, Upper Band: ${upperBand.toFixed(6)}, Lower Band: ${lowerBand.toFixed(
-        6
-      )}, Closing Price: ${lastPrice.toFixed(6)}`
-    )
-  );
+  // console.log(
+  //   chalk.yellow(
+  //     `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
+  //       6
+  //     )}, RSI: ${rsi.toFixed(2)}, MACD: ${macdLine.toFixed(
+  //       6
+  //     )}, Signal: ${signalLine.toFixed(6)}, VWAP: ${vwap.toFixed(
+  //       6
+  //     )}, Upper Band: ${upperBand.toFixed(6)}, Lower Band: ${lowerBand.toFixed(
+  //       6
+  //     )}, Closing Price: ${lastPrice.toFixed(6)}`
+  //   )
+  // );
 
   // Keanggotaan fuzzy untuk kondisi pasar
   const rsiBuy = fuzzyMembership(rsi, 30, 50); // RSI rendah (oversold)
