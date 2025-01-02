@@ -321,6 +321,12 @@ async function checkExtremeMarketConditions(candles) {
     valuesisExtreme.reduce((sum, value) => sum + value, 0) /
     valuesisExtreme.length;
 
+  console.log(
+    chalk.yellow(
+      `isExtreme: ${isExtreme}`
+    )
+  );
+
   if (isExtreme > 0.7) {
     // Threshold 0.7 untuk kondisi ekstrem
     console.log(
