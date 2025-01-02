@@ -42,5 +42,16 @@ Pastikan semua konfigurasi sudah benar, lalu jalankan bot dengan perintah:
 
 node grid.js
 
+fitur dalam bot :
+
+- Menentukan kondisi Long atau short secara otomatis
+- take profit dan stop loss di buat secara otomatis
+- aplikasi memulai trading baru jika take profit dan stop loss telah tercapai
+- pemantauan kondisi pasar extreme akan menutup semua order open dan open posisi secara otomatis 
+
 Note*
+
 Risiko Trading: Trading futures melibatkan risiko besar. Pastikan Anda memahami risiko sebelum menggunakan bot ini.
+
+Gunakan VPN luar negeri karna untuk binance di Indonesia sudah di blokir.
+
