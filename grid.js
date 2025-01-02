@@ -102,7 +102,9 @@ async function closeOpenPositions() {
           )
         );
 
-        const currentPrice = parseFloat(position.markPrice || position.entryPrice); // Gunakan markPrice jika ada
+        const currentPrice = parseFloat(
+          position.markPrice || position.entryPrice
+        ); // Gunakan markPrice jika ada
         const entryPrice = parseFloat(position.entryPrice);
         // Hitung profit atau loss
         const pnl =
@@ -139,19 +141,20 @@ async function closeOpenPositions() {
 
 // Fungsi untuk memeriksa apakah semua order telah selesai
 async function waitForOrdersToComplete() {
-      let openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-      if (openOrders.length === 0) {
-  console.log(chalk.green("Semua order telah selesai."));
-} else {
-  console.log(chalk.yellow(`Masih ada ${openOrders.length} order terbuka.`));
-} 
+  let openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+  if (openOrders.length === 0) {
+    console.log(chalk.green("Semua order telah selesai."));
+  } else {
+    console.log(chalk.yellow(`Masih ada ${openOrders.length} order terbuka.`));
+  }
 }
-
 
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
-  if (!candles.every(c => c.high && c.low && c.close)) {
-    throw new Error("Format candle tidak valid. Pastikan data memiliki high, low, dan close.");
+  if (!candles.every((c) => c.high && c.low && c.close)) {
+    throw new Error(
+      "Format candle tidak valid. Pastikan data memiliki high, low, dan close."
+    );
   }
 
   if (candles.length < period) {
@@ -219,16 +222,24 @@ async function calculateRSI(candles, period) {
 }
 
 // Fungsi untuk menghitung MACD
-function calculateMACD(closingPrices, shortPeriod = 12, longPeriod = 26, signalPeriod = 9) {
-  const macdLine = closingPrices.map((_, i) => i >= longPeriod 
-    ? calculateEMA(closingPrices.slice(i - shortPeriod, i), shortPeriod) -
-      calculateEMA(closingPrices.slice(i - longPeriod, i), longPeriod)
-    : null).filter(v => v !== null);
+function calculateMACD(
+  closingPrices,
+  shortPeriod = 12,
+  longPeriod = 26,
+  signalPeriod = 9
+) {
+  const macdLine = closingPrices
+    .map((_, i) =>
+      i >= longPeriod
+        ? calculateEMA(closingPrices.slice(i - shortPeriod, i), shortPeriod) -
+          calculateEMA(closingPrices.slice(i - longPeriod, i), longPeriod)
+        : null
+    )
+    .filter((v) => v !== null);
 
   const signalLine = calculateEMA(macdLine, signalPeriod);
   return { macdLine: macdLine[macdLine.length - 1], signalLine };
 }
-
 
 // Fungsi untuk menghitung Bollinger Bands
 function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
@@ -286,20 +297,32 @@ async function checkExtremeMarketConditions(candles) {
   const extremeVolatility = fuzzyMembership(atr, 0.1, 0.2); // ATR > 10% dianggap sangat volatil
 
   // Keanggotaan fuzzy untuk volume ekstrem
-  const volumes = candles.map(c => parseFloat(c.volume));
+  const volumes = candles.map((c) => parseFloat(c.volume));
   const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
-  const volumeMembership = fuzzyMembership(volumes[volumes.length - 1], avgVolume * 1.5, avgVolume * 3);
+  const volumeMembership = fuzzyMembership(
+    volumes[volumes.length - 1],
+    avgVolume * 1.5,
+    avgVolume * 3
+  );
 
   // Keanggotaan fuzzy untuk harga jauh dari VWAP
   const priceFarBelowVWAP = fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9);
   const priceFarAboveVWAP = fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2);
 
-    // Gabungkan aturan fuzzy
-  const isExtreme = Math.max(highVolatility, extremeVolatility, volumeMembership, priceFarBelowVWAP, priceFarAboveVWAP);
-  
-console.log('data: ${isExtreme}');
-  if (isExtreme > 0.7) { // Threshold 0.7 untuk kondisi ekstrem
-    console.log(chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara."));
+  // Gabungkan aturan fuzzy
+  const isExtreme = Math.max(
+    highVolatility,
+    extremeVolatility,
+    volumeMembership,
+    priceFarBelowVWAP,
+    priceFarAboveVWAP
+  );
+
+ 
+  if (isExtreme >= 0.9) {
+    console.log(
+      chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.")
+    );
     await closeOpenPositions(); // Menutup semua posisi terbuka
     await closeOpenOrders();
     return true;
@@ -340,16 +363,34 @@ async function determineMarketCondition(candles) {
   const rsiSell = fuzzyMembership(rsi, 50, 70); // RSI tinggi (overbought)
   const macdBuy = macdLine > signalLine ? 1 : 0; // MACD positif
   const macdSell = macdLine < signalLine ? 1 : 0; // MACD negatif
-  const priceNearLowerBand = fuzzyMembership(lastPrice, lowerBand, lowerBand * 1.02); // Dekat lower band
-  const priceNearUpperBand = fuzzyMembership(lastPrice, upperBand * 0.98, upperBand); // Dekat upper band
+  const priceNearLowerBand = fuzzyMembership(
+    lastPrice,
+    lowerBand,
+    lowerBand * 1.02
+  ); // Dekat lower band
+  const priceNearUpperBand = fuzzyMembership(
+    lastPrice,
+    upperBand * 0.98,
+    upperBand
+  ); // Dekat upper band
 
   // Logika berbasis VWAP
   const priceBelowVWAP = lastPrice < vwap ? 1 : 0; // Harga di bawah VWAP
   const priceAboveVWAP = lastPrice > vwap ? 1 : 0; // Harga di atas VWAP
 
   // Gabungkan aturan fuzzy
-  const buySignal = Math.min(rsiBuy, macdBuy, priceNearLowerBand, priceBelowVWAP); // Logika AND untuk BUY
-  const sellSignal = Math.min(rsiSell, macdSell, priceNearUpperBand, priceAboveVWAP); // Logika AND untuk SELL
+  const buySignal = Math.min(
+    rsiBuy,
+    macdBuy,
+    priceNearLowerBand,
+    priceBelowVWAP
+  ); // Logika AND untuk BUY
+  const sellSignal = Math.min(
+    rsiSell,
+    macdSell,
+    priceNearUpperBand,
+    priceAboveVWAP
+  ); // Logika AND untuk SELL
 
   console.log(
     chalk.yellow(
@@ -378,7 +419,9 @@ async function placeGridOrders(currentPrice, atr, direction) {
   await closeOpenPositions();
   await closeOpenOrders();
 
-  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(SYMBOL);
+  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
+    SYMBOL
+  );
   const buffer = currentPrice * 0.005; // Buffer sebesar 0.5%
 
   // Hitung VWAP dari data candle
@@ -410,7 +453,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
         : Math.min(currentPrice + gridSpacing * i + buffer, vwap + atr * i);
 
     // Validasi apakah harga grid logis
-    const isPriceValid = price > currentPrice * 0.8 && price < currentPrice * 1.2; // Kisaran 20% dari harga sekarang
+    const isPriceValid =
+      price > currentPrice * 0.8 && price < currentPrice * 1.2; // Kisaran 20% dari harga sekarang
     if (!isPriceValid) {
       console.warn(`Harga grid ${price} tidak logis, melewati iterasi.`);
       continue;
@@ -437,91 +481,94 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-    // Hitung takeProfitPrice menggunakan fuzzy logic dan VWAP
-    const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
-    const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
-    const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1; // Tambahkan bobot jika harga di bawah VWAP
+      // Hitung takeProfitPrice menggunakan fuzzy logic dan VWAP
+      const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
+      const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
+      const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1; // Tambahkan bobot jika harga di bawah VWAP
 
-    const takeProfitPrice =
-      direction === "LONG"
-        ? roundedPrice + (fuzzyMultiplier * atr) + buffer
-        : roundedPrice - (fuzzyMultiplier * atr) - buffer;
+      const takeProfitPrice =
+        direction === "LONG"
+          ? roundedPrice + fuzzyMultiplier * atr + buffer
+          : roundedPrice - fuzzyMultiplier * atr - buffer;
 
-    // Validasi takeProfitPrice
-    if (
-      (direction === "LONG" && takeProfitPrice <= currentPrice) ||
-      (direction === "SHORT" && takeProfitPrice >= currentPrice)
-    ) {
-      console.error(
-        `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(pricePrecision)}`
+      // Validasi takeProfitPrice
+      if (
+        (direction === "LONG" && takeProfitPrice <= currentPrice) ||
+        (direction === "SHORT" && takeProfitPrice >= currentPrice)
+      ) {
+        console.error(
+          `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
+            pricePrecision
+          )}`
+        );
+        continue;
+      }
+      // Validasi dan cegah duplikasi Take Profit
+      const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+      const duplicateTP = existingOrders.some(
+        (order) =>
+          order.type === "TAKE_PROFIT_MARKET" &&
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            takeProfitPrice.toFixed(pricePrecision)
       );
-      continue;
-    }
-        // Validasi dan cegah duplikasi Take Profit
-const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-const duplicateTP = existingOrders.some(
-  (order) =>
-    order.type === "TAKE_PROFIT_MARKET" &&
-    parseFloat(order.stopPrice).toFixed(pricePrecision) ===
-      takeProfitPrice.toFixed(pricePrecision)
-);
 
-if (!duplicateTP) {
-  // Buat Order Take Profit
-  await client.futuresOrder({
-    symbol: SYMBOL,
-    side: direction === "LONG" ? "SELL" : "BUY",
-    type: "TAKE_PROFIT_MARKET",
-    stopPrice: takeProfitPrice.toFixed(pricePrecision),
-    quantity: roundedQuantity,
-    timeInForce: "GTC",
-    reduceOnly: true,
-  });
-  console.log(
-    chalk.green(`Take Profit di harga ${takeProfitPrice} berhasil dibuat.`)
-  );
-} else {
-  console.log(
-    chalk.yellow(`Take Profit di harga ${takeProfitPrice} sudah ada.`)
-  );
-}
+      if (!duplicateTP) {
+        // Buat Order Take Profit
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TAKE_PROFIT_MARKET",
+          stopPrice: takeProfitPrice.toFixed(pricePrecision),
+          quantity: roundedQuantity,
+          timeInForce: "GTC",
+          reduceOnly: true,
+        });
+        console.log(
+          chalk.green(
+            `Take Profit di harga ${takeProfitPrice} berhasil dibuat.`
+          )
+        );
+      } else {
+        console.log(
+          chalk.yellow(`Take Profit di harga ${takeProfitPrice} sudah ada.`)
+        );
+      }
 
-// Validasi dan cegah duplikasi Trailing Stop
-const duplicateTS = existingOrders.some(
-  (order) =>
-    order.type === "TRAILING_STOP_MARKET" &&
-    parseFloat(order.stopPrice).toFixed(pricePrecision) ===
-      activationPrice.toFixed(pricePrecision) &&
-    parseFloat(order.callbackRate) === callbackRate
-);
+      // Validasi dan cegah duplikasi Trailing Stop
+      const duplicateTS = existingOrders.some(
+        (order) =>
+          order.type === "TRAILING_STOP_MARKET" &&
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            activationPrice.toFixed(pricePrecision) &&
+          parseFloat(order.callbackRate) === callbackRate
+      );
 
-if (!duplicateTS) {
-  // Buat Order Trailing Stop
-  await client.futuresOrder({
-    symbol: SYMBOL,
-    side: direction === "LONG" ? "SELL" : "BUY",
-    type: "TRAILING_STOP_MARKET",
-    callbackRate,
-    quantity: roundedQuantity,
-    reduceOnly: true,
-  });
-  console.log(
-    chalk.green(
-      `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
-        pricePrecision
-      )} dengan callback rate ${callbackRate}%`
-    )
-  );
-} else {
-  console.log(
-    chalk.yellow(
-      `Trailing Stop dengan harga ${activationPrice.toFixed(
-        pricePrecision
-      )} dan callback rate ${callbackRate}% sudah ada.`
-    )
-  );
-}
-
+      if (!duplicateTS) {
+        // Buat Order Trailing Stop
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TRAILING_STOP_MARKET",
+          callbackRate,
+          quantity: roundedQuantity,
+          reduceOnly: true,
+        });
+        console.log(
+          chalk.green(
+            `Trailing Stop diaktifkan pada harga ${activationPrice.toFixed(
+              pricePrecision
+            )} dengan callback rate ${callbackRate}%`
+          )
+        );
+      } else {
+        console.log(
+          chalk.yellow(
+            `Trailing Stop dengan harga ${activationPrice.toFixed(
+              pricePrecision
+            )} dan callback rate ${callbackRate}% sudah ada.`
+          )
+        );
+      }
     } catch (error) {
       console.error(
         `Kesalahan saat menempatkan order grid atau Take Profit: ${error.message}`
@@ -530,8 +577,7 @@ if (!duplicateTS) {
   }
 }
 
-
-// memantau kondisi Take profit 
+// memantau kondisi Take profit
 async function monitorOrders() {
   try {
     // Ambil semua order sebelumnya
@@ -552,19 +598,20 @@ async function monitorOrders() {
     if (takeProfitOrder) {
       console.log("Take Profit tercapai. Menutup semua posisi dan order.");
       await closeOpenPositions(); // Menutup semua posisi terbuka
-      await closeOpenOrders();    // Menutup semua order terbuka
+      await closeOpenOrders(); // Menutup semua order terbuka
     } else if (trailingStopOrder) {
       console.log("Trailing Stop tercapai. Menutup semua posisi dan order.");
       await closeOpenPositions(); // Menutup semua posisi terbuka
-      await closeOpenOrders();    // Menutup semua order terbuka
+      await closeOpenOrders(); // Menutup semua order terbuka
     } else {
-      console.log("Take Profit atau Trailing Stop belum tercapai. Memeriksa lagi...");
+      console.log(
+        "Take Profit atau Trailing Stop belum tercapai. Memeriksa lagi..."
+      );
     }
   } catch (error) {
     console.error("Kesalahan saat memantau order:", error.message);
   }
 }
-
 
 // Fungsi trading utama
 async function trade() {
@@ -578,7 +625,6 @@ async function trade() {
         `Harga pasar terkini untuk ${SYMBOL}: ${currentPrice.toFixed(6)}`
       )
     );
-
 
     // Periksa apakah masih ada order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
@@ -620,7 +666,9 @@ async function trade() {
     }
 
     if (candles.length < 20) {
-      console.warn(chalk.bgYellow("Data candle tidak mencukupi untuk analisis."));
+      console.warn(
+        chalk.bgYellow("Data candle tidak mencukupi untuk analisis.")
+      );
       return;
     }
 
