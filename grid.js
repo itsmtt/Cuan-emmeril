@@ -297,13 +297,13 @@ async function checkExtremeMarketConditions(candles) {
   const extremeVolatility = fuzzyMembership(atr, 0.1, 0.2); // ATR > 10% dianggap sangat volatil
 
   // Keanggotaan fuzzy untuk volume ekstrem
-  const volumes = candles.map((c) => parseFloat(c.volume));
-  const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
-  const volumeMembership = fuzzyMembership(
-    volumes[volumes.length - 1],
-    avgVolume * 1.5,
-    avgVolume * 3
-  );
+  // const volumes = candles.map((c) => parseFloat(c.volume));
+  // const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+  // const volumeMembership = fuzzyMembership(
+  //   volumes[volumes.length - 1],
+  //   avgVolume * 1.5,
+  //   avgVolume * 3
+  // );
 
   // Keanggotaan fuzzy untuk harga jauh dari VWAP
   const priceFarBelowVWAP = fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9);
@@ -313,7 +313,7 @@ async function checkExtremeMarketConditions(candles) {
   const isExtreme = Math.max(
     highVolatility,
     extremeVolatility,
-    volumeMembership,
+    // volumeMembership,
     priceFarBelowVWAP,
     priceFarAboveVWAP
   );
