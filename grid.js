@@ -289,45 +289,18 @@ function calculateVWAP(candles) {
 // Fungsi untuk memeriksa kondisi pasar ekstrem
 async function checkExtremeMarketConditions(candles) {
   const atr = await calculateATR(candles, 14);
-  const lastPrice = parseFloat(candles[candles.length - 1].close);
-  const vwap = calculateVWAP(candles);
 
-  // Keanggotaan fuzzy untuk ATR
-  const highVolatility = fuzzyMembership(atr, 0.05, 0.1); // ATR > 5% dianggap volatil
-  const extremeVolatility = fuzzyMembership(atr, 0.1, 0.2); // ATR > 10% dianggap sangat volatil
+  if (atr > 0.05) {
+    console.log(chalk.red("Pasar terlalu volatil. Menghentikan trading sementara."));
+    await closeOpenPositions(); // Menutup semua posisi terbuka
+    await closeOpenOrders();
+    return true;
+  }
 
-  // Keanggotaan fuzzy untuk volume ekstrem
-  // const volumes = candles.map((c) => parseFloat(c.volume));
-  // const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
-  // const volumeMembership = fuzzyMembership(
-  //   volumes[volumes.length - 1],
-  //   avgVolume * 1.5,
-  //   avgVolume * 3
-  // );
-
-  // Keanggotaan fuzzy untuk harga jauh dari VWAP
-  const priceFarBelowVWAP = fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9);
-  const priceFarAboveVWAP = fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2);
-
-  // Gabungkan aturan fuzzy
-  const isExtreme = Math.max(
-    highVolatility,
-    extremeVolatility,
-    // volumeMembership,
-    priceFarBelowVWAP,
-    priceFarAboveVWAP
-  );
-
-  console.log(
-    chalk.yellow(
-      `isExtreme: ${isExtreme}`
-    )
-  );
- 
-  if (isExtreme === 1) {
-    console.log(
-      chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.")
-    );
+  const volumes = candles.map(c => parseFloat(c.volume));
+  const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+  if (parseFloat(candles[candles.length - 1].volume) > avgVolume * 2) {
+    console.log(chalk.red("Volume pasar sangat tinggi, pertimbangkan untuk menghentikan trading sementara."));
     await closeOpenPositions(); // Menutup semua posisi terbuka
     await closeOpenOrders();
     return true;
