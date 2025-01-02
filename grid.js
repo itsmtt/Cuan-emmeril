@@ -327,8 +327,8 @@ async function checkExtremeMarketConditions(candles) {
     )
   );
 
-  if (isExtreme > 0.7) {
-    // Threshold 0.7 untuk kondisi ekstrem
+  if (isExtreme >= 0.9) {
+    // Threshold 0.9 untuk kondisi ekstrem
     console.log(
       chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.")
     );
