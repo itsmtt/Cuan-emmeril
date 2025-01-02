@@ -652,7 +652,7 @@ async function monitorOrders() {
     } else {
       console.log(
         chalk.blue(
-          "Tidak ada order terbuka yang membutuhkan tindakan saat ini."
+          "Tidak ada order terbuka dan posisi terbuka yang membutuhkan tindakan saat ini."
         )
       );
     }
