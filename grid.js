@@ -396,7 +396,7 @@ async function determineMarketCondition(candles) {
 
   console.log(
     chalk.yellow(
-      `Fuzzy Signals: BUY = ${logBuySignal} % Jika lebih dari 50 %, SELL = ${logSellSignal} % Jika lebih dari 50 % `
+      `Fuzzy Signals: BUY = ${logBuySignal} % Jika lebih dari 50 %, SELL = ${logSellSignal} % Jika lebih dari 50 %`
     )
   );
 
