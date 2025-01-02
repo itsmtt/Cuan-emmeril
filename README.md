@@ -4,7 +4,7 @@ untuk menentukan kondisi pasar dan penempatan take profit dan stop loss. di bang
 
 untuk menggunakanya bot nya lakukan setup dengan cara :
 
-1.Instalasi Dependensi
+1. Instalasi Dependensi
 
 Jalankan perintah berikut di terminal pada direktori proyek Anda:
 
