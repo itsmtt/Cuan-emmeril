@@ -412,10 +412,10 @@ async function determineMarketCondition(candles) {
   );
 
   // Tentukan sinyal berdasarkan nilai keanggotaan tertinggi
-  if (buySignal > sellSignal && buySignal >= 0.5) {
+  if (buySignal > sellSignal && buySignal > 0.5) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
-  } else if (sellSignal > buySignal && sellSignal >= 0.5) {
+  } else if (sellSignal > buySignal && sellSignal > 0.5) {
     console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
     return "SHORT";
   } else {
@@ -431,6 +431,16 @@ async function placeGridOrders(currentPrice, atr, direction) {
   await closeOpenOrders();
 
   const { pricePrecision, quantityPrecision } = await getSymbolPrecision(SYMBOL);
+
+  // Ambil tickSize dari Binance API
+  const exchangeInfo = await client.futuresExchangeInfo();
+  const symbolInfo = exchangeInfo.symbols.find((s) => s.symbol === SYMBOL);
+  if (!symbolInfo) {
+    console.error(`Symbol ${SYMBOL} tidak ditemukan di Binance.`);
+    return;
+  }
+  const tickSize = parseFloat(symbolInfo.filters.find((f) => f.tickSize).tickSize);
+
   const buffer = currentPrice * 0.005; // Buffer sebesar 0.5%
 
   // Hitung VWAP dari data candle
@@ -443,7 +453,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
   // Gunakan fuzzy logic untuk menyesuaikan level grid
   const volatility = atr / currentPrice; // Volatilitas relatif
-  const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT; // Fuzzy: lebih sedikit grid jika volatilitas tinggi
+  const gridCount = volatility > 0.03 ? GRID_COUNT - 1 : GRID_COUNT; // Fuzzy: lebih sedikit grid jika volatilitas tinggi
   const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr; // Fuzzy: jarak lebih lebar jika volatilitas tinggi
 
   console.log(
@@ -471,7 +481,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
     // Hitung kuantitas dan pembulatan harga/kuantitas
     const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
-    const roundedPrice = parseFloat(price.toFixed(pricePrecision));
+    const roundedPrice = parseFloat((Math.round(price / tickSize) * tickSize).toFixed(pricePrecision));
     const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
     // Validasi notional value
@@ -510,12 +520,16 @@ async function placeGridOrders(currentPrice, atr, direction) {
           : roundedPrice - fuzzyMultiplier * atr - buffer;
 
       // Validasi takeProfitPrice
+      const roundedTakeProfitPrice = parseFloat(
+        (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(pricePrecision)
+      );
+
       if (
-        (direction === "LONG" && takeProfitPrice <= currentPrice) ||
-        (direction === "SHORT" && takeProfitPrice >= currentPrice)
+        (direction === "LONG" && roundedTakeProfitPrice <= currentPrice) ||
+        (direction === "SHORT" && roundedTakeProfitPrice >= currentPrice)
       ) {
         console.error(
-          `Harga Take Profit tidak valid untuk ${direction}: ${takeProfitPrice.toFixed(
+          `Harga Take Profit tidak valid untuk ${direction}: ${roundedTakeProfitPrice.toFixed(
             pricePrecision
           )}`
         );
@@ -528,7 +542,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
         (order) =>
           order.type === "TAKE_PROFIT_MARKET" &&
           parseFloat(order.stopPrice).toFixed(pricePrecision) ===
-            takeProfitPrice.toFixed(pricePrecision)
+            roundedTakeProfitPrice.toFixed(pricePrecision)
       );
 
       if (!duplicateTP) {
@@ -537,19 +551,19 @@ async function placeGridOrders(currentPrice, atr, direction) {
           symbol: SYMBOL,
           side: direction === "LONG" ? "SELL" : "BUY",
           type: "TAKE_PROFIT_MARKET",
-          stopPrice: takeProfitPrice.toFixed(pricePrecision),
+          stopPrice: roundedTakeProfitPrice,
           quantity: roundedQuantity,
           timeInForce: "GTC",
           reduceOnly: true,
         });
         console.log(
           chalk.green(
-            `Take Profit di harga ${takeProfitPrice} berhasil dibuat.`
+            `Take Profit di harga ${roundedTakeProfitPrice} berhasil dibuat.`
           )
         );
       } else {
         console.log(
-          chalk.yellow(`Take Profit di harga ${takeProfitPrice} sudah ada.`)
+          chalk.yellow(`Take Profit di harga ${roundedTakeProfitPrice} sudah ada.`)
         );
       }
     } catch (error) {
@@ -559,6 +573,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
     }
   }
 }
+
 
 
 // memantau kondisi Take profit
