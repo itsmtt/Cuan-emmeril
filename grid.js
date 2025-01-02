@@ -442,6 +442,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
   );
 
   const buffer = currentPrice * 0.005; // Buffer sebesar 0.5%
+  const additionalBuffer = currentPrice * 0.01; // Buffer tambahan untuk validasi
 
   // Hitung VWAP dari data candle
   const candles = await client.futuresCandles({
@@ -520,8 +521,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       const takeProfitPrice =
         direction === "LONG"
-          ? roundedPrice + fuzzyMultiplier * atr + buffer
-          : roundedPrice - fuzzyMultiplier * atr - buffer;
+          ? roundedPrice + fuzzyMultiplier * atr + buffer + additionalBuffer
+          : roundedPrice - fuzzyMultiplier * atr - buffer - additionalBuffer;
       const roundedTakeProfitPrice = parseFloat(
         (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
           pricePrecision
@@ -530,8 +531,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       const stopLossPrice =
         direction === "LONG"
-          ? roundedPrice - fuzzyMultiplier * atr - buffer
-          : roundedPrice + fuzzyMultiplier * atr + buffer;
+          ? roundedPrice - fuzzyMultiplier * atr - buffer - additionalBuffer
+          : roundedPrice + fuzzyMultiplier * atr + buffer + additionalBuffer;
       const roundedStopLossPrice = parseFloat(
         (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
           pricePrecision
