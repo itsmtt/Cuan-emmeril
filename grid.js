@@ -309,9 +309,9 @@ async function checkExtremeMarketConditions(candles) {
   ]; // Array nilai
   const isExtreme =
     valuesisExtreme.reduce((sum, value) => sum + value, 0) /
-    valuesisExtreme.length;
+    valuesisExtreme.length * 100;
 
-  console.log(chalk.yellow(`Pasar dalam kondisi ekstrem jika nilai lebih dari 0.9 : ${isExtreme}`));
+  console.log(chalk.yellow(`Pasar dalam kondisi ekstrem jika nilai 90 % : ${isExtreme} %`));
 
   if (isExtreme >= 0.9) {
     // Threshold 0.9 untuk kondisi ekstrem
