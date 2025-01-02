@@ -646,7 +646,7 @@ async function monitorOrders() {
     } else if (openOrders.length > 0) {
       console.log(
         chalk.blue(
-          `Masih ada ${openOrders.length} order terbuka. Memantau kembali...`
+          `Take Profit dan Stop Loss masih belum tercapai. Memantau kembali...`
         )
       );
     } else {
