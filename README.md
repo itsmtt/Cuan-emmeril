@@ -17,6 +17,7 @@ npm install binance-api-node dotenv chalk fs
 Buat file .env di direktori proyek Anda, lalu tambahkan API key dan secret dari akun Binance Anda:
 
 API_KEY=your_binance_api_key
+
 API_SECRET=your_binance_api_secret
 
 3. Buat File config.json
@@ -24,10 +25,15 @@ API_SECRET=your_binance_api_secret
 File ini digunakan untuk menyimpan parameter grid trading. Contoh isi file config.json:
 
 {
+
   "SYMBOL": "BTCUSDT",
+  
   "GRID_COUNT": 5,
+  
   "LEVERAGE": 10,
+  
   "BASE_USDT": 10
+  
 }
 
 4. Jalankan Bot
