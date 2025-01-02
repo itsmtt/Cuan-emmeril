@@ -318,6 +318,11 @@ async function checkExtremeMarketConditions(candles) {
     priceFarAboveVWAP
   );
 
+  console.log(
+    chalk.yellow(
+      `Short EMA: ${isExtreme}`
+    )
+  );
  
   if (isExtreme >= 0.9) {
     console.log(
