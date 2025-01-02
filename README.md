@@ -9,6 +9,7 @@ untuk menggunakanya bot nya lakukan setup dengan cara :
 Jalankan perintah berikut di terminal pada direktori proyek Anda:
 
 npm init -y
+
 npm install binance-api-node dotenv chalk fs
 
 2. Konfigurasi File .env
