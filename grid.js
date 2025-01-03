@@ -527,8 +527,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-      // Hitung rata-rata harga grid
-      const averagePrice = roundedPrice / gridCount;
       // Hitung takeProfitPrice menggunakan fuzzy logic dan VWAP
       const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
       const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
@@ -536,8 +534,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       const takeProfitPrice =
         direction === "LONG"
-          ? averagePrice + fuzzyMultiplier * atr + buffer
-          : averagePrice - fuzzyMultiplier * atr - buffer;
+          ? roundedPrice + fuzzyMultiplier * atr + buffer
+          : roundedPrice - fuzzyMultiplier * atr - buffer;
       const roundedTakeProfitPrice = parseFloat(
         (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
           pricePrecision
@@ -546,8 +544,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       const stopLossPrice =
         direction === "LONG"
-          ? averagePrice - fuzzyMultiplier * atr - buffer
-          : averagePrice + fuzzyMultiplier * atr + buffer;
+          ? roundedPrice - fuzzyMultiplier * atr - buffer
+          : roundedPrice + fuzzyMultiplier * atr + buffer;
       const roundedStopLossPrice = parseFloat(
         (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
           pricePrecision
