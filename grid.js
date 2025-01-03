@@ -655,12 +655,6 @@ async function monitorOrders() {
 
     const currentOrderCount = relevantOrders.length;
 
-    console.log(
-      chalk.yellow(
-        `Jumlah order TAKE_PROFIT_MARKET dan STOP_MARKET saat ini: ${currentOrderCount}`
-      )
-    );
-
     if (takeProfitOrders.length === 0) {
       console.log(
         chalk.red("Tidak ada Take Profit order di daftar open orders.")
@@ -694,6 +688,13 @@ async function monitorOrders() {
         )
       );
     }
+
+    console.log(
+      chalk.yellow(
+        `Jumlah order TAKE_PROFIT_MARKET dan STOP_MARKET saat ini: ${currentOrderCount}`
+      )
+    );
+
 
     // Jika jumlah order berkurang dibandingkan iterasi sebelumnya
     if (currentOrderCount < previousOrderCount) {
