@@ -375,12 +375,22 @@ async function determineMarketCondition(candles) {
     upperBand
   ); // Dekat upper band
 
+  // Tambahkan logika untuk EMA
+  const emaBuy = shortEMA > longEMA ? 1 : 0; // Tren bullish
+  const emaSell = shortEMA < longEMA ? 1 : 0; // Tren bearish
+
   // Logika berbasis VWAP
   const priceBelowVWAP = lastPrice < vwap ? 1 : 0; // Harga di bawah VWAP
   const priceAboveVWAP = lastPrice > vwap ? 1 : 0; // Harga di atas VWAP
 
   // Logika untuk BUY
-  const valuesBuySignal = [rsiBuy, macdBuy, priceNearLowerBand, priceBelowVWAP]; // Array nilai
+  const valuesBuySignal = [
+    rsiBuy,
+    macdBuy,
+    priceNearLowerBand,
+    priceBelowVWAP,
+    emaBuy,
+  ]; // Array nilai
   const buySignal =
     valuesBuySignal.reduce((sum, value) => sum + value, 0) /
     valuesBuySignal.length;
@@ -390,6 +400,7 @@ async function determineMarketCondition(candles) {
     macdSell,
     priceNearUpperBand,
     priceAboveVWAP,
+    emaSell,
   ]; // Array nilai
   const sellSignal =
     valuesSellSignal.reduce((sum, value) => sum + value, 0) /
