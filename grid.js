@@ -636,6 +636,23 @@ async function monitorOrders() {
     // Ambil semua order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
+    // Pantau riwayat posisi
+    const positions = await client.futuresPositionRisk();
+    const closedPositions = positions.filter(
+      (position) => parseFloat(position.positionAmt) === 0
+    );
+
+    // Jika ada posisi yang baru saja ditutup
+    if (closedPositions.length > 0) {
+      console.log(
+        chalk.green("Terdeteksi posisi yang telah berhasil ditutup.")
+      );
+      await closeOpenPositions();
+      console.log(chalk.green("Semua posisi terbuka telah ditutup."));
+      await closeOpenOrders();
+      console.log(chalk.green("Semua order terbuka telah dibatalkan."));
+    }
+
     // Filter order dengan tipe TAKE_PROFIT_MARKET
     const takeProfitOrders = openOrders.filter(
       (order) => order.type === "TAKE_PROFIT_MARKET"
@@ -650,11 +667,6 @@ async function monitorOrders() {
       console.log(
         chalk.red("Tidak ada Take Profit order di daftar open orders.")
       );
-      console.log(chalk.blue("Menutup semua posisi dan order..."));
-      await closeOpenPositions();
-      console.log(chalk.green("Semua posisi telah ditutup."));
-      await closeOpenOrders();
-      console.log(chalk.green("Semua order telah dibatalkan."));
     } else {
       console.log(
         chalk.green(
@@ -667,11 +679,6 @@ async function monitorOrders() {
       console.log(
         chalk.red("Tidak ada Stop Loss order di daftar open orders.")
       );
-      console.log(chalk.blue("Menutup semua posisi dan order..."));
-      await closeOpenPositions();
-      console.log(chalk.green("Semua posisi telah ditutup."));
-      await closeOpenOrders();
-      console.log(chalk.green("Semua order telah dibatalkan."));
     } else {
       console.log(
         chalk.green(
