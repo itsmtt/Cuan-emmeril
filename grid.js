@@ -434,7 +434,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const buffer = currentPrice * 0.005; // Buffer sebesar 0.5%
+  const buffer = (atr * 0.5) + (Math.abs(currentPrice - vwap) * 0.5);
 
   // Hitung VWAP dari data candle
   const candles = await client.futuresCandles({
