@@ -434,8 +434,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const buffer = (atr * 0.5) + (Math.abs(currentPrice - vwap) * 0.5);
-
   // Hitung VWAP dari data candle
   const candles = await client.futuresCandles({
     symbol: SYMBOL,
@@ -443,6 +441,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
     limit: 50,
   });
   const vwap = calculateVWAP(candles);
+
+  const buffer = (atr * 0.5) + (Math.abs(currentPrice - vwap) * 0.5);
 
   // Gunakan fuzzy logic untuk menyesuaikan level grid
   const volatility = atr / currentPrice; // Volatilitas relatif
