@@ -313,7 +313,11 @@ async function checkExtremeMarketConditions(candles) {
 
   const logIsExtreme = isExtreme * 100;
 
-  console.log(chalk.yellow(`Pasar dalam kondisi ekstrem jika nilai 90 % : ${logIsExtreme} %`));
+  console.log(
+    chalk.yellow(
+      `Pasar dalam kondisi ekstrem jika nilai 90 % : ${logIsExtreme} %`
+    )
+  );
 
   if (isExtreme >= 0.9) {
     // Threshold 0.9 untuk kondisi ekstrem
@@ -442,7 +446,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
   });
   const vwap = calculateVWAP(candles);
 
-  const buffer = (atr * 0.5) + (Math.abs(currentPrice - vwap) * 0.5);
+  const buffer = atr * 0.5 + Math.abs(currentPrice - vwap) * 0.5;
 
   // Gunakan fuzzy logic untuk menyesuaikan level grid
   const volatility = atr / currentPrice; // Volatilitas relatif
@@ -613,7 +617,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
   }
 }
 
-// memantau kondisi Take profit
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
   try {
@@ -622,28 +625,82 @@ async function monitorOrders() {
     // Ambil semua order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
-    // Periksa apakah ada order dengan status FILLED
+    // Ambil semua order untuk symbol
     const allOrders = await client.futuresAllOrders({ symbol: SYMBOL });
 
-    const takeProfitOrder = allOrders.find(
+    // Cari TP dan SL orders yang sudah terisi
+    const takeProfitFilledOrder = allOrders.find(
       (order) =>
         order.type === "TAKE_PROFIT_MARKET" && order.status === "FILLED"
     );
 
-    const stopLossOrder = allOrders.find(
+    const stopLossFilledOrder = allOrders.find(
       (order) => order.type === "STOP_MARKET" && order.status === "FILLED"
     );
 
-    if (takeProfitOrder || stopLossOrder) {
+    if (takeProfitFilledOrder || stopLossFilledOrder) {
       console.log(
         chalk.green(
-          `Order ${takeProfitOrder ? "Take Profit" : "Stop Loss"} tercapai.`
+          `Order ${
+            takeProfitFilledOrder ? "Take Profit" : "Stop Loss"
+          } tercapai.`
         )
       );
       console.log(chalk.blue("Menutup semua posisi dan order..."));
       await closeOpenPositions();
       await closeOpenOrders();
-    } else if (openOrders.length > 0) {
+      return; // Keluar setelah menutup posisi dan order
+    }
+
+    // Cek apakah semua TP orders telah kadaluwarsa
+    const takeProfitOpenOrders = openOrders.filter(
+      (order) => order.type === "TAKE_PROFIT_MARKET"
+    );
+
+    if (takeProfitOpenOrders.length > 0) {
+      // Ambil harga terkini
+      const ticker = await client.futuresPrices();
+      const currentPrice = parseFloat(ticker[SYMBOL]);
+
+      // Cek setiap TP order apakah telah kadaluwarsa
+      const expiredTakeProfitOrders = takeProfitOpenOrders.filter((order) => {
+        if (order.side === "SELL") {
+          // Untuk TP Sell (LONG), expired jika currentPrice >= TP Price
+          return currentPrice >= parseFloat(order.price);
+        } else if (order.side === "BUY") {
+          // Untuk TP Buy (SHORT), expired jika currentPrice <= TP Price
+          return currentPrice <= parseFloat(order.price);
+        }
+        return false;
+      });
+
+      if (expiredTakeProfitOrders.length === takeProfitOpenOrders.length) {
+        // Semua TP orders telah kadaluwarsa
+        console.log(
+          chalk.red(
+            "Semua order Take Profit telah kadaluwarsa. Menutup semua posisi dan order..."
+          )
+        );
+        await closeOpenPositions();
+        await closeOpenOrders();
+        return; // Keluar setelah menutup posisi dan order
+      } else {
+        console.log(
+          chalk.blue(
+            `Masih ada ${
+              takeProfitOpenOrders.length - expiredTakeProfitOrders.length
+            } Take Profit order aktif yang belum kadaluwarsa.`
+          )
+        );
+      }
+    } else {
+      console.log(
+        chalk.blue("Tidak ada order Take Profit aktif yang perlu dipantau.")
+      );
+    }
+
+    // Jika tidak ada TP atau SL orders yang tercapai dan tidak semua TP orders kadaluwarsa
+    if (openOrders.length > 0) {
       console.log(
         chalk.blue(
           `Take Profit dan Stop Loss masih belum tercapai. Memantau kembali...`
