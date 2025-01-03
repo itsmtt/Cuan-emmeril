@@ -10,30 +10,30 @@
 <a href="z"><img src="https://img.shields.io/badge/VSCode-0078D4?style=for-the-badge&logo=visual%20studio%20code&logoColor=white"/></a>
 </div>
 
-
-
 <p align="center">
   <i align="center">Aplikasi ini di bangun menggunakan javaScript 🚀</i>
 </p>
 
-  
----------------------------------  
-  
+---
+
 <p align="center">
   Hi, 🚀 Salam developer 🚀 I ❤️ Happy Hardcore ❤️
 </p>
 
 ## Read About
-Ini adalah bot trading futures binance 
-dengan mengkombinasikan strategi RSI,MACD,EMA DAN BOLINGER BANDS dengan anilisa AI dengan metode logical Fuzzy dan VWAP untuk menentukan kondisi pasar dan penempatan take profit dan stop loss. di bangun dengan javascript  
+
+Ini adalah bot trading futures binance
+dengan mengkombinasikan strategi RSI,MACD,EMA DAN BOLINGER BANDS dengan anilisa AI dengan metode logical Fuzzy dan VWAP untuk menentukan kondisi pasar dan penempatan take profit dan stop loss. di bangun dengan javascript
 
 <!-- GETTING STARTED -->
+
 ## Getting Started
 
 ### Instalasi Dependensi
 
 Jalankan perintah berikut di terminal:
-* npm
+
+- npm
   ```sh
   npm init -y
   npm install binance-api-node dotenv chalk fs
@@ -42,10 +42,27 @@ Jalankan perintah berikut di terminal:
 ### Konfigurasi File .env
 
 Buat file .env , lalu tambahkan API key dan secret dari akun Binance Anda:
-* .env
+
+- .env
   ```sh
-API_KEY=your_binance_api_key
-API_SECRET=your_binance_api_secret
+  API_KEY=your_binance_api_key
+  API_SECRET=your_binance_api_secret
   ```
-### Konfigurasi File .env
+
+### Buat File config.json
+
+File ini digunakan untuk menyimpan parameter grid trading. Contoh isi file config.json:
+
+- config.json
+
+  ```sh
+  {
+
+  "SYMBOL": "BTCUSDT",
+  "GRID_COUNT": 5,
+  "LEVERAGE": 10,
+  "BASE_USDT": 10
+
+  }
+  ```
 
