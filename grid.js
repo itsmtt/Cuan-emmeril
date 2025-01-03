@@ -637,7 +637,16 @@ async function monitorOrders() {
 
     // Ambil semua order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+    // Filter order dengan tipe TAKE_PROFIT_MARKET
+    const takeProfitOrders = openOrders.filter(
+      (order) => order.type === "TAKE_PROFIT_MARKET"
+    );
 
+    // Filter order dengan tipe STOP_MARKET
+    const stopLossOrders = openOrders.filter(
+      (order) => order.type === "STOP_MARKET"
+    );
+    
     // Filter order TAKE_PROFIT_MARKET dan STOP_MARKET
     const relevantOrders = openOrders.filter(
       (order) =>
@@ -651,6 +660,40 @@ async function monitorOrders() {
         `Jumlah order TAKE_PROFIT_MARKET dan STOP_MARKET saat ini: ${currentOrderCount}`
       )
     );
+
+    if (takeProfitOrders.length === 0) {
+      console.log(
+        chalk.red("Tidak ada Take Profit order di daftar open orders.")
+      );
+      console.log(chalk.blue("Menutup semua posisi dan order..."));
+      await closeOpenPositions();
+      console.log(chalk.green("Semua posisi telah ditutup."));
+      await closeOpenOrders();
+      console.log(chalk.green("Semua order telah dibatalkan."));
+    } else {
+      console.log(
+        chalk.green(
+          `Masih ada ${takeProfitOrders.length} Take Profit order yang aktif.`
+        )
+      );
+    }
+
+    if (stopLossOrders.length === 0) {
+      console.log(
+        chalk.red("Tidak ada Stop Loss order di daftar open orders.")
+      );
+      console.log(chalk.blue("Menutup semua posisi dan order..."));
+      await closeOpenPositions();
+      console.log(chalk.green("Semua posisi telah ditutup."));
+      await closeOpenOrders();
+      console.log(chalk.green("Semua order telah dibatalkan."));
+    } else {
+      console.log(
+        chalk.green(
+          `Masih ada ${stopLossOrders.length} Stop Loss order yang aktif.`
+        )
+      );
+    }
 
     // Jika jumlah order berkurang dibandingkan iterasi sebelumnya
     if (currentOrderCount < previousOrderCount) {
