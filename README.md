@@ -10,12 +10,11 @@
 <a href="z"><img src="https://img.shields.io/badge/VSCode-0078D4?style=for-the-badge&logo=visual%20studio%20code&logoColor=white"/></a>
 </div>
 
+---
+
 <p align="center">
   <i align="center">Aplikasi ini di bangun menggunakan javaScript 🚀</i>
 </p>
-
----
-
 <p align="center">
   Hi, 🚀 Salam developer 🚀 I ❤️ Happy Hardcore ❤️
 </p>
@@ -66,3 +65,22 @@ File ini digunakan untuk menyimpan parameter grid trading. Contoh isi file confi
   }
   ```
 
+### Jalankan Bot
+
+Pastikan semua konfigurasi sudah benar, lalu jalankan bot dengan perintah:
+
+```sh
+node grid.js
+```
+
+### fitur bot :
+
+- Menentukan kondisi Long atau short secara otomatis
+- take profit dan stop loss di buat secara otomatis
+- aplikasi memulai trading baru jika take profit dan stop loss telah tercapai
+- pemantauan kondisi pasar extreme akan menutup semua order open dan open posisi secara otomatis
+
+### Note\*
+
+Risiko Trading: Trading futures melibatkan risiko besar. Pastikan Anda memahami risiko sebelum menggunakan bot ini.
+Gunakan VPN luar negeri karna untuk binance di Indonesia sudah di blokir.
