@@ -7,7 +7,7 @@
 <a href="z"><img src="https://img.shields.io/badge/Litecoin-A6A9AA?style=for-the-badge&logo=Litecoin&logoColor=white"/></a>
 <a href="z"><img src="https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white"/></a>
 <a href="z"><img src="https://img.shields.io/badge/Visual_Studio-5C2D91?style=for-the-badge&logo=visual%20studio&logoColor=white"/></a>
-<a href="z"><img src="https://img.shields.io/badge/VSCode-0078D4?style=for-the-badge&logo=visual%20studio%20code&logoColor=white"/></a>
+<a href="z"><img src="https://github.com/itsmtt/Cuan-emmeril/blob/main/img/code_runing.png"/></a>
 </div>
 
 ---
@@ -79,6 +79,12 @@ node grid.js
 - take profit dan stop loss di buat secara otomatis
 - aplikasi memulai trading baru jika take profit dan stop loss telah tercapai
 - pemantauan kondisi pasar extreme akan menutup semua order open dan open posisi secara otomatis
+
+### Simulasi apliksi berjalan:
+
+<div align="center">
+<a href="z"><img src="https://github.com/itsmtt/Cuan-emmeril/blob/main/img/code_runing.png"/></a>
+</div>
 
 ### Note\*
 
