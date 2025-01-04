@@ -509,8 +509,8 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
 
       const takeProfitPrice =
         direction === "LONG"
-          ? roundedPrice + buffer * atrVwap
-          : roundedPrice - buffer * atrVwap;
+          ? roundedPrice + buffer + atrVwap
+          : roundedPrice - buffer + atrVwap;
 
       const roundedTakeProfitPrice = parseFloat(
         (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
@@ -520,8 +520,8 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
 
       const stopLossPrice =
         direction === "LONG"
-          ? roundedPrice - buffer * atrVwap
-          : roundedPrice + buffer * atrVwap;
+          ? roundedPrice - buffer + atrVwap
+          : roundedPrice + buffer + atrVwap;
 
       const roundedStopLossPrice = parseFloat(
         (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
