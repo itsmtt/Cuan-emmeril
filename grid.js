@@ -440,7 +440,12 @@ async function determineMarketCondition(candles) {
   
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
+// Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, marketCondition) {
+    // Pastikan semua posisi dan order terbuka ditutup sebelum membuat order baru
+    await closeOpenPositions();
+    await closeOpenOrders();
+
     const {
         signal,
         buySignal,
@@ -452,6 +457,17 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
         pricePrecision,
         quantityPrecision
     } = await getSymbolPrecision(SYMBOL);
+
+    // Ambil tickSize dari Binance API
+    const exchangeInfo = await client.futuresExchangeInfo();
+    const symbolInfo = exchangeInfo.symbols.find((s) => s.symbol === SYMBOL);
+    if (!symbolInfo) {
+        console.error(`Symbol ${SYMBOL} tidak ditemukan di Binance.`);
+        return;
+    }
+    const tickSize = parseFloat(
+        symbolInfo.filters.find((f) => f.tickSize).tickSize
+    );
 
     const direction = signal; // "LONG" atau "SHORT"
 
@@ -473,7 +489,6 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
         const price =
         direction === "LONG"
         ? currentPrice - gridSpacing * i: currentPrice + gridSpacing * i;
-
 
         // Validasi harga grid
         const roundedPrice = parseFloat(
@@ -548,8 +563,7 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
 
             // Validasi bahwa TP dan SL sesuai aturan
             if ((direction === "LONG" && roundedTakeProfitPrice > roundedPrice && roundedStopLossPrice < roundedPrice) ||
-                (direction === "SHORT" && roundedTakeProfitPrice < roundedPrice && roundedStopLossPrice > roundedPrice)
-            ) {
+                (direction === "SHORT" && roundedTakeProfitPrice < roundedPrice && roundedStopLossPrice > roundedPrice)) {
 
                 const duplicateTP = existingOrders.some(
                     (order) =>
@@ -616,8 +630,6 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
         }
     }
 }
-
-    
 
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
