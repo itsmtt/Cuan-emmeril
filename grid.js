@@ -690,6 +690,29 @@ async function monitorOrders() {
         )
       );
     }
+    
+    // Jika tidak ada limit order dan tidak ada posisi terbuka
+    if (limitOrders.length === 0 && !openPosition) {
+      console.log(chalk.red("Tidak ada limit order atau posisi terbuka."));
+
+      // Tutup semua order dan posisi sebagai tindakan preventif
+      await closeOpenOrders();
+      console.log(chalk.green("Semua limit order telah dibatalkan."));
+      await closeOpenPositions();
+      console.log(chalk.green("Semua posisi telah ditutup."));
+    } else {
+      if (limitOrders.length > 0) {
+        console.log(
+          chalk.green(`Masih ada ${limitOrders.length} limit order yang aktif.`)
+        );
+      }
+
+      if (openPosition) {
+        console.log(
+          chalk.green(`Masih ada posisi terbuka pada ${openPosition.symbol}.`)
+        );
+      }
+    
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan saat memantau order terbuka:"),
