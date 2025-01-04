@@ -472,7 +472,13 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
     const direction = signal; // "LONG" atau "SHORT"
 
     // Tentukan grid spacing dan jumlah grid berdasarkan sinyal
-    const gridSpacing = atr + vwap;
+  const valuesAtrVwap = [
+    atr,
+    vwap
+  ]; 
+  const atrVwap =
+    valuesAtrVwap.reduce((sum, value) => sum + value, 0) /
+    valuesAtrVwap.length;
     const gridCount = GRID_COUNT;
 
     console.log(
@@ -488,7 +494,7 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
     for (let i = 1; i <= gridCount; i++) {
         const price =
         direction === "LONG"
-        ? currentPrice - gridSpacing * i: currentPrice + gridSpacing * i;
+        ? currentPrice - atrVwap * i: currentPrice + atrVwap * i;
 
         // Validasi harga grid
         const roundedPrice = parseFloat(
@@ -542,7 +548,7 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
 
             const takeProfitPrice =
             direction === "LONG"
-            ? roundedPrice + gridSpacing * vwap + atr : roundedPrice - gridSpacing * vwap + atr;
+            ? roundedPrice + atrVwap * atrVwap : roundedPrice - atrVwap * atrVwap;
 
             const roundedTakeProfitPrice = parseFloat(
                 (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(pricePrecision)
@@ -550,7 +556,7 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
 
             const stopLossPrice =
             direction === "LONG"
-            ? roundedPrice - gridSpacing * vwap + atr : roundedPrice + gridSpacing * vwap + atr;
+            ? roundedPrice - atrVwap * atrVwap : roundedPrice + atrVwap * atrVwap;
 
             const roundedStopLossPrice = parseFloat(
                 (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(pricePrecision)
