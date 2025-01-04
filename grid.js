@@ -472,8 +472,8 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
     const direction = signal; // "LONG" atau "SHORT"
 
     // Tentukan grid spacing dan jumlah grid berdasarkan sinyal
-    const gridSpacing = atr * (buySignal > 0.7 || sellSignal > 0.7 ? 1.5: 1);
-    const gridCount = Math.max(Math.floor(GRID_COUNT * (buySignal > 0.7 ? 1.2: 1)), 1);
+    const gridSpacing = atr + vwap;
+    const gridCount = GRID_COUNT;
 
     console.log(
         chalk.yellow(
@@ -540,14 +540,9 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
                 )
             );
 
-            // Hitung Take Profit dan Stop Loss
-            const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
-            const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
-            const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5: 1;
-
             const takeProfitPrice =
             direction === "LONG"
-            ? roundedPrice + fuzzyMultiplier * atr: roundedPrice - fuzzyMultiplier * atr;
+            ? roundedPrice + gridSpacing * vwap + atr : roundedPrice - gridSpacing * vwap + atr;
 
             const roundedTakeProfitPrice = parseFloat(
                 (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(pricePrecision)
@@ -555,7 +550,7 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
 
             const stopLossPrice =
             direction === "LONG"
-            ? roundedPrice - fuzzyMultiplier * atr: roundedPrice + fuzzyMultiplier * atr;
+            ? roundedPrice - gridSpacing * vwap + atr : roundedPrice + gridSpacing * vwap + atr;
 
             const roundedStopLossPrice = parseFloat(
                 (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(pricePrecision)
