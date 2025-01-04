@@ -479,7 +479,8 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
   const atrVwap =
     valuesAtrVwap.reduce((sum, value) => sum + value, 0) /
     valuesAtrVwap.length;
-    const gridCount = GRID_COUNT;
+    const gridCount = Math.max(Math.floor(GRID_COUNT * (buySignal > 0.7 ? 1.2: 1)), 1);
+  
     const existingOrders = await client.futuresOpenOrders({
         symbol: SYMBOL
     });
