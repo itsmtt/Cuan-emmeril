@@ -408,7 +408,7 @@ async function determineMarketCondition(candles) {
     
     const result = {
         signal: "NEUTRAL",
-        buySignal
+        buySignal,
         sellSignal,
         vwap
         
