@@ -712,7 +712,7 @@ async function monitorOrders() {
           chalk.green(`Masih ada posisi terbuka pada ${openPosition.symbol}.`)
         );
       }
-    
+    }
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan saat memantau order terbuka:"),
