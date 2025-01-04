@@ -334,54 +334,6 @@ async function checkExtremeMarketConditions(candles) {
 
 // Fungsi untuk menentukan kondisi pasar
 async function determineMarketCondition(candles) {
-    const closingPrices = candles.map((c) => parseFloat(c.close));
-    const shortEMA = calculateEMA(closingPrices.slice(-10), 5);
-    const longEMA = calculateEMA(closingPrices.slice(-20), 20);
-    const rsi = await calculateRSI(candles, 14);
-    const { macdLine, signalLine } = calculateMACD(closingPrices);
-    const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
-    const vwap = calculateVWAP(candles);
-
-    const lastPrice = closingPrices[closingPrices.length - 1];
-
-    // Logika untuk sinyal
-    const rsiBuy = fuzzyMembership(rsi, 30, 50); // RSI rendah (oversold)
-    const rsiSell = fuzzyMembership(rsi, 50, 70); // RSI tinggi (overbought)
-    const macdBuy = macdLine > signalLine ? 1 : 0; // MACD positif
-    const macdSell = macdLine < signalLine ? 1 : 0; // MACD negatif
-    const priceNearLowerBand = fuzzyMembership(lastPrice, lowerBand, lowerBand * 1.02);
-    const priceNearUpperBand = fuzzyMembership(lastPrice, upperBand * 0.98, upperBand);
-
-    const emaBuy = shortEMA > longEMA ? 1 : 0;
-    const emaSell = shortEMA < longEMA ? 1 : 0;
-
-    const buySignal = (rsiBuy + macdBuy + priceNearLowerBand + emaBuy) / 4;
-    const sellSignal = (rsiSell + macdSell + priceNearUpperBand + emaSell) / 4;
-
-    console.log(`BUY Signal: ${buySignal.toFixed(2)}, SELL Signal: ${sellSignal.toFixed(2)}`);
-
-    const result = {
-        signal: "NEUTRAL",
-        buySignal,
-        sellSignal,
-        lastPrice,
-        vwap,
-        upperBand,
-        lowerBand,
-        shortEMA,
-        longEMA,
-        rsi,
-        macdLine,
-        signalLine
-    };
-
-    if (buySignal > sellSignal && buySignal > 0.5) result.signal = "LONG";
-    else if (sellSignal > buySignal && sellSignal > 0.5) result.signal = "SHORT";
-
-    return result;
-}
-
-async function determineMarketCondition(candles) {
   const closingPrices = candles.map((c) => parseFloat(c.close));
   const shortEMA = calculateEMA(closingPrices.slice(-10), 5);
   const longEMA = calculateEMA(closingPrices.slice(-20), 20);
@@ -485,6 +437,7 @@ async function determineMarketCondition(candles) {
     return result;
     
 }
+  
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, marketCondition) {
