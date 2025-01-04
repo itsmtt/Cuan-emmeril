@@ -646,6 +646,17 @@ async function monitorOrders() {
       (order) => order.type === "STOP_MARKET"
     );
 
+    // Filter hanya limit order
+    const limitOrders = openOrders.filter((order) => order.type === "LIMIT");
+
+    // Ambil data posisi terbuka
+    const positions = await client.futuresPositionRisk();
+
+    // Periksa apakah tidak ada posisi terbuka
+    const openPosition = positions.find(
+      (position) => parseFloat(position.positionAmt) !== 0
+    );
+
     if (takeProfitOrders.length === 0) {
       console.log(
         chalk.red("Tidak ada Take Profit order di daftar open orders.")
