@@ -442,20 +442,30 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
   const direction = signal; // "LONG" atau "SHORT"
 
   // Tentukan grid spacing dan jumlah grid berdasarkan sinyal
-  const valuesAtrVwap = [atr, vwap];
-  const atrVwap =
-    valuesAtrVwap.reduce((sum, value) => sum + value, 0) / valuesAtrVwap.length;
-  const buffer = atrVwap * 0.5;
+  const buffer = atr * 0.5 + Math.abs(currentPrice - vwap) * 0.5;
+
+  // Gunakan fuzzy logic untuk menyesuaikan level grid
+  const volatility = atr / currentPrice; // Volatilitas relatif
+  const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT;
+  const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
 
   const existingOrders = await client.futuresOpenOrders({
     symbol: SYMBOL,
   });
 
-  for (let i = 1; i <= GRID_COUNT; i++) {
+  for (let i = 1; i <= gridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - atrVwap * i
-        : currentPrice + atrVwap * i;
+        ? Math.max(currentPrice - gridSpacing * i - buffer, vwap - atr * i)
+        : Math.min(currentPrice + gridSpacing * i + buffer, vwap + atr * i);
+
+    // Validasi apakah harga grid logis
+    const isPriceValid =
+      price > currentPrice * 0.8 && price < currentPrice * 1.2; // Kisaran 20% dari harga sekarang
+    if (!isPriceValid) {
+      console.warn(`Harga grid ${price} tidak logis, melewati iterasi.`);
+      continue;
+    }
 
     // Validasi harga grid
     const roundedPrice = parseFloat(
@@ -507,10 +517,15 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
         )
       );
 
+      // Hitung takeProfitPrice menggunakan fuzzy logic dan VWAP
+      const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
+      const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
+      const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1;
+
       const takeProfitPrice =
         direction === "LONG"
-          ? roundedPrice + buffer + atrVwap
-          : roundedPrice - buffer - atrVwap;
+          ? roundedPrice + fuzzyMultiplier * atr + buffer
+          : roundedPrice - fuzzyMultiplier * atr - buffer;
 
       const roundedTakeProfitPrice = parseFloat(
         (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
@@ -520,8 +535,8 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
 
       const stopLossPrice =
         direction === "LONG"
-          ? roundedPrice - buffer - atrVwap
-          : roundedPrice + buffer + atrVwap;
+          ? roundedPrice - fuzzyMultiplier * atr - buffer
+          : roundedPrice + fuzzyMultiplier * atr + buffer;
 
       const roundedStopLossPrice = parseFloat(
         (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
