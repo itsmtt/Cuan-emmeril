@@ -480,13 +480,6 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
     valuesAtrVwap.reduce((sum, value) => sum + value, 0) /
     valuesAtrVwap.length;
     const gridCount = GRID_COUNT;
-
-    console.log(
-        chalk.yellow(
-            `VWAP: ${vwap.toFixed(6)}, Grid Spacing: ${gridSpacing}, Grid Count: ${gridCount}`
-        )
-    );
-
     const existingOrders = await client.futuresOpenOrders({
         symbol: SYMBOL
     });
