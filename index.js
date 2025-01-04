@@ -458,11 +458,9 @@ async function placeGridOrders(currentPrice, atr, direction) {
   const vwap = calculateVWAP(candles);
 
   const buffer = atr * 0.5 + Math.abs(currentPrice - vwap) * 0.5;
-
-  // Gunakan fuzzy logic untuk menyesuaikan level grid
-  const volatility = atr / currentPrice; // Volatilitas relatif
-  const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT; // Fuzzy: lebih sedikit grid jika volatilitas tinggi
-  const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr; // Fuzzy: jarak lebih lebar jika volatilitas tinggi
+  const volatility = atr / currentPrice;
+  const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT;
+  const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
 
   console.log(
     chalk.yellow(
@@ -538,15 +536,11 @@ async function placeGridOrders(currentPrice, atr, direction) {
         )
       );
 
-      // Hitung takeProfitPrice menggunakan fuzzy logic dan VWAP
-      const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
-      const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
-      const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1; // Tambahkan bobot jika harga di bawah VWAP
-
+      // Hitung takeProfitPrice dan stop loss
       const takeProfitPrice =
         direction === "LONG"
-          ? roundedPrice + fuzzyMultiplier * atr + buffer
-          : roundedPrice - fuzzyMultiplier * atr - buffer;
+          ? roundedPrice + atr * 1.5 + buffer
+          : roundedPrice - atr * 1.5 - buffer;
       const roundedTakeProfitPrice = parseFloat(
         (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
           pricePrecision
@@ -555,8 +549,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
       const stopLossPrice =
         direction === "LONG"
-          ? roundedPrice - fuzzyMultiplier * atr - buffer
-          : roundedPrice + fuzzyMultiplier * atr + buffer;
+          ? roundedPrice - atr * 1.2 - buffer
+          : roundedPrice + atr * 1.2 + buffer;
       const roundedStopLossPrice = parseFloat(
         (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
           pricePrecision
@@ -690,7 +684,7 @@ async function monitorOrders() {
         )
       );
     }
-    
+
     // Jika tidak ada limit order dan tidak ada posisi terbuka
     if (limitOrders.length === 0 && !openPosition) {
       console.log(chalk.red("Tidak ada limit order atau posisi terbuka."));
