@@ -441,10 +441,25 @@ async function determineMarketCondition(candles) {
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
 async function placeGridOrders(currentPrice, atr, marketCondition) {
+   // Pastikan semua posisi dan order terbuka ditutup sebelum membuat order baru
+  await closeOpenPositions();
+  await closeOpenOrders();
+  
   const { signal, buySignal, sellSignal, vwap } = marketCondition;
 
   const { pricePrecision, quantityPrecision } = await getSymbolPrecision(SYMBOL);
-
+  
+   // Ambil tickSize dari Binance API
+  const exchangeInfo = await client.futuresExchangeInfo();
+  const symbolInfo = exchangeInfo.symbols.find((s) => s.symbol === SYMBOL);
+  if (!symbolInfo) {
+    console.error(`Symbol ${SYMBOL} tidak ditemukan di Binance.`);
+    return;
+  }
+  const tickSize = parseFloat(
+    symbolInfo.filters.find((f) => f.tickSize).tickSize
+  );
+  
   const direction = signal; // "LONG" atau "SHORT"
 
   // Tentukan grid spacing dan jumlah grid berdasarkan sinyal
