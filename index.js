@@ -343,6 +343,22 @@ async function determineMarketCondition(candles) {
   const vwap = calculateVWAP(candles);
 
   const lastPrice = closingPrices[closingPrices.length - 1];
+
+  // Log indikator
+  // console.log(
+  //   chalk.yellow(
+  //     `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
+  //       6
+  //     )}, RSI: ${rsi.toFixed(2)}, MACD: ${macdLine.toFixed(
+  //       6
+  //     )}, Signal: ${signalLine.toFixed(6)}, VWAP: ${vwap.toFixed(
+  //       6
+  //     )}, Upper Band: ${upperBand.toFixed(6)}, Lower Band: ${lowerBand.toFixed(
+  //       6
+  //     )}, Closing Price: ${lastPrice.toFixed(6)}`
+  //   )
+  // );
+
   // Keanggotaan fuzzy untuk kondisi pasar
   const rsiBuy = fuzzyMembership(rsi, 30, 50); // RSI rendah (oversold)
   const rsiSell = fuzzyMembership(rsi, 50, 70); // RSI tinggi (overbought)
@@ -390,13 +406,6 @@ async function determineMarketCondition(candles) {
     valuesSellSignal.reduce((sum, value) => sum + value, 0) /
     valuesSellSignal.length;
 
-  const result = {
-    signal: "NEUTRAL",
-    buySignal,
-    sellSignal,
-    vwap,
-  };
-
   const logBuySignal = buySignal.toFixed(2) * 100;
   const logSellSignal = sellSignal.toFixed(2) * 100;
 
@@ -407,22 +416,23 @@ async function determineMarketCondition(candles) {
   );
 
   // Tentukan sinyal berdasarkan nilai keanggotaan tertinggi
-  if (buySignal > sellSignal && buySignal > 0.5) result.signal = "LONG";
-  else if (sellSignal > buySignal && sellSignal > 0.5) result.signal = "SHORT";
-
-  console.log(chalk.yellow(`Kondisi Signal sekarang : ${result.signal}`));
-
-  return result;
+  if (buySignal > sellSignal && buySignal > 0.5) {
+    console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
+    return "LONG";
+  } else if (sellSignal > buySignal && sellSignal > 0.5) {
+    console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
+    return "SHORT";
+  } else {
+    console.log(`Posisi sekarang NEUTRAL. Menunggu.`);
+    return "NEUTRAL";
+  }
 }
 
 // Fungsi untuk menetapkan order grid dengan take profit dan stop loss
-// Fungsi untuk menetapkan order grid dengan take profit dan stop loss
-async function placeGridOrders(currentPrice, atr, marketCondition) {
+async function placeGridOrders(currentPrice, atr, direction) {
   // Pastikan semua posisi dan order terbuka ditutup sebelum membuat order baru
   await closeOpenPositions();
   await closeOpenOrders();
-
-  const { signal, vwap } = marketCondition;
 
   const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
     SYMBOL
@@ -439,21 +449,33 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const direction = signal; // "LONG" atau "SHORT"
+  // Hitung VWAP dari data candle
+  const candles = await client.futuresCandles({
+    symbol: SYMBOL,
+    interval: "15m",
+    limit: 50,
+  });
+  const vwap = calculateVWAP(candles);
 
-  // Tentukan grid spacing dan jumlah grid berdasarkan sinyal
   const buffer = atr * 0.5 + Math.abs(currentPrice - vwap) * 0.5;
 
   // Gunakan fuzzy logic untuk menyesuaikan level grid
   const volatility = atr / currentPrice; // Volatilitas relatif
-  const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT;
-  const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
+  const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT; // Fuzzy: lebih sedikit grid jika volatilitas tinggi
+  const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr; // Fuzzy: jarak lebih lebar jika volatilitas tinggi
 
-  const existingOrders = await client.futuresOpenOrders({
-    symbol: SYMBOL,
-  });
+  console.log(
+    chalk.yellow(
+      `VWAP: ${vwap.toFixed(6)}, Volatility: ${volatility.toFixed(
+        6
+      )}, Grid Count: ${gridCount}, Grid Spacing: ${gridSpacing.toFixed(6)}`
+    )
+  );
+
+  const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
   for (let i = 1; i <= gridCount; i++) {
+    // Hitung harga grid
     const price =
       direction === "LONG"
         ? Math.max(currentPrice - gridSpacing * i - buffer, vwap - atr * i)
@@ -467,16 +489,15 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
       continue;
     }
 
-    // Validasi harga grid
+    // Hitung kuantitas dan pembulatan harga/kuantitas
+    const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
     const roundedPrice = parseFloat(
       (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
     );
+    const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
-    const quantity = parseFloat(
-      ((BASE_USDT * LEVERAGE) / currentPrice).toFixed(quantityPrecision)
-    );
-
-    const notional = roundedPrice * quantity;
+    // Validasi notional value
+    const notional = roundedPrice * roundedQuantity;
     if (notional < 5) {
       console.error(
         `Notional value terlalu kecil: ${notional.toFixed(
@@ -508,25 +529,24 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
         side: direction === "LONG" ? "BUY" : "SELL",
         type: "LIMIT",
         price: roundedPrice,
-        quantity,
+        quantity: roundedQuantity,
         timeInForce: "GTC",
       });
       console.log(
         chalk.green(
-          `Order grid berhasil ditempatkan di harga ${roundedPrice}, kuantitas ${quantity}, arah ${direction}`
+          `Order grid berhasil ditempatkan di harga ${roundedPrice}, kuantitas ${roundedQuantity}, arah ${direction}`
         )
       );
 
       // Hitung takeProfitPrice menggunakan fuzzy logic dan VWAP
       const priceBelowVWAP = fuzzyMembership(currentPrice, vwap * 0.95, vwap);
       const priceAboveVWAP = fuzzyMembership(currentPrice, vwap, vwap * 1.05);
-      const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1;
+      const fuzzyMultiplier = priceBelowVWAP > priceAboveVWAP ? 1.5 : 1; // Tambahkan bobot jika harga di bawah VWAP
 
       const takeProfitPrice =
         direction === "LONG"
           ? roundedPrice + fuzzyMultiplier * atr + buffer
           : roundedPrice - fuzzyMultiplier * atr - buffer;
-
       const roundedTakeProfitPrice = parseFloat(
         (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
           pricePrecision
@@ -537,81 +557,68 @@ async function placeGridOrders(currentPrice, atr, marketCondition) {
         direction === "LONG"
           ? roundedPrice - fuzzyMultiplier * atr - buffer
           : roundedPrice + fuzzyMultiplier * atr + buffer;
-
       const roundedStopLossPrice = parseFloat(
         (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
           pricePrecision
         )
       );
 
-      // Validasi bahwa TP dan SL sesuai aturan
-      if (
-        (direction === "LONG" &&
-          roundedTakeProfitPrice > roundedPrice &&
-          roundedStopLossPrice < roundedPrice) ||
-        (direction === "SHORT" &&
-          roundedTakeProfitPrice < roundedPrice &&
-          roundedStopLossPrice > roundedPrice)
-      ) {
-        const duplicateTP = existingOrders.some(
-          (order) =>
-            order.type === "TAKE_PROFIT_MARKET" &&
-            parseFloat(order.stopPrice).toFixed(pricePrecision) ===
-              roundedTakeProfitPrice.toFixed(pricePrecision)
+      const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+      const duplicateTP = existingOrders.some(
+        (order) =>
+          order.type === "TAKE_PROFIT_MARKET" &&
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            roundedTakeProfitPrice.toFixed(pricePrecision)
+      );
+      const duplicateSL = existingOrders.some(
+        (order) =>
+          order.type === "STOP_MARKET" &&
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            roundedStopLossPrice.toFixed(pricePrecision)
+      );
+
+      if (!duplicateTP) {
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TAKE_PROFIT_MARKET",
+          stopPrice: roundedTakeProfitPrice,
+          quantity: roundedQuantity,
+          timeInForce: "GTC",
+          reduceOnly: true,
+        });
+        console.log(
+          chalk.green(
+            `Take Profit di harga ${roundedTakeProfitPrice} berhasil dibuat.`
+          )
         );
-
-        const duplicateSL = existingOrders.some(
-          (order) =>
-            order.type === "STOP_MARKET" &&
-            parseFloat(order.stopPrice).toFixed(pricePrecision) ===
-              roundedStopLossPrice.toFixed(pricePrecision)
+      } else {
+        console.log(
+          chalk.yellow(
+            `Take Profit di harga ${roundedTakeProfitPrice} sudah ada.`
+          )
         );
+      }
 
-        if (!duplicateTP) {
-          await client.futuresOrder({
-            symbol: SYMBOL,
-            side: direction === "LONG" ? "SELL" : "BUY",
-            type: "TAKE_PROFIT_MARKET",
-            stopPrice: roundedTakeProfitPrice,
-            quantity,
-            timeInForce: "GTC",
-            reduceOnly: true,
-          });
-          console.log(
-            chalk.green(
-              `Take Profit di harga ${roundedTakeProfitPrice} berhasil dibuat.`
-            )
-          );
-        } else {
-          console.log(
-            chalk.yellow(
-              `Take Profit di harga ${roundedTakeProfitPrice} sudah ada.`
-            )
-          );
-        }
-
-        if (!duplicateSL) {
-          await client.futuresOrder({
-            symbol: SYMBOL,
-            side: direction === "LONG" ? "SELL" : "BUY",
-            type: "STOP_MARKET",
-            stopPrice: roundedStopLossPrice,
-            quantity,
-            timeInForce: "GTC",
-            reduceOnly: true,
-          });
-          console.log(
-            chalk.green(
-              `Stop Loss di harga ${roundedStopLossPrice} berhasil dibuat.`
-            )
-          );
-        } else {
-          console.log(
-            chalk.yellow(
-              `Stop Loss di harga ${roundedStopLossPrice} sudah ada.`
-            )
-          );
-        }
+      if (!duplicateSL) {
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "STOP_MARKET",
+          stopPrice: roundedStopLossPrice,
+          quantity: roundedQuantity,
+          timeInForce: "GTC",
+          reduceOnly: true,
+        });
+        console.log(
+          chalk.green(
+            `Stop Loss di harga ${roundedStopLossPrice} berhasil dibuat.`
+          )
+        );
+      } else {
+        console.log(
+          chalk.yellow(`Stop Loss di harga ${roundedStopLossPrice} sudah ada.`)
+        );
       }
     } catch (error) {
       console.error(
@@ -683,7 +690,7 @@ async function monitorOrders() {
         )
       );
     }
-
+    
     // Jika tidak ada limit order dan tidak ada posisi terbuka
     if (limitOrders.length === 0 && !openPosition) {
       console.log(chalk.red("Tidak ada limit order atau posisi terbuka."));
@@ -801,13 +808,10 @@ async function trade() {
     const marketCondition = await determineMarketCondition(candles);
 
     // Tempatkan order grid jika ada sinyal trading
-    if (
-      marketCondition.signal === "LONG" ||
-      marketCondition.signal === "SHORT"
-    ) {
+    if (marketCondition === "LONG" || marketCondition === "SHORT") {
       console.log(
         chalk.blue(
-          `Sinyal order baru terdeteksi: ${marketCondition.signal}. Menempatkan order grid.`
+          `Sinyal order baru terdeteksi: ${marketCondition}. Menempatkan order grid.`
         )
       );
       await placeGridOrders(currentPrice, atr, marketCondition);
