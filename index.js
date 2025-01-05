@@ -548,7 +548,9 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
   }
 
   if (batchOrders.length > 0) {
-    await client.futuresBatchOrders(batchOrders);
+    for (const order of batchOrders) {
+      await client.futuresOrder(order);
+    }
     console.log(chalk.green("Take Profit dan Stop Loss berhasil ditempatkan."));
   }
 }
