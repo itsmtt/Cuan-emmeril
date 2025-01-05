@@ -490,17 +490,18 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
 
     for (const order of orders) {
       const { price, quantity, symbol } = order;
+      const buffer = (atr + Math.abs(currentPrice - vwap)) / 2;
 
       // Hitung Take Profit dan Stop Loss berdasarkan ATR dan VWAP
       const takeProfitPrice =
         direction === "LONG"
-          ? parseFloat(price) + atr
-          : parseFloat(price) - atr;
+        ? parseFloat(price) + atr + buffer
+        : parseFloat(price) - atr - buffer;
 
       const stopLossPrice =
         direction === "LONG"
-          ? Math.min(parseFloat(price) - atr, vwap * 0.98)
-          : Math.max(parseFloat(price) + atr, vwap * 1.02);
+        ? Math.min(parseFloat(price) - atr - buffer, vwap * 0.98)
+        : Math.max(parseFloat(price) + atr + buffer, vwap * 1.02);
 
       // Bulatkan harga berdasarkan presisi simbol
       const { pricePrecision } = await getSymbolPrecision(symbol);
