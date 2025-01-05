@@ -500,17 +500,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       const { price, quantity, symbol } = order;
       const orderPrice = parseFloat(price);
       const { pricePrecision, tickSize } = await getSymbolPrecision(symbol);
-
-      // Dapatkan batas harga min/max dari simbol
-      const symbolInfo = await client.futuresExchangeInfo();
-      const symbolData = symbolInfo.symbols.find((s) => s.symbol === symbol);
-      const minPrice = parseFloat(
-        symbolData.filters.find((f) => f.minPrice).minPrice
-      );
-      const maxPrice = parseFloat(
-        symbolData.filters.find((f) => f.maxPrice).maxPrice
-      );
-
       const momentumFactor = Math.abs((orderPrice - vwap) / orderPrice);
       const buffer = atr * (1 + momentumFactor);
 
@@ -524,19 +513,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
           ? orderPrice - buffer - atr * 0.5
           : orderPrice + buffer + atr * 0.5;
 
-      // Fuzzy logic untuk pasar ekstrem
-      const priceFarVWAP = fuzzyMembership(
-        Math.abs(orderPrice - vwap),
-        atr,
-        atr * 2
-      );
-      if (priceFarVWAP > 0.8) {
-        const extremeBuffer = atr * priceFarVWAP;
-        takeProfitPrice +=
-          direction === "LONG" ? extremeBuffer : -extremeBuffer;
-        stopLossPrice -= direction === "LONG" ? extremeBuffer : -extremeBuffer;
-      }
-
       // Penyesuaian harga berdasarkan tick size
       const adjustToTickSize = (price) =>
         parseFloat(
@@ -545,35 +521,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
 
       takeProfitPrice = adjustToTickSize(takeProfitPrice);
       stopLossPrice = adjustToTickSize(stopLossPrice);
-
-      // Validasi harga terhadap batas min/max
-      if (
-        !takeProfitPrice ||
-        isNaN(takeProfitPrice) ||
-        takeProfitPrice < minPrice ||
-        takeProfitPrice > maxPrice
-      ) {
-        console.log(
-          chalk.red(
-            `Take Profit (${takeProfitPrice}) melanggar batas atau tidak valid.`
-          )
-        );
-        continue;
-      }
-
-      if (
-        !stopLossPrice ||
-        isNaN(stopLossPrice) ||
-        stopLossPrice < minPrice ||
-        stopLossPrice > maxPrice
-      ) {
-        console.log(
-          chalk.red(
-            `Stop Loss (${stopLossPrice}) melanggar batas atau tidak valid.`
-          )
-        );
-        continue;
-      }
 
       // Validasi jarak minimum
       const minDistance = tickSize * 2; // Gunakan dua kali tickSize sebagai jarak minimum
