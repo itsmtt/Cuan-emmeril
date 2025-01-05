@@ -499,7 +499,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
     for (const order of orders) {
       const { price, quantity, symbol } = order;
       const orderPrice = parseFloat(price);
-      const { pricePrecision } = await getSymbolPrecision(symbol);
+      const { pricePrecision, tickSize } = await getSymbolPrecision(symbol);
 
       const momentumFactor = Math.abs((orderPrice - vwap) / orderPrice);
       const buffer = atr * (1 + momentumFactor);
@@ -530,22 +530,37 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
       const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
 
-      if (
-        (direction === "LONG" && roundedSL >= orderPrice) ||
-        (direction === "SHORT" && roundedSL <= orderPrice)
-      ) {
-        console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
+      // Validasi jarak minimum
+      const minDistance = tickSize * 2; // Gunakan dua kali tickSize sebagai jarak minimum
+      if (Math.abs(roundedTP - orderPrice) < minDistance) {
+        console.log(
+          chalk.red(
+            "Take Profit terlalu dekat dengan harga order. Melewati order ini."
+          )
+        );
         continue;
       }
 
-      if (
-        (direction === "LONG" && roundedTP <= orderPrice) ||
-        (direction === "SHORT" && roundedTP >= orderPrice)
-      ) {
+      if (Math.abs(roundedSL - orderPrice) < minDistance) {
         console.log(
-          chalk.red("Take Profit terlalu dekat, melewati order asli.")
+          chalk.red(
+            "Stop Loss terlalu dekat dengan harga order. Melewati order ini."
+          )
         );
         continue;
+      }
+
+      // Tambahkan buffer tambahan jika harga terlalu dekat
+      if (Math.abs(roundedTP - orderPrice) < minDistance) {
+        const additionalBuffer = atr * 0.2; // Tambahkan 20% dari ATR sebagai buffer tambahan
+        takeProfitPrice +=
+          direction === "LONG" ? additionalBuffer : -additionalBuffer;
+      }
+
+      if (Math.abs(roundedSL - orderPrice) < minDistance) {
+        const additionalBuffer = atr * 0.2; // Tambahkan 20% dari ATR sebagai buffer tambahan
+        stopLossPrice -=
+          direction === "LONG" ? additionalBuffer : -additionalBuffer;
       }
 
       await new Promise((resolve) => setTimeout(resolve, 3000)); // Jeda untuk sinkronisasi
