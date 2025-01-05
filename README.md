@@ -70,7 +70,7 @@ File ini digunakan untuk menyimpan parameter grid trading. Contoh isi file confi
 Pastikan semua konfigurasi sudah benar, lalu jalankan bot dengan perintah:
 
 ```sh
-node grid.js
+node index.js
 ```
 
 ### fitur bot :
