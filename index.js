@@ -513,15 +513,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
           ? orderPrice - buffer - atr * 0.5
           : orderPrice + buffer + atr * 0.5;
 
-      // Penyesuaian harga berdasarkan tick size
-      const adjustToTickSize = (price) =>
-        parseFloat(
-          (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
-        );
-
-      takeProfitPrice = adjustToTickSize(takeProfitPrice);
-      stopLossPrice = adjustToTickSize(stopLossPrice);
-
       // Validasi jarak minimum
       const minDistance = tickSize * 2; // Gunakan dua kali tickSize sebagai jarak minimum
       if (Math.abs(takeProfitPrice - orderPrice) < minDistance) {
