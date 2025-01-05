@@ -411,7 +411,13 @@ async function determineMarketCondition(
 }
 
 // Fungsi untuk menetapkan order grid
-async function placeGridOrders(currentPrice, atr, vwap, direction) {
+async function placeGridOrders(
+  currentPrice,
+  atr,
+  vwap,
+  direction,
+  historicalVolatility
+) {
   await closeOpenPositions();
   await closeOpenOrders();
 
@@ -429,21 +435,24 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const buffer = (atr + Math.abs(currentPrice - vwap)) / 2;
+  const adjustedGridSpacing = atr * (historicalVolatility > 0.03 ? 1.5 : 1.2);
   const volatility = atr / currentPrice;
   const adjustedGridCount = Math.max(
     2,
-    GRID_COUNT - Math.floor(volatility * 10)
+    GRID_COUNT - Math.floor(Math.sqrt(volatility) * 5)
   );
-  const gridSpacing = atr * (volatility > 0.03 ? 1.5 : 1.2);
+
+  const buffer = (atr + Math.abs(currentPrice - vwap)) / 2;
+  const momentumOffset = (currentPrice - vwap) * 0.1; // Offset berdasarkan momentum
+
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
 
   for (let i = 1; i <= adjustedGridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - gridSpacing * i - buffer
-        : currentPrice + gridSpacing * i + buffer;
+        ? currentPrice - adjustedGridSpacing * i - buffer + momentumOffset
+        : currentPrice + adjustedGridSpacing * i + buffer + momentumOffset;
     const roundedPrice = parseFloat(
       (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
     );
@@ -481,41 +490,46 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
   }
 }
 
-// Fungsi untuk menetapkan Take Profit dan Stop Loss
 async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
     );
 
-    // Ambil semua order terbuka
-    const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-
     for (const order of orders) {
       const { price, quantity, symbol } = order;
-
-      // Gunakan harga order sebagai referensi
       const orderPrice = parseFloat(price);
-
-      // Hitung buffer sebagai kombinasi ATR dan VWAP
       const { pricePrecision } = await getSymbolPrecision(symbol);
-      const buffer =
+
+      const momentumFactor = Math.abs((orderPrice - vwap) / orderPrice);
+      const buffer = atr * (1 + momentumFactor);
+
+      let takeProfitPrice =
         direction === "LONG"
-          ? atr + Math.abs(vwap - orderPrice)
-          : atr + Math.abs(orderPrice - vwap);
+          ? orderPrice + buffer + atr * 0.5
+          : orderPrice - buffer - atr * 0.5;
 
-      // Hitung harga TP dan SL
-      const takeProfitPrice =
-        direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
+      let stopLossPrice =
+        direction === "LONG"
+          ? orderPrice - buffer - atr * 0.5
+          : orderPrice + buffer + atr * 0.5;
 
-      const stopLossPrice =
-        direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
+      // Fuzzy logic untuk pasar ekstrem
+      const priceFarVWAP = fuzzyMembership(
+        Math.abs(orderPrice - vwap),
+        atr,
+        atr * 2
+      );
+      if (priceFarVWAP > 0.8) {
+        const extremeBuffer = atr * priceFarVWAP;
+        takeProfitPrice +=
+          direction === "LONG" ? extremeBuffer : -extremeBuffer;
+        stopLossPrice -= direction === "LONG" ? extremeBuffer : -extremeBuffer;
+      }
 
-      // Bulatkan harga berdasarkan presisi
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
       const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
 
-      // Validasi harga agar tidak memicu langsung
       if (
         (direction === "LONG" && roundedSL >= orderPrice) ||
         (direction === "SHORT" && roundedSL <= orderPrice)
@@ -534,13 +548,12 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         continue;
       }
 
-        // Jeda waktu untuk memastikan Binance memproses order sebelumnya
-        await new Promise((resolve) => setTimeout(resolve, 3000)); // Tunggu 1 detik
+      await new Promise((resolve) => setTimeout(resolve, 3000)); // Jeda untuk sinkronisasi
 
-        // Perbarui daftar order terbuka
-        const updatedOpenOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+      const updatedOpenOrders = await client.futuresOpenOrders({
+        symbol: SYMBOL,
+      });
 
-      // Cek apakah TP sudah ada
       const tpExists = updatedOpenOrders.some(
         (o) =>
           o.type === "TAKE_PROFIT_MARKET" &&
@@ -548,7 +561,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
             roundedTP.toFixed(pricePrecision)
       );
 
-      // Cek apakah SL sudah ada
       const slExists = updatedOpenOrders.some(
         (o) =>
           o.type === "STOP_MARKET" &&
@@ -556,13 +568,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
             roundedSL.toFixed(pricePrecision)
       );
 
-      // Skip jika TP atau SL sudah ada
-      if (tpExists) {
-        console.log(
-          chalk.yellow(`Take Profit pada harga ${roundedTP} sudah ada.`)
-        );
-      } else {
-        // Buat order Take Profit
+      if (!tpExists) {
         await client.futuresOrder({
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
@@ -579,12 +585,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         );
       }
 
-      if (slExists) {
-        console.log(
-          chalk.yellow(`Stop Loss pada harga ${roundedSL} sudah ada.`)
-        );
-      } else {
-        // Buat order Stop Loss
+      if (!slExists) {
         await client.futuresOrder({
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
@@ -746,7 +747,16 @@ async function trade() {
     // Hitung VWAP
     const vwap = await calculateVWAP(candles);
 
+    // Hitung rsi
     const rsi = await calculateRSI(candles, 14);
+
+    // Penyesuaian dinamis grid spacing dan jumlah grid
+    const historicalVolatility = Math.sqrt(
+      candles
+        .slice(-20)
+        .map((c) => Math.pow(c.high - c.low, 2))
+        .reduce((sum, diffSq) => sum + diffSq, 0) / 20
+    );
 
     // Hitung volumes
     const volumes = candles.map((c) => parseFloat(c.volume));
@@ -802,7 +812,13 @@ async function trade() {
           `Sinyal order baru terdeteksi: ${marketCondition}. Menempatkan order grid.`
         )
       );
-      await placeGridOrders(currentPrice, atr, vwap, marketCondition);
+      await placeGridOrders(
+        currentPrice,
+        atr,
+        vwap,
+        marketCondition,
+        historicalVolatility
+      );
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
