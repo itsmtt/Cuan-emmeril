@@ -543,29 +543,41 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
           (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
         );
 
-      const adjustedTP = adjustToTickSize(takeProfitPrice);
-      const adjustedSL = adjustToTickSize(stopLossPrice);
+      takeProfitPrice = adjustToTickSize(takeProfitPrice);
+      stopLossPrice = adjustToTickSize(stopLossPrice);
 
       // Validasi harga terhadap batas min/max
-      if (adjustedTP < minPrice || adjustedTP > maxPrice) {
+      if (
+        !takeProfitPrice ||
+        isNaN(takeProfitPrice) ||
+        takeProfitPrice < minPrice ||
+        takeProfitPrice > maxPrice
+      ) {
         console.log(
           chalk.red(
-            `Take Profit (${adjustedTP}) melanggar batas min/max price.`
+            `Take Profit (${takeProfitPrice}) melanggar batas atau tidak valid.`
           )
         );
         continue;
       }
 
-      if (adjustedSL < minPrice || adjustedSL > maxPrice) {
+      if (
+        !stopLossPrice ||
+        isNaN(stopLossPrice) ||
+        stopLossPrice < minPrice ||
+        stopLossPrice > maxPrice
+      ) {
         console.log(
-          chalk.red(`Stop Loss (${adjustedSL}) melanggar batas min/max price.`)
+          chalk.red(
+            `Stop Loss (${stopLossPrice}) melanggar batas atau tidak valid.`
+          )
         );
         continue;
       }
 
       // Validasi jarak minimum
       const minDistance = tickSize * 2; // Gunakan dua kali tickSize sebagai jarak minimum
-      if (Math.abs(adjustedTP - orderPrice) < minDistance) {
+      if (Math.abs(takeProfitPrice - orderPrice) < minDistance) {
         console.log(
           chalk.red(
             "Take Profit terlalu dekat dengan harga order. Melewati order ini."
@@ -574,7 +586,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         continue;
       }
 
-      if (Math.abs(adjustedSL - orderPrice) < minDistance) {
+      if (Math.abs(stopLossPrice - orderPrice) < minDistance) {
         console.log(
           chalk.red(
             "Stop Loss terlalu dekat dengan harga order. Melewati order ini."
@@ -593,14 +605,14 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         (o) =>
           o.type === "TAKE_PROFIT_MARKET" &&
           parseFloat(o.stopPrice).toFixed(pricePrecision) ===
-            adjustedTP.toFixed(pricePrecision)
+            takeProfitPrice.toFixed(pricePrecision)
       );
 
       const slExists = updatedOpenOrders.some(
         (o) =>
           o.type === "STOP_MARKET" &&
           parseFloat(o.stopPrice).toFixed(pricePrecision) ===
-            adjustedSL.toFixed(pricePrecision)
+            stopLossPrice.toFixed(pricePrecision)
       );
 
       if (!tpExists) {
@@ -608,14 +620,14 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
           type: "TAKE_PROFIT_MARKET",
-          stopPrice: adjustedTP,
+          stopPrice: takeProfitPrice,
           quantity,
           priceProtect: true,
         });
 
         console.log(
           chalk.green(
-            `Take Profit untuk ${symbol} pada harga ${adjustedTP} berhasil ditempatkan.`
+            `Take Profit untuk ${symbol} pada harga ${takeProfitPrice} berhasil ditempatkan.`
           )
         );
       }
@@ -625,14 +637,14 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
           type: "STOP_MARKET",
-          stopPrice: adjustedSL,
+          stopPrice: stopLossPrice,
           quantity,
           priceProtect: true,
         });
 
         console.log(
           chalk.green(
-            `Stop Loss untuk ${symbol} pada harga ${adjustedSL} berhasil ditempatkan.`
+            `Stop Loss untuk ${symbol} pada harga ${stopLossPrice} berhasil ditempatkan.`
           )
         );
       }
@@ -640,7 +652,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       // Debugging tambahan
       console.log(
         chalk.yellow(
-          `Order Price: ${orderPrice}, TP: ${adjustedTP}, SL: ${adjustedSL}, Min Price: ${minPrice}, Max Price: ${maxPrice}`
+          `Order Price: ${orderPrice}, TP: ${takeProfitPrice}, SL: ${stopLossPrice}, Min Price: ${minPrice}, Max Price: ${maxPrice}`
         )
       );
     }
