@@ -481,46 +481,69 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
   }
 }
 
-// Fungsi untuk menetapkan take profit dan stop loss
+// Fungsi untuk menetapkan Take Profit dan Stop Loss
 async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
-  const batchOrders = [];
-  for (const order of orders) {
-    const takeProfitPrice =
-      direction === "LONG"
-        ? order.price + vwap + atr * 1.5
-        : order.price - vwap - atr * 1.5;
-    const stopLossPrice =
-      direction === "LONG"
-        ? order.price - vwap - atr * 1.2
-        : order.price + vwap + atr * 1.2;
+  try {
+    console.log(
+      chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
+    );
 
-    batchOrders.push(
-      {
-        symbol: SYMBOL,
+    for (const order of orders) {
+      const { price, quantity, symbol } = order;
+
+      // Hitung Take Profit dan Stop Loss berdasarkan ATR dan VWAP
+      const takeProfitPrice =
+        direction === "LONG"
+          ? parseFloat(price) + atr
+          : parseFloat(price) - atr;
+
+      const stopLossPrice =
+        direction === "LONG"
+          ? Math.min(parseFloat(price) - atr, vwap * 0.98)
+          : Math.max(parseFloat(price) + atr, vwap * 1.02);
+
+      // Bulatkan harga berdasarkan presisi simbol
+      const { pricePrecision } = await getSymbolPrecision(symbol);
+      const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
+      const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
+
+      // Buat order Take Profit
+      await client.futuresOrder({
+        symbol,
         side: direction === "LONG" ? "SELL" : "BUY",
         type: "TAKE_PROFIT_MARKET",
-        stopPrice: takeProfitPrice.toFixed(2),
-        quantity: order.quantity,
-        timeInForce: "GTC",
-        reduceOnly: true,
-      },
-      {
-        symbol: SYMBOL,
+        stopPrice: roundedTP,
+        quantity,
+        priceProtect: true,
+      });
+
+      console.log(
+        chalk.green(
+          `Take Profit untuk ${symbol} pada harga ${roundedTP} berhasil ditempatkan.`
+        )
+      );
+
+      // Buat order Stop Loss
+      await client.futuresOrder({
+        symbol,
         side: direction === "LONG" ? "SELL" : "BUY",
         type: "STOP_MARKET",
-        stopPrice: stopLossPrice.toFixed(2),
-        quantity: order.quantity,
-        timeInForce: "GTC",
-        reduceOnly: true,
-      }
-    );
-  }
+        stopPrice: roundedSL,
+        quantity,
+        priceProtect: true,
+      });
 
-  if (batchOrders.length > 0) {
-    for (const order of batchOrders) {
-      await client.futuresOrder(order);
+      console.log(
+        chalk.green(
+          `Stop Loss untuk ${symbol} pada harga ${roundedSL} berhasil ditempatkan.`
+        )
+      );
     }
-    console.log(chalk.green("Take Profit dan Stop Loss berhasil ditempatkan."));
+  } catch (error) {
+    console.error(
+      chalk.bgRed("Kesalahan saat menetapkan Take Profit dan Stop Loss:"),
+      error.message || error
+    );
   }
 }
 
