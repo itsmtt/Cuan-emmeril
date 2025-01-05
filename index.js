@@ -490,6 +490,22 @@ async function placeGridOrders(
   }
 }
 
+//Fungsi Hitung Harga Rata-Rata untuk Grid Orders
+function calculateAveragePrice(orders) {
+  if (orders.length === 0) {
+    throw new Error("Tidak ada order untuk menghitung harga rata-rata.");
+  }
+  const totalValue = orders.reduce(
+    (sum, order) => sum + parseFloat(order.price) * parseFloat(order.quantity),
+    0
+  );
+  const totalQuantity = orders.reduce(
+    (sum, order) => sum + parseFloat(order.quantity),
+    0
+  );
+  return totalValue / totalQuantity;
+}
+
 // Fungsi untuk menetapkan Take Profit dan Stop Loss
 async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
   try {
@@ -500,22 +516,18 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
     for (const order of orders) {
       const { price, quantity, symbol } = order;
 
-      // Gunakan harga order sebagai referensi
-      const orderPrice = parseFloat(price);
-
       // Hitung buffer sebagai kombinasi ATR dan VWAP
       const { pricePrecision } = await getSymbolPrecision(symbol);
-      const buffer =
-        direction === "LONG"
-          ? atr + Math.abs(vwap - orderPrice)
-          : atr + Math.abs(orderPrice - vwap);
-
-      // Hitung harga TP dan SL
-      const takeProfitPrice =
-        direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
-
-      const stopLossPrice =
-        direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
+      const averagePrice = calculateAveragePrice(price);
+      const buffer = atr + Math.abs(vwap - averagePrice);
+  
+      const takeProfitPrice = direction === "LONG" 
+        ? averagePrice + buffer 
+        : averagePrice - buffer;
+  
+      const stopLossPrice = direction === "LONG" 
+        ? averagePrice - buffer 
+        : averagePrice + buffer;
 
       // Bulatkan harga berdasarkan presisi
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
