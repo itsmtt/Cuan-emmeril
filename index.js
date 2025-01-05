@@ -534,8 +534,14 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         continue;
       }
 
+        // Jeda waktu untuk memastikan Binance memproses order sebelumnya
+        await new Promise((resolve) => setTimeout(resolve, 3000)); // Tunggu 1 detik
+
+        // Perbarui daftar order terbuka
+        const updatedOpenOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+
       // Cek apakah TP sudah ada
-      const tpExists = openOrders.some(
+      const tpExists = updatedOpenOrders.some(
         (o) =>
           o.type === "TAKE_PROFIT_MARKET" &&
           parseFloat(o.stopPrice).toFixed(pricePrecision) ===
@@ -543,7 +549,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       );
 
       // Cek apakah SL sudah ada
-      const slExists = openOrders.some(
+      const slExists = updatedOpenOrders.some(
         (o) =>
           o.type === "STOP_MARKET" &&
           parseFloat(o.stopPrice).toFixed(pricePrecision) ===
