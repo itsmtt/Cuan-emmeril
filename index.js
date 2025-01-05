@@ -541,7 +541,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       }
 
       // Jeda waktu untuk memastikan Binance memproses order sebelumnya
-      await new Promise((resolve) => setTimeout(resolve, 3000)); // Tunggu 1 detik
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Tunggu 1 detik
 
       // Perbarui daftar order terbuka
       const updatedOpenOrders = await client.futuresOpenOrders({
