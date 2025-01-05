@@ -514,11 +514,11 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
     );
 
     for (const order of orders) {
-      const { price, quantity, symbol } = order;
+      const { quantity, symbol } = order;
 
       // Hitung buffer sebagai kombinasi ATR dan VWAP
       const { pricePrecision } = await getSymbolPrecision(symbol);
-      const averagePrice = calculateAveragePrice(price);
+      const averagePrice = calculateAveragePrice(orders);
       const buffer = atr + Math.abs(vwap - averagePrice);
   
       const takeProfitPrice = direction === "LONG" 
