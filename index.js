@@ -498,40 +498,19 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
 
     for (const order of orders) {
       const { price, quantity, symbol } = order;
-      const orderPrice = parseFloat(price);
-      const { pricePrecision, tickSize } = await getSymbolPrecision(symbol);
-      const momentumFactor = Math.abs((orderPrice - vwap) / orderPrice);
+      const momentumFactor = Math.abs((price - vwap) / price);
       const buffer = atr * (1 + momentumFactor);
 
       let takeProfitPrice =
         direction === "LONG"
-          ? orderPrice + buffer + atr * 0.5
-          : orderPrice - buffer - atr * 0.5;
+          ? price + buffer + atr * 0.01
+          : price - buffer - atr * 0.01;
 
       let stopLossPrice =
         direction === "LONG"
-          ? orderPrice - buffer - atr * 0.5
-          : orderPrice + buffer + atr * 0.5;
+          ? price - buffer - atr * 0.01
+          : price + buffer + atr * 0.01;
 
-      // Validasi jarak minimum
-      const minDistance = tickSize * 2; // Gunakan dua kali tickSize sebagai jarak minimum
-      if (Math.abs(takeProfitPrice - orderPrice) < minDistance) {
-        console.log(
-          chalk.red(
-            "Take Profit terlalu dekat dengan harga order. Melewati order ini."
-          )
-        );
-        continue;
-      }
-
-      if (Math.abs(stopLossPrice - orderPrice) < minDistance) {
-        console.log(
-          chalk.red(
-            "Stop Loss terlalu dekat dengan harga order. Melewati order ini."
-          )
-        );
-        continue;
-      }
 
       await new Promise((resolve) => setTimeout(resolve, 3000)); // Jeda untuk sinkronisasi
 
@@ -587,12 +566,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         );
       }
 
-      // Debugging tambahan
-      console.log(
-        chalk.yellow(
-          `Order Price: ${orderPrice}, TP: ${takeProfitPrice}, SL: ${stopLossPrice}, Min Price: ${minPrice}, Max Price: ${maxPrice}`
-        )
-      );
     }
   } catch (error) {
     console.error(
