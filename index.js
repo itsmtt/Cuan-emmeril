@@ -475,14 +475,26 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
     for (const order of batchOrders) {
       await client.futuresOrder(order);
     }
-    await placeTakeProfitAndStopLoss(batchOrders, atr, vwap, direction);
+    await placeTakeProfitAndStopLoss(
+      batchOrders,
+      atr,
+      vwap,
+      currentPrice,
+      direction
+    );
   } else {
     console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
   }
 }
 
 // Fungsi untuk menetapkan Take Profit dan Stop Loss
-async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
+async function placeTakeProfitAndStopLoss(
+  orders,
+  atr,
+  vwap,
+  currentPrice,
+  direction
+) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
@@ -495,13 +507,13 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       // Hitung Take Profit dan Stop Loss berdasarkan ATR dan VWAP
       const takeProfitPrice =
         direction === "LONG"
-        ? parseFloat(price) + atr + buffer
-        : parseFloat(price) - atr - buffer;
+          ? parseFloat(price) + atr + buffer
+          : parseFloat(price) - atr - buffer;
 
       const stopLossPrice =
         direction === "LONG"
-        ? Math.min(parseFloat(price) - atr - buffer, vwap * 0.98)
-        : Math.max(parseFloat(price) + atr + buffer, vwap * 1.02);
+          ? Math.min(parseFloat(price) - atr - buffer, vwap * 0.98)
+          : Math.max(parseFloat(price) + atr + buffer, vwap * 1.02);
 
       // Bulatkan harga berdasarkan presisi simbol
       const { pricePrecision } = await getSymbolPrecision(symbol);
