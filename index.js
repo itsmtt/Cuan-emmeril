@@ -804,7 +804,6 @@ async function trade() {
       return; // Keluar dari fungsi jika masih ada posisi terbuka
     }
 
-  
     // Tempatkan order grid jika ada sinyal trading
     if (marketCondition === "LONG" || marketCondition === "SHORT") {
       console.log(
