@@ -483,47 +483,16 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
 
 // Fungsi untuk menetapkan take profit dan stop loss
 async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
-  const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
   for (const order of orders) {
-    if (
-      openOrders.some(
-        (o) =>
-          o.type === "TAKE_PROFIT_MARKET" &&
-          parseFloat(o.stopPrice) ===
-            parseFloat(
-              (direction === "LONG"
-                ? vwap + atr * 1.5
-                : vwap - atr * 1.5
-              ).toFixed(2)
-            )
-      )
-    ) {
-      console.log(
-        `Take Profit order untuk ${order.symbol} sudah ada, melewati.`
-      );
-      continue;
-    }
-    if (
-      openOrders.some(
-        (o) =>
-          o.type === "STOP_MARKET" &&
-          parseFloat(o.stopPrice) ===
-            parseFloat(
-              (direction === "LONG"
-                ? vwap - atr * 1.2
-                : vwap + atr * 1.2
-              ).toFixed(2)
-            )
-      )
-    ) {
-      console.log(`Stop Loss order untuk ${order.symbol} sudah ada, melewati.`);
-      continue;
-    }
     const takeProfitPrice =
-      direction === "LONG" ? vwap + atr * 1.5 : vwap - atr * 1.5;
+      direction === "LONG"
+        ? order.price + vwap + atr * 1.5
+        : order.price - vwap - atr * 1.5;
     const stopLossPrice =
-      direction === "LONG" ? vwap - atr * 1.2 : vwap + atr * 1.2;
+      direction === "LONG"
+        ? order.price - vwap - atr * 1.2
+        : order.price + vwap + atr * 1.2;
 
     batchOrders.push(
       {
