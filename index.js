@@ -475,12 +475,7 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
     for (const order of batchOrders) {
       await client.futuresOrder(order);
     }
-    await placeTakeProfitAndStopLoss(
-      batchOrders,
-      atr,
-      vwap,
-      direction
-    );
+    await placeTakeProfitAndStopLoss(batchOrders, atr, vwap, direction);
   } else {
     console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
   }
@@ -489,7 +484,12 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
 // Fungsi untuk menetapkan Take Profit dan Stop Loss
 async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
   try {
-    console.log(chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order..."));
+    console.log(
+      chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
+    );
+
+    // Ambil semua order terbuka
+    const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
     for (const order of orders) {
       const { price, quantity, symbol } = order;
@@ -499,18 +499,17 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
 
       // Hitung buffer sebagai kombinasi ATR dan VWAP
       const { pricePrecision } = await getSymbolPrecision(symbol);
-      const buffer = direction === "LONG"
-        ? atr + Math.abs(vwap - orderPrice)
-        : atr + Math.abs(orderPrice - vwap);
+      const buffer =
+        direction === "LONG"
+          ? atr + Math.abs(vwap - orderPrice)
+          : atr + Math.abs(orderPrice - vwap);
 
       // Hitung harga TP dan SL
-      const takeProfitPrice = direction === "LONG"
-        ? orderPrice + buffer
-        : orderPrice - buffer;
+      const takeProfitPrice =
+        direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
 
-      const stopLossPrice = direction === "LONG"
-        ? orderPrice - buffer
-        : orderPrice + buffer;
+      const stopLossPrice =
+        direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
 
       // Bulatkan harga berdasarkan presisi
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
@@ -529,41 +528,72 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         (direction === "LONG" && roundedTP <= orderPrice) ||
         (direction === "SHORT" && roundedTP >= orderPrice)
       ) {
-        console.log(chalk.red("Take Profit terlalu dekat, melewati order asli."));
+        console.log(
+          chalk.red("Take Profit terlalu dekat, melewati order asli.")
+        );
         continue;
       }
 
-      // Buat order Take Profit
-      await client.futuresOrder({
-        symbol,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        type: "TAKE_PROFIT_MARKET",
-        stopPrice: roundedTP,
-        quantity,
-        priceProtect: true,
-      });
-
-      console.log(
-        chalk.green(
-          `Take Profit untuk ${symbol} pada harga ${roundedTP} berhasil ditempatkan.`
-        )
+      // Cek apakah TP sudah ada
+      const tpExists = openOrders.some(
+        (o) =>
+          o.type === "TAKE_PROFIT_MARKET" &&
+          parseFloat(o.stopPrice).toFixed(pricePrecision) ===
+            roundedTP.toFixed(pricePrecision)
       );
 
-      // Buat order Stop Loss
-      await client.futuresOrder({
-        symbol,
-        side: direction === "LONG" ? "SELL" : "BUY",
-        type: "STOP_MARKET",
-        stopPrice: roundedSL,
-        quantity,
-        priceProtect: true,
-      });
-
-      console.log(
-        chalk.green(
-          `Stop Loss untuk ${symbol} pada harga ${roundedSL} berhasil ditempatkan.`
-        )
+      // Cek apakah SL sudah ada
+      const slExists = openOrders.some(
+        (o) =>
+          o.type === "STOP_MARKET" &&
+          parseFloat(o.stopPrice).toFixed(pricePrecision) ===
+            roundedSL.toFixed(pricePrecision)
       );
+
+      // Skip jika TP atau SL sudah ada
+      if (tpExists) {
+        console.log(
+          chalk.yellow(`Take Profit pada harga ${roundedTP} sudah ada.`)
+        );
+      } else {
+        // Buat order Take Profit
+        await client.futuresOrder({
+          symbol,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TAKE_PROFIT_MARKET",
+          stopPrice: roundedTP,
+          quantity,
+          priceProtect: true,
+        });
+
+        console.log(
+          chalk.green(
+            `Take Profit untuk ${symbol} pada harga ${roundedTP} berhasil ditempatkan.`
+          )
+        );
+      }
+
+      if (slExists) {
+        console.log(
+          chalk.yellow(`Stop Loss pada harga ${roundedSL} sudah ada.`)
+        );
+      } else {
+        // Buat order Stop Loss
+        await client.futuresOrder({
+          symbol,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "STOP_MARKET",
+          stopPrice: roundedSL,
+          quantity,
+          priceProtect: true,
+        });
+
+        console.log(
+          chalk.green(
+            `Stop Loss untuk ${symbol} pada harga ${roundedSL} berhasil ditempatkan.`
+          )
+        );
+      }
     }
   } catch (error) {
     console.error(
@@ -572,7 +602,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
     );
   }
 }
-
 
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
