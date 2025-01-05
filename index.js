@@ -501,6 +501,16 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       const orderPrice = parseFloat(price);
       const { pricePrecision, tickSize } = await getSymbolPrecision(symbol);
 
+      // Dapatkan batas harga min/max dari simbol
+      const symbolInfo = await client.futuresExchangeInfo();
+      const symbolData = symbolInfo.symbols.find((s) => s.symbol === symbol);
+      const minPrice = parseFloat(
+        symbolData.filters.find((f) => f.minPrice).minPrice
+      );
+      const maxPrice = parseFloat(
+        symbolData.filters.find((f) => f.maxPrice).maxPrice
+      );
+
       const momentumFactor = Math.abs((orderPrice - vwap) / orderPrice);
       const buffer = atr * (1 + momentumFactor);
 
@@ -527,12 +537,35 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         stopLossPrice -= direction === "LONG" ? extremeBuffer : -extremeBuffer;
       }
 
-      const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
-      const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
+      // Penyesuaian harga berdasarkan tick size
+      const adjustToTickSize = (price) =>
+        parseFloat(
+          (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
+        );
+
+      const adjustedTP = adjustToTickSize(takeProfitPrice);
+      const adjustedSL = adjustToTickSize(stopLossPrice);
+
+      // Validasi harga terhadap batas min/max
+      if (adjustedTP < minPrice || adjustedTP > maxPrice) {
+        console.log(
+          chalk.red(
+            `Take Profit (${adjustedTP}) melanggar batas min/max price.`
+          )
+        );
+        continue;
+      }
+
+      if (adjustedSL < minPrice || adjustedSL > maxPrice) {
+        console.log(
+          chalk.red(`Stop Loss (${adjustedSL}) melanggar batas min/max price.`)
+        );
+        continue;
+      }
 
       // Validasi jarak minimum
       const minDistance = tickSize * 2; // Gunakan dua kali tickSize sebagai jarak minimum
-      if (Math.abs(roundedTP - orderPrice) < minDistance) {
+      if (Math.abs(adjustedTP - orderPrice) < minDistance) {
         console.log(
           chalk.red(
             "Take Profit terlalu dekat dengan harga order. Melewati order ini."
@@ -541,26 +574,13 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         continue;
       }
 
-      if (Math.abs(roundedSL - orderPrice) < minDistance) {
+      if (Math.abs(adjustedSL - orderPrice) < minDistance) {
         console.log(
           chalk.red(
             "Stop Loss terlalu dekat dengan harga order. Melewati order ini."
           )
         );
         continue;
-      }
-
-      // Tambahkan buffer tambahan jika harga terlalu dekat
-      if (Math.abs(roundedTP - orderPrice) < minDistance) {
-        const additionalBuffer = atr * 0.2; // Tambahkan 20% dari ATR sebagai buffer tambahan
-        takeProfitPrice +=
-          direction === "LONG" ? additionalBuffer : -additionalBuffer;
-      }
-
-      if (Math.abs(roundedSL - orderPrice) < minDistance) {
-        const additionalBuffer = atr * 0.2; // Tambahkan 20% dari ATR sebagai buffer tambahan
-        stopLossPrice -=
-          direction === "LONG" ? additionalBuffer : -additionalBuffer;
       }
 
       await new Promise((resolve) => setTimeout(resolve, 3000)); // Jeda untuk sinkronisasi
@@ -573,14 +593,14 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         (o) =>
           o.type === "TAKE_PROFIT_MARKET" &&
           parseFloat(o.stopPrice).toFixed(pricePrecision) ===
-            roundedTP.toFixed(pricePrecision)
+            adjustedTP.toFixed(pricePrecision)
       );
 
       const slExists = updatedOpenOrders.some(
         (o) =>
           o.type === "STOP_MARKET" &&
           parseFloat(o.stopPrice).toFixed(pricePrecision) ===
-            roundedSL.toFixed(pricePrecision)
+            adjustedSL.toFixed(pricePrecision)
       );
 
       if (!tpExists) {
@@ -588,14 +608,14 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
           type: "TAKE_PROFIT_MARKET",
-          stopPrice: roundedTP,
+          stopPrice: adjustedTP,
           quantity,
           priceProtect: true,
         });
 
         console.log(
           chalk.green(
-            `Take Profit untuk ${symbol} pada harga ${roundedTP} berhasil ditempatkan.`
+            `Take Profit untuk ${symbol} pada harga ${adjustedTP} berhasil ditempatkan.`
           )
         );
       }
@@ -605,17 +625,24 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
           type: "STOP_MARKET",
-          stopPrice: roundedSL,
+          stopPrice: adjustedSL,
           quantity,
           priceProtect: true,
         });
 
         console.log(
           chalk.green(
-            `Stop Loss untuk ${symbol} pada harga ${roundedSL} berhasil ditempatkan.`
+            `Stop Loss untuk ${symbol} pada harga ${adjustedSL} berhasil ditempatkan.`
           )
         );
       }
+
+      // Debugging tambahan
+      console.log(
+        chalk.yellow(
+          `Order Price: ${orderPrice}, TP: ${adjustedTP}, SL: ${adjustedSL}, Min Price: ${minPrice}, Max Price: ${maxPrice}`
+        )
+      );
     }
   } catch (error) {
     console.error(
