@@ -328,11 +328,11 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 }
 
 // Fungsi untuk menentukan kondisi pasar
-async function determineMarketCondition(rsi, vwap, lastPrice) {
-  const shortEMA = calculateEMA(lastPrice.slice(-10), 5);
-  const longEMA = calculateEMA(lastPrice.slice(-20), 20);
-  const { macdLine, signalLine } = calculateMACD(lastPrice);
-  const { upperBand, lowerBand } = calculateBollingerBands(lastPrice);
+async function determineMarketCondition(rsi, vwap, closinglastPricePrices) {
+  const shortEMA = calculateEMA(closinglastPricePrices.slice(-10), 5);
+  const longEMA = calculateEMA(closinglastPricePrices.slice(-20), 20);
+  const { macdLine, signalLine } = calculateMACD(closinglastPricePrices);
+  const { upperBand, lowerBand } = calculateBollingerBands(closinglastPricePrices);
 
   // Keanggotaan fuzzy untuk kondisi pasar
   const rsiBuy = fuzzyMembership(rsi, 30, 50);
@@ -672,8 +672,11 @@ async function trade() {
       )
     );
 
-    // harga penutupan
-    const lastPrice = candles.map(c => parseFloat(c.close));
+    // harga penutupan untuk extreme conditions
+    const lastPrice = parseFloat(candles[candles.length - 1].close);
+
+    // harga penutupan untuk determineMarket conditions
+    const closinglastPricePrices = candles.map(c => parseFloat(c.close));
 
     // Hitung ATR
     const atr = await calculateATR(candles, 14);
@@ -726,7 +729,7 @@ async function trade() {
     const marketCondition = await determineMarketCondition(
       rsi,
       vwap,
-      lastPrice
+      closinglastPricePrices
     );
 
     // Tempatkan order grid jika ada sinyal trading
