@@ -673,7 +673,7 @@ async function trade() {
     );
 
     // harga penutupan
-    const lastPrice = parseFloat(candles[candles.length - 1].close);
+    const lastPrice = candles.map(c => parseFloat(c.close));
 
     // Hitung ATR
     const atr = await calculateATR(candles, 14);
