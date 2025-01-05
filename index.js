@@ -768,11 +768,6 @@ async function trade() {
     // Hitung volumes
     const volumes = candles.map((c) => parseFloat(c.volume));
 
-    // Kondisi pasar extreme
-    if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes)) {
-      return; // Berhenti jika pasar terlalu ekstrem
-    }
-
     // Periksa apakah masih ada order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
     if (openOrders.length > 0) {
@@ -803,6 +798,19 @@ async function trade() {
       );
       return; // Keluar dari fungsi jika masih ada posisi terbuka
     }
+
+    // Kondisi pasar extreme
+    if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes)) {
+      return; // Berhenti jika pasar terlalu ekstrem
+    }
+
+    // Tentukan kondisi pasar
+    const marketCondition = await determineMarketCondition(
+      rsi,
+      vwap,
+      closinglastPricePrices,
+      lastPrice
+    );
 
     // Tempatkan order grid jika ada sinyal trading
     if (marketCondition === "LONG" || marketCondition === "SHORT") {
