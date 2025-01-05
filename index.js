@@ -804,14 +804,7 @@ async function trade() {
       return; // Keluar dari fungsi jika masih ada posisi terbuka
     }
 
-    // Tentukan kondisi pasar
-    const marketCondition = await determineMarketCondition(
-      rsi,
-      vwap,
-      closinglastPricePrices,
-      lastPrice
-    );
-
+  
     // Tempatkan order grid jika ada sinyal trading
     if (marketCondition === "LONG" || marketCondition === "SHORT") {
       console.log(
