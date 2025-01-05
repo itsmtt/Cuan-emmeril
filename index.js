@@ -472,10 +472,9 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
   }
 
   if (batchOrders.length > 0) {
-    await client.futuresBatchOrders(batchOrders);
-    console.log(
-      chalk.green(`${batchOrders.length} Grid Orders berhasil ditempatkan.`)
-    );
+    for (const order of batchOrders) {
+      await client.futuresOrder(order);
+    }
     await placeTakeProfitAndStopLoss(batchOrders, atr, vwap, direction);
   } else {
     console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
