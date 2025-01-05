@@ -479,7 +479,6 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
       batchOrders,
       atr,
       vwap,
-      currentPrice,
       direction
     );
   } else {
@@ -488,37 +487,51 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
 }
 
 // Fungsi untuk menetapkan Take Profit dan Stop Loss
-async function placeTakeProfitAndStopLoss(
-  orders,
-  atr,
-  vwap,
-  currentPrice,
-  direction
-) {
+async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
   try {
-    console.log(
-      chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
-    );
+    console.log(chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order..."));
 
     for (const order of orders) {
       const { price, quantity, symbol } = order;
-      const buffer = (atr + Math.abs(currentPrice - vwap)) / 2;
 
-      // Hitung Take Profit dan Stop Loss berdasarkan ATR dan VWAP
-      const takeProfitPrice =
-        direction === "LONG"
-          ? parseFloat(price) + atr + buffer
-          : parseFloat(price) - atr - buffer;
+      // Gunakan harga order sebagai referensi
+      const orderPrice = parseFloat(price);
 
-      const stopLossPrice =
-        direction === "LONG"
-          ? Math.min(parseFloat(price) - atr - buffer, vwap * 0.98)
-          : Math.max(parseFloat(price) + atr + buffer, vwap * 1.02);
-
-      // Bulatkan harga berdasarkan presisi simbol
+      // Hitung buffer sebagai kombinasi ATR dan VWAP
       const { pricePrecision } = await getSymbolPrecision(symbol);
+      const buffer = direction === "LONG"
+        ? atr + Math.abs(vwap - orderPrice)
+        : atr + Math.abs(orderPrice - vwap);
+
+      // Hitung harga TP dan SL
+      const takeProfitPrice = direction === "LONG"
+        ? orderPrice + buffer
+        : orderPrice - buffer;
+
+      const stopLossPrice = direction === "LONG"
+        ? orderPrice - buffer
+        : orderPrice + buffer;
+
+      // Bulatkan harga berdasarkan presisi
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
       const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
+
+      // Validasi harga agar tidak memicu langsung
+      if (
+        (direction === "LONG" && roundedSL >= orderPrice) ||
+        (direction === "SHORT" && roundedSL <= orderPrice)
+      ) {
+        console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
+        continue;
+      }
+
+      if (
+        (direction === "LONG" && roundedTP <= orderPrice) ||
+        (direction === "SHORT" && roundedTP >= orderPrice)
+      ) {
+        console.log(chalk.red("Take Profit terlalu dekat, melewati order asli."));
+        continue;
+      }
 
       // Buat order Take Profit
       await client.futuresOrder({
@@ -559,6 +572,7 @@ async function placeTakeProfitAndStopLoss(
     );
   }
 }
+
 
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
