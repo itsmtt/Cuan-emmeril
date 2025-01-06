@@ -769,13 +769,14 @@ async function trade() {
       if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes)) {
         return;
       }
+      
       // Memantau status take profit
       await monitorOrders();
 
       // Log total profit dan loss saat ini
       console.log(chalk.yellow(`Total Profit: ${totalProfit.toFixed(2)} USDT`));
       console.log(chalk.yellow(`Total Loss: ${totalLoss.toFixed(2)} USDT`));
-      
+
       console.log(
         chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
       );
