@@ -31,10 +31,10 @@ try {
   process.exit(1);
 }
 
-const SYMBOL = config.SYMBOL; // Symbol yang akan ditradingkan
-const GRID_COUNT = config.GRID_COUNT; // Jumlah level grid
-const LEVERAGE = config.LEVERAGE; // Leverage untuk trading
-const BASE_USDT = config.BASE_USDT; // Nilai order per grid dalam USDT
+const SYMBOL = config.SYMBOL;
+const GRID_COUNT = config.GRID_COUNT;
+const LEVERAGE = config.LEVERAGE;
+const BASE_USDT = config.BASE_USDT;
 
 let totalProfit = 0;
 let totalLoss = 0;
@@ -77,7 +77,7 @@ async function closeOpenOrders() {
     }
   } catch (error) {
     console.error(chalk.bgRed("Kesalahan saat menutup order terbuka:"), error);
-    throw error; // Bubble up the error for higher-level handling
+    throw error;
   }
 }
 
@@ -102,11 +102,11 @@ async function closeOpenPositions() {
           )
         );
 
+        // Hitung profit atau loss
         const currentPrice = parseFloat(
           position.markPrice || position.entryPrice
-        ); // Gunakan markPrice jika ada
+        );
         const entryPrice = parseFloat(position.entryPrice);
-        // Hitung profit atau loss
         const pnl =
           side === "SELL"
             ? (entryPrice - currentPrice) * quantity
@@ -252,9 +252,9 @@ function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
 
 // Fungsi untuk menghitung keanggotaan fuzzy
 function fuzzyMembership(value, low, high) {
-  if (value <= low) return 1; // Penuh keanggotaan
-  if (value >= high) return 0; // Tidak ada keanggotaan
-  return (high - value) / (high - low); // Linear
+  if (value <= low) return 1;
+  if (value >= high) return 0;
+  return (high - value) / (high - low);
 }
 
 // Fungsi untuk menghitung VWAP
@@ -268,40 +268,36 @@ function calculateVWAP(candles) {
     const close = parseFloat(candle.close);
     const volume = parseFloat(candle.volume);
 
-    const typicalPrice = (high + low + close) / 3; // Harga tipikal
+    const typicalPrice = (high + low + close) / 3;
     cumulativeVolume += volume;
     cumulativePriceVolume += typicalPrice * volume;
   }
 
-  return cumulativePriceVolume / cumulativeVolume; // Rumus VWAP
+  return cumulativePriceVolume / cumulativeVolume;
 }
 
 // Fungsi untuk memeriksa kondisi pasar ekstrem
 async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
-  // Keanggotaan fuzzy untuk ATR
+  // Keanggotaan fuzzy
   const highVolatility = fuzzyMembership(atr, 0.05, 0.1);
   const extremeVolatility = fuzzyMembership(atr, 0.1, 0.2);
-
-  // Keanggotaan fuzzy untuk volume ekstrem
   const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
   const volumeMembership = fuzzyMembership(
     volumes[volumes.length - 1],
     avgVolume * 1.5,
     avgVolume * 3
   );
-
-  // Keanggotaan fuzzy untuk harga jauh dari VWAP
   const priceFarBelowVWAP = fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9);
   const priceFarAboveVWAP = fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2);
 
-  // Gabungkan aturan fuzzy
+  // Hitung berdasarkan Keanggotaan fuzzy
   const valuesisExtreme = [
     highVolatility,
     extremeVolatility,
     volumeMembership,
     priceFarBelowVWAP,
     priceFarAboveVWAP,
-  ]; // Array nilai
+  ];
   const isExtreme =
     valuesisExtreme.reduce((sum, value) => sum + value, 0) /
     valuesisExtreme.length;
@@ -315,7 +311,6 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
   );
 
   if (isExtreme >= 0.9) {
-    // Threshold 0.9 untuk kondisi ekstrem
     console.log(
       chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.")
     );
@@ -356,12 +351,8 @@ async function determineMarketCondition(
     upperBand * 0.98,
     upperBand
   );
-
-  // Tambahkan logika untuk EMA
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
-
-  // Logika berbasis VWAP
   const priceBelowVWAP = lastPrice < vwap ? 1 : 0;
   const priceAboveVWAP = lastPrice > vwap ? 1 : 0;
 
@@ -372,10 +363,11 @@ async function determineMarketCondition(
     priceNearLowerBand,
     priceBelowVWAP,
     emaBuy,
-  ]; // Array nilai
+  ];
   const buySignal =
     valuesBuySignal.reduce((sum, value) => sum + value, 0) /
     valuesBuySignal.length;
+
   // Logika untuk SELL
   const valuesSellSignal = [
     rsiSell,
@@ -383,7 +375,7 @@ async function determineMarketCondition(
     priceNearUpperBand,
     priceAboveVWAP,
     emaSell,
-  ]; // Array nilai
+  ];
   const sellSignal =
     valuesSellSignal.reduce((sum, value) => sum + value, 0) /
     valuesSellSignal.length;
@@ -397,7 +389,7 @@ async function determineMarketCondition(
     )
   );
 
-  // Tentukan sinyal berdasarkan nilai keanggotaan tertinggi
+  // fungsi untuk menentukan sinyal buy or sell
   if (buySignal > sellSignal && buySignal > 0.5) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
@@ -431,6 +423,7 @@ async function placeGridOrders(
   const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
     SYMBOL
   );
+
   const tickSize = parseFloat(
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
@@ -443,8 +436,7 @@ async function placeGridOrders(
   );
 
   const buffer = (atr + Math.abs(currentPrice - vwap)) / 2;
-  const momentumOffset = (currentPrice - vwap) * 0.1; // Offset berdasarkan momentum
-
+  const momentumOffset = (currentPrice - vwap) * 0.1;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
 
@@ -453,9 +445,11 @@ async function placeGridOrders(
       direction === "LONG"
         ? currentPrice - adjustedGridSpacing * i - buffer + momentumOffset
         : currentPrice + adjustedGridSpacing * i + buffer + momentumOffset;
+
     const roundedPrice = parseFloat(
       (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
     );
+
     const quantity = parseFloat(
       ((BASE_USDT * LEVERAGE) / currentPrice).toFixed(quantityPrecision)
     );
@@ -757,7 +751,7 @@ async function trade() {
     // Hitung rsi
     const rsi = await calculateRSI(candles, 14);
 
-    // Penyesuaian dinamis grid spacing dan jumlah grid
+    // Hitung historicalVolatility
     const historicalVolatility = Math.sqrt(
       candles
         .slice(-20)
@@ -771,32 +765,21 @@ async function trade() {
     // Periksa apakah masih ada order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
     if (openOrders.length > 0) {
+      // Berhenti jika pasar terlalu ekstrem
       if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes)) {
-        return; // Berhenti jika pasar terlalu ekstrem
+        return;
       }
-      await monitorOrders(); // Memantau status take profit
+      // Memantau status take profit
+      await monitorOrders();
+
+      // Log total profit dan loss saat ini
+      console.log(chalk.yellow(`Total Profit: ${totalProfit.toFixed(2)} USDT`));
+      console.log(chalk.yellow(`Total Loss: ${totalLoss.toFixed(2)} USDT`));
+      
       console.log(
         chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
       );
       return; // Keluar dari fungsi jika masih ada order terbuka
-    }
-
-    // Periksa apakah masih ada posisi terbuka
-    const positions = await client.futuresPositionRisk();
-    const openPosition = positions.find(
-      (position) => parseFloat(position.positionAmt) !== 0
-    );
-    if (openPosition) {
-      if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes)) {
-        return; // Berhenti jika pasar terlalu ekstrem
-      }
-      await monitorOrders(); // Memantau status take profit
-      console.log(
-        chalk.blue(
-          `Masih ada posisi terbuka pada ${openPosition.symbol}. Menunggu...`
-        )
-      );
-      return; // Keluar dari fungsi jika masih ada posisi terbuka
     }
 
     // Kondisi pasar extreme
