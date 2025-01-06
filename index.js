@@ -777,24 +777,34 @@ async function trade() {
         closinglastPricePrices,
         lastPrice
       );
-      
-          // Ambil semua limit orders
-    const hasOpenOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-    const limitBuyOrders = hasOpenOrders.filter((order) => order.side === "BUY" && order.type === "LIMIT");
-    const limitSellOrders = hasOpenOrders.filter((order) => order.side === "SELL" && order.type === "LIMIT");
 
-    // Periksa konflik antara limit orders dan kondisi pasar
-    const conflictingBuyOrders = limitBuyOrders.some(() => marketCondition === "SHORT");
-    const conflictingSellOrders = limitSellOrders.some(() => marketCondition === "LONG");
+      // Ambil semua limit orders
+      const hasOpenOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+      const limitBuyOrders = hasOpenOrders.filter(
+        (order) => order.side === "BUY" && order.type === "LIMIT"
+      );
+      const limitSellOrders = hasOpenOrders.filter(
+        (order) => order.side === "SELL" && order.type === "LIMIT"
+      );
 
-    if (conflictingBuyOrders || conflictingSellOrders) {
-      console.log(chalk.red("Kondisi pasar berlawanan dengan limit orders yang terbuka. Menutup semua order."));
-      await closeOpenOrders();
-      await closeOpenPositions();
-      return;
-    }
-      
-      
+      // Periksa konflik antara limit orders dan kondisi pasar
+      const conflictingBuyOrders = limitBuyOrders.some(
+        () => marketCondition === "SHORT"
+      );
+      const conflictingSellOrders = limitSellOrders.some(
+        () => marketCondition === "LONG"
+      );
+
+      if (conflictingBuyOrders || conflictingSellOrders) {
+        console.log(
+          chalk.red(
+            "Kondisi pasar berlawanan dengan limit orders yang terbuka. Menutup semua order."
+          )
+        );
+        await closeOpenOrders();
+        await closeOpenPositions();
+        return;
+      }
 
       // Memantau status take profit
       await monitorOrders();
