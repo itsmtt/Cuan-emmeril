@@ -777,6 +777,27 @@ async function trade() {
         closinglastPricePrices,
         lastPrice
       );
+
+      // Periksa arah order terbuka terhadap kondisi pasar
+      const conflictingOrders = openOrders.some((order) => {
+        const isBuyOrder = order.side === "BUY";
+        return (
+          (isBuyOrder && marketCondition === "SHORT") ||
+          (!isBuyOrder && marketCondition === "LONG")
+        );
+      });
+
+      if (conflictingOrders) {
+        console.log(
+          chalk.red(
+            `Kondisi pasar (${marketCondition}) berlawanan dengan order terbuka. Menutup semua order.`
+          )
+        );
+        await closeOpenOrders();
+        await closeOpenPositions();
+        return;
+      }
+      
       
       // Periksa posisi/order terbuka
       const positions = await client.futuresPositionRisk();
