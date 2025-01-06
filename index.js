@@ -777,9 +777,11 @@ async function trade() {
         closinglastPricePrices,
         lastPrice
       );
+      
+      const hasOpenOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
       // Periksa arah order terbuka terhadap kondisi pasar
-      const conflictingOrders = openOrders.some((order) => {
+      const conflictingOrders = hasOpenOrders.some((order) => {
         const isBuyOrder = order.side === "BUY";
         return (
           (isBuyOrder && marketCondition === "SHORT") ||
