@@ -499,10 +499,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
 
       // Hitung buffer sebagai kombinasi ATR dan VWAP
       const { pricePrecision } = await getSymbolPrecision(symbol);
-      const buffer =
-        direction === "LONG"
-          ? atr + Math.abs(vwap - orderPrice)
-          : atr + Math.abs(orderPrice - vwap);
+      const buffer = Math.max(atr, 0.5 * Math.abs(orderPrice - vwap));
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
@@ -516,20 +513,27 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
 
       // Validasi harga agar tidak memicu langsung
-      if (
-        (direction === "LONG" && roundedSL >= orderPrice) ||
-        (direction === "SHORT" && roundedSL <= orderPrice)
-      ) {
-        console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
+      if (direction === "LONG" && roundedSL >= orderPrice) {
+        console.log(
+          chalk.red("Stop Loss terlalu dekat dengan harga order LONG.")
+        );
         continue;
       }
-
-      if (
-        (direction === "LONG" && roundedTP <= orderPrice) ||
-        (direction === "SHORT" && roundedTP >= orderPrice)
-      ) {
+      if (direction === "SHORT" && roundedSL <= orderPrice) {
         console.log(
-          chalk.red("Take Profit terlalu dekat, melewati order asli.")
+          chalk.red("Stop Loss terlalu dekat dengan harga order SHORT.")
+        );
+        continue;
+      }
+      if (direction === "LONG" && roundedTP <= orderPrice) {
+        console.log(
+          chalk.red("Take Profit terlalu dekat dengan harga order LONG.")
+        );
+        continue;
+      }
+      if (direction === "SHORT" && roundedTP >= orderPrice) {
+        console.log(
+          chalk.red("Take Profit terlalu dekat dengan harga order SHORT.")
         );
         continue;
       }
