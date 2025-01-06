@@ -770,13 +770,37 @@ async function trade() {
         return;
       }
 
-      // lihat kondisi pasar saat ini
-      await determineMarketCondition(
+      // Tentukan kondisi pasar
+      const marketCondition = await determineMarketCondition(
         rsi,
         vwap,
         closinglastPricePrices,
         lastPrice
       );
+      
+      // Periksa posisi/order terbuka
+      const positions = await client.futuresPositionRisk();
+      const hasOpenPositions = positions.some(
+        (position) => parseFloat(position.positionAmt) !== 0
+      );
+
+      const currentDirection = hasOpenPositions
+        ? positions.find((position) => parseFloat(position.positionAmt) !== 0)
+            .positionAmt > 0
+          ? "LONG"
+          : "SHORT"
+        : null;
+
+      if (currentDirection && currentDirection !== marketCondition) {
+        console.log(
+          chalk.red(
+            `Kondisi pasar (${marketCondition}) berlawanan dengan posisi terbuka (${currentDirection}). Menutup posisi dan order.`
+          )
+        );
+        await closeOpenOrders();
+        await closeOpenPositions();
+        return;
+      }
 
       // Memantau status take profit
       await monitorOrders();
