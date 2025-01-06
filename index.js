@@ -769,7 +769,7 @@ async function trade() {
       if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes)) {
         return;
       }
-      
+
       // Memantau status take profit
       await monitorOrders();
 
@@ -780,12 +780,12 @@ async function trade() {
       console.log(
         chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
       );
-      return; // Keluar dari fungsi jika masih ada order terbuka
+      return; 
     }
 
     // Kondisi pasar extreme
     if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes)) {
-      return; // Berhenti jika pasar terlalu ekstrem
+      return; 
     }
 
     // Tentukan kondisi pasar
