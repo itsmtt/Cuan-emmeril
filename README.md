@@ -75,10 +75,29 @@ node index.js
 
 ### fitur bot :
 
-- Menentukan kondisi Long atau short secara otomatis
-- take profit dan stop loss di buat secara otomatis
-- aplikasi memulai trading baru jika take profit dan stop loss telah tercapai
-- pemantauan kondisi pasar extreme akan menutup semua order open dan open posisi secara otomatis
+1. Manajemen Order dan Posisi
+   - Menutup semua order terbuka sebelum memulai trading untuk mencegah konflik strategi.
+   - Menutup semua posisi terbuka untuk memastikan bot memulai dari kondisi bersih.
+   - Memeriksa dan membatalkan order terbuka jika kondisi pasar berubah drastis.
+2. Analisis Teknikal untuk Trading
+   - ATR (Average True Range) untuk mengukur volatilitas pasar.
+   - VWAP (Volume Weighted Average Price) untuk menentukan level harga yang wajar.
+   - RSI (Relative Strength Index) untuk mengidentifikasi kondisi overbought dan oversold.
+   - MACD (Moving Average Convergence Divergence) untuk melihat tren pasar.
+   - Bollinger Bands untuk mengukur volatilitas dan kemungkinan breakout.
+   - Fuzzy Logic untuk menentukan kondisi pasar ekstrem.
+3. Strategi Grid Trading
+   - Menempatkan order grid berdasarkan volatilitas dan kondisi pasar.
+   - Menyesuaikan grid spacing sesuai dengan volatilitas historis.
+   - Menyesuaikan jumlah grid order berdasarkan volatilitas pasar.
+4. Manajemen Risiko
+   - Menetapkan Take Profit (TP) dan Stop Loss (SL) secara dinamis berdasarkan ATR dan VWAP.
+   - Memeriksa kondisi pasar ekstrem, seperti volatilitas tinggi atau harga jauh dari VWAP, untuk menghentikan trading sementara.
+   - Menggunakan leverage yang dapat disesuaikan berdasarkan konfigurasi pengguna.
+5. Monitoring dan Logging
+   - Memantau status order terbuka dan menutup posisi jika tidak ada Take Profit atau Stop Loss.
+   - Melakukan evaluasi profit dan loss setiap iterasi untuk mencatat performa trading.
+   - Loop trading terus-menerus dengan jeda waktu tertentu.
 
 ### Simulasi apliksi berjalan:
 
