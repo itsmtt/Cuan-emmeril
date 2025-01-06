@@ -516,23 +516,23 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
 
       // Validasi harga agar tidak memicu langsung
-      // if (
-      //   (direction === "LONG" && roundedSL >= orderPrice) ||
-      //   (direction === "SHORT" && roundedSL <= orderPrice)
-      // ) {
-      //   console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
-      //   continue;
-      // }
+      if (
+        (direction === "LONG" && roundedSL >= orderPrice) ||
+        (direction === "SHORT" && roundedSL <= orderPrice)
+      ) {
+        console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
+        continue;
+      }
 
-      // if (
-      //   (direction === "LONG" && roundedTP <= orderPrice) ||
-      //   (direction === "SHORT" && roundedTP >= orderPrice)
-      // ) {
-      //   console.log(
-      //     chalk.red("Take Profit terlalu dekat, melewati order asli.")
-      //   );
-      //   continue;
-      // }
+      if (
+        (direction === "LONG" && roundedTP <= orderPrice) ||
+        (direction === "SHORT" && roundedTP >= orderPrice)
+      ) {
+        console.log(
+          chalk.red("Take Profit terlalu dekat, melewati order asli.")
+        );
+        continue;
+      }
 
       // Jeda waktu untuk memastikan Binance memproses order sebelumnya
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Tunggu 1 detik
