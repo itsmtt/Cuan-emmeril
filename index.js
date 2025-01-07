@@ -418,15 +418,13 @@ async function placeGridOrders(
     GRID_COUNT - Math.floor(Math.sqrt(volatility) * 3)
   );
 
-  // const buffer = (atr + Math.abs(currentPrice - vwap)) / 4;
-  // const momentumOffset = (currentPrice - vwap) * 0.05;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
 
   for (let i = 1; i <= adjustedGridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - adjustedGridSpacing * i 
+        ? currentPrice - adjustedGridSpacing * i
         : currentPrice + adjustedGridSpacing * i;
 
     const roundedPrice = parseFloat(
@@ -489,18 +487,12 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       // Tentukan multiplier dinamis berdasarkan volatilitas
       const multiplier = volatility > 0.03 ? 1.5 : 1.2;
 
-      // Hitung buffer dinamis untuk TP dan SL
-      const buffer =
-        direction === "LONG"
-          ? atr * multiplier + Math.abs(vwap - orderPrice) * 0.5
-          : atr * multiplier + Math.abs(orderPrice - vwap) * 0.5;
-          
       // Hitung harga TP dan SL
       const takeProfitPrice =
-        direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
+        direction === "LONG" ? orderPrice + multiplier : orderPrice - multiplier;
 
       const stopLossPrice =
-        direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
+        direction === "LONG" ? orderPrice - multiplier : orderPrice + multiplier;
 
       // Bulatkan harga berdasarkan presisi
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
