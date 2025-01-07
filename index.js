@@ -406,7 +406,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
   );
 
   const volatility = atr / currentPrice;
-  const adjustedGridSpacing = volatility > 0.03 ? atr * 0.5 : atr;
+  const adjustedGridSpacing = volatility > 0.03 ? atr * 0.1 : atr;
   const adjustedGridCount = Math.max(
     2,
     GRID_COUNT - Math.floor(Math.sqrt(volatility) * 3)
@@ -479,7 +479,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       const volatility = atr / orderPrice;
 
       // Tentukan multiplier dinamis berdasarkan volatilitas
-      const multiplier = volatility > 0.03 ? atr * 0.5 : atr;
+      const multiplier = volatility > 0.03 ? atr * 0.1 : atr;
 
       // Hitung buffer dinamis untuk TP dan SL
       const buffer =
