@@ -406,6 +406,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
   );
 
   const volatility = atr / currentPrice;
+  const adjustedGridSpacing = volatility > 0.03 ? atr * 0.00001 : atr;
   const adjustedGridCount = Math.max(
     2,
     GRID_COUNT - Math.floor(Math.sqrt(volatility) * 3)
@@ -417,8 +418,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
   for (let i = 1; i <= adjustedGridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - volatility * i
-        : currentPrice + volatility * i;
+        ? currentPrice - adjustedGridSpacing * i
+        : currentPrice + adjustedGridSpacing * i;
 
     const roundedPrice = parseFloat(
       (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
@@ -478,7 +479,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       const volatility = atr / orderPrice;
 
       // Tentukan multiplier dinamis berdasarkan volatilitas
-      const multiplier = volatility > 0.03 ? atr : atr;
+      const multiplier = volatility > 0.03 ? atr * 0.001 : atr;
 
       // Hitung buffer dinamis untuk TP dan SL
       const buffer =
