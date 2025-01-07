@@ -305,9 +305,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
   const logIsExtreme = isExtreme * 100;
 
   console.log(
-    chalk.yellow(
-      `Pasar dalam kondisi ekstrem jika : ${logIsExtreme} % > 90 %`
-    )
+    chalk.yellow(`Pasar dalam kondisi ekstrem jika : ${logIsExtreme} % > 90 %`)
   );
 
   if (isExtreme >= 0.9) {
@@ -403,13 +401,7 @@ async function determineMarketCondition(
 }
 
 // Fungsi untuk menetapkan order grid
-async function placeGridOrders(
-  currentPrice,
-  atr,
-  vwap,
-  direction,
-  historicalVolatility
-) {
+async function placeGridOrders(currentPrice, atr, vwap, direction) {
   await closeOpenPositions();
   await closeOpenOrders();
 
@@ -428,23 +420,21 @@ async function placeGridOrders(
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const adjustedGridSpacing = atr * (historicalVolatility > 0.03 ? 1.5 : 1.2);
-  const volatility = atr / currentPrice;
   const adjustedGridCount = Math.max(
     2,
     GRID_COUNT - Math.floor(Math.sqrt(volatility) * 5)
   );
 
-  const buffer = (atr + Math.abs(currentPrice - vwap)) / 2;
-  const momentumOffset = (currentPrice - vwap) * 0.1;
-  const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-  const batchOrders = [];
+  const buffer =
+    direction === "LONG"
+      ? atr + Math.abs(vwap - currentPrice)
+      : atr + Math.abs(currentPrice - vwap);
 
   for (let i = 1; i <= adjustedGridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - adjustedGridSpacing * i - buffer + momentumOffset
-        : currentPrice + adjustedGridSpacing * i + buffer + momentumOffset;
+        ? currentPrice - buffer * i
+        : currentPrice + buffer * i;
 
     const roundedPrice = parseFloat(
       (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
