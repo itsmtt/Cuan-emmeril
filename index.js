@@ -429,8 +429,8 @@ async function placeGridOrders(
   for (let i = 1; i <= adjustedGridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - adjustedGridSpacing * i - buffer
-        : currentPrice + adjustedGridSpacing * i + buffer;
+        ? currentPrice - buffer * i
+        : currentPrice + buffer * i;
 
     const roundedPrice = parseFloat(
       (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
