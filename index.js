@@ -389,7 +389,6 @@ function calculateFuzzySignals(signals) {
 async function placeGridOrders(
   currentPrice,
   atr,
-  vwap,
   direction,
   historicalVolatility
 ) {
@@ -459,14 +458,14 @@ async function placeGridOrders(
     for (const order of batchOrders) {
       await client.futuresOrder(order);
     }
-    await placeTakeProfitAndStopLoss(batchOrders, atr, vwap, direction);
+    await placeTakeProfitAndStopLoss(batchOrders, atr, direction);
   } else {
     console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
   }
 }
 
 // Fungsi untuk menetapkan Take Profit dan Stop Loss
-async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
+async function placeTakeProfitAndStopLoss(orders, atr, direction) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
@@ -827,7 +826,6 @@ async function trade() {
       await placeGridOrders(
         currentPrice,
         atr,
-        vwap,
         marketCondition,
         historicalVolatility
       );
