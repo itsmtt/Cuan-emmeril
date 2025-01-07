@@ -410,6 +410,7 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
   const volatility = atr / currentPrice;
   const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT;
   const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
+  
 
   console.log(
     chalk.yellow(
@@ -485,7 +486,11 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
         )
       );
 
+      
+
       // Hitung takeProfitPrice dan stop loss
+      const volatilityTpSl = atr / roundedPrice;
+      const buffer = atr * volatilityTpSl;
       const takeProfitPrice =
         direction === "LONG"
           ? roundedPrice + atr * 1.5 + buffer
