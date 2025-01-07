@@ -717,7 +717,6 @@ async function trade() {
     const candles = await client.futuresCandles({
       symbol: SYMBOL,
       interval: "15m",
-      limit: 50,
     });
 
     //validasi candles
