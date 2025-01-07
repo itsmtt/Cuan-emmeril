@@ -488,10 +488,11 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
 
       
 
-      // Hitung takeProfitPrice dan stop loss
+      // Hitung 
+          
       const volatilityTpSl = atr / roundedPrice;
       const muliple = volatilityTpSl > 0.03 ? atr * 1.5 : atr;
-      const bufferTpSl = atr * muliple;
+      const bufferTpSl = atr * muliple + Math.abs(vwap - orderPrice) * 0.5;
       const takeProfitPrice =
         direction === "LONG"
           ? roundedPrice + atr * 1.5 + bufferTpSl
