@@ -406,7 +406,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
   );
 
   const volatility = atr / currentPrice;
-  const adjustedGridSpacing = volatility > 0.03 ? atr : atr;
   const adjustedGridCount = Math.max(
     2,
     GRID_COUNT - Math.floor(Math.sqrt(volatility) * 3)
@@ -418,8 +417,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
   for (let i = 1; i <= adjustedGridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - adjustedGridSpacing * i
-        : currentPrice + adjustedGridSpacing * i;
+        ? currentPrice - volatility * i
+        : currentPrice + volatility * i;
 
     const roundedPrice = parseFloat(
       (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
