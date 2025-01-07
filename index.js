@@ -407,15 +407,12 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
   const volatility = atr / currentPrice;
   const adjustedGridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
-  const adjustedGridCount = Math.max(
-    2,
-    GRID_COUNT - Math.floor(Math.sqrt(volatility) * 3)
-  );
+  const orderGrid = GRID_COUNT;
 
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
 
-  for (let i = 1; i <= adjustedGridCount; i++) {
+  for (let i = 1; i <= orderGrid; i++) {
     const price =
       direction === "LONG"
         ? currentPrice - adjustedGridSpacing * i
