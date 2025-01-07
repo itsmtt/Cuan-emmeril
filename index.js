@@ -474,8 +474,8 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       // Hitung buffer atr untuk TP dan SL
       const buffer =
         direction === "LONG"
-          ? atr + orderPrice * 0.07
-          : atr + orderPrice * 0.07;
+          ? atr + orderPrice * 0.1
+          : atr + orderPrice * 0.1;
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
