@@ -401,13 +401,7 @@ async function determineMarketCondition(
 }
 
 // Fungsi untuk menetapkan order grid
-async function placeGridOrders(
-  currentPrice,
-  atr,
-  vwap,
-  direction,
-  historicalVolatility
-) {
+async function placeGridOrders(currentPrice, atr, vwap, direction) {
   await closeOpenPositions();
   await closeOpenOrders();
 
@@ -746,14 +740,6 @@ async function trade() {
 
     // Hitung rsi
     const rsi = await calculateRSI(candles, 14);
-
-    // Hitung historicalVolatility
-    const historicalVolatility = Math.sqrt(
-      candles
-        .slice(-20)
-        .map((c) => Math.pow(c.high - c.low, 2))
-        .reduce((sum, diffSq) => sum + diffSq, 0) / 20
-    );
 
     // Hitung volumes
     const volumes = candles.map((c) => parseFloat(c.volume));
