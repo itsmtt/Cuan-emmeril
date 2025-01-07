@@ -303,9 +303,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 
   console.log(
     chalk.yellow(
-      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(
-        2
-      )}% > 90%`
+      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(2)}% > 90%`
     )
   );
 
@@ -388,12 +386,7 @@ function calculateFuzzySignals(signals) {
 }
 
 // Fungsi untuk menetapkan order grid
-async function placeGridOrders(
-  currentPrice,
-  atr,
-  vwap,
-  direction
-) {
+async function placeGridOrders(currentPrice, atr, vwap, direction) {
   await closeOpenPositions();
   await closeOpenOrders();
 
@@ -703,7 +696,6 @@ async function trade() {
     const candles = await client.futuresCandles({
       symbol: SYMBOL,
       interval: "15m",
-      limit: 50,
     });
 
     //validasi candles
@@ -736,14 +728,6 @@ async function trade() {
 
     // Hitung rsi
     const rsi = await calculateRSI(candles, 14);
-
-    // Hitung historicalVolatility
-    const historicalVolatility = Math.sqrt(
-      candles
-        .slice(-20)
-        .map((c) => Math.pow(c.high - c.low, 2))
-        .reduce((sum, diffSq) => sum + diffSq, 0) / 20
-    );
 
     // Hitung volumes
     const volumes = candles.map((c) => parseFloat(c.volume));
