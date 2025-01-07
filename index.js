@@ -487,12 +487,15 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       // Tentukan multiplier dinamis berdasarkan volatilitas
       const multiplier = volatility > 0.03 ? 1.5 : 1.2;
 
+      // Hitung buffer dinamis untuk TP dan SL
+      const buffer = atr * multiplier;
+
       // Hitung harga TP dan SL
       const takeProfitPrice =
-        direction === "LONG" ? orderPrice + multiplier : orderPrice - multiplier;
+        direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
 
       const stopLossPrice =
-        direction === "LONG" ? orderPrice - multiplier : orderPrice + multiplier;
+        direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
 
       // Bulatkan harga berdasarkan presisi
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
