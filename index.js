@@ -506,10 +506,10 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
-        direction === "LONG" ? orderPrice * 0.015 + buffer : orderPrice * 0.015 - buffer;
+        direction === "LONG" ? orderPrice * 0.05 + buffer : orderPrice * 0.05 - buffer;
 
       const stopLossPrice =
-        direction === "LONG" ? orderPrice * 0.015 - buffer : orderPrice * 0.015 + buffer;
+        direction === "LONG" ? orderPrice * 0.05 - buffer : orderPrice * 0.05 + buffer;
 
       // Bulatkan harga berdasarkan presisi
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
