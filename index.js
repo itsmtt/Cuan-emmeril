@@ -386,82 +386,197 @@ function calculateFuzzySignals(signals) {
 }
 
 // Fungsi untuk menetapkan order grid
-async function placeGridOrders(
-  currentPrice,
-  atr,
-  vwap,
-  direction,
-  historicalVolatility
-) {
+// Fungsi untuk menetapkan order grid dengan take profit dan stop loss
+async function placeGridOrders(currentPrice, atr, direction) {
+  // Pastikan semua posisi dan order terbuka ditutup sebelum membuat order baru
   await closeOpenPositions();
   await closeOpenOrders();
 
+  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
+    SYMBOL
+  );
+
+  // Ambil tickSize dari Binance API
   const exchangeInfo = await client.futuresExchangeInfo();
   const symbolInfo = exchangeInfo.symbols.find((s) => s.symbol === SYMBOL);
   if (!symbolInfo) {
     console.error(`Symbol ${SYMBOL} tidak ditemukan di Binance.`);
     return;
   }
-
-  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
-    SYMBOL
-  );
-
   const tickSize = parseFloat(
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const adjustedGridSpacing = atr * (historicalVolatility > 0.03 ? 1.5 : 1.2);
+  // Hitung VWAP dari data candle
+  const candles = await client.futuresCandles({
+    symbol: SYMBOL,
+    interval: "15m",
+    limit: 50,
+  });
+  const vwap = calculateVWAP(candles);
+
+  const buffer = atr * 0.5 + Math.abs(currentPrice - vwap) * 0.5;
   const volatility = atr / currentPrice;
-  const adjustedGridCount = Math.max(
-    2,
-    GRID_COUNT - Math.floor(Math.sqrt(volatility) * 3)
+  const gridCount = volatility > 0.03 ? GRID_COUNT - 2 : GRID_COUNT;
+  const gridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
+
+  console.log(
+    chalk.yellow(
+      `VWAP: ${vwap.toFixed(6)}, Volatility: ${volatility.toFixed(
+        6
+      )}, Grid Count: ${gridCount}, Grid Spacing: ${gridSpacing.toFixed(6)}`
+    )
   );
 
-  const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-  const batchOrders = [];
+  const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
-  for (let i = 1; i <= adjustedGridCount; i++) {
+  for (let i = 1; i <= gridCount; i++) {
+    // Hitung harga grid
     const price =
       direction === "LONG"
-        ? currentPrice - adjustedGridSpacing * i 
-        : currentPrice + adjustedGridSpacing * i;
+        ? Math.max(currentPrice - gridSpacing * i - buffer, vwap - atr * i)
+        : Math.min(currentPrice + gridSpacing * i + buffer, vwap + atr * i);
 
-    const roundedPrice = parseFloat(
-      (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
-    );
-
-    const quantity = parseFloat(
-      ((BASE_USDT * LEVERAGE) / currentPrice).toFixed(quantityPrecision)
-    );
-
-    if (
-      openOrders.some(
-        (order) =>
-          parseFloat(order.price).toFixed(pricePrecision) ===
-          roundedPrice.toFixed(pricePrecision)
-      )
-    ) {
+    // Validasi apakah harga grid logis
+    const isPriceValid =
+      price > currentPrice * 0.8 && price < currentPrice * 1.2; // Kisaran 20% dari harga sekarang
+    if (!isPriceValid) {
+      console.warn(`Harga grid ${price} tidak logis, melewati iterasi.`);
       continue;
     }
 
-    batchOrders.push({
-      symbol: SYMBOL,
-      side: direction === "LONG" ? "BUY" : "SELL",
-      type: "LIMIT",
-      price: roundedPrice,
-      quantity: quantity,
-      timeInForce: "GTC",
-    });
-  }
+    // Hitung kuantitas dan pembulatan harga/kuantitas
+    const quantity = (BASE_USDT * LEVERAGE) / currentPrice;
+    const roundedPrice = parseFloat(
+      (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
+    );
+    const roundedQuantity = parseFloat(quantity.toFixed(quantityPrecision));
 
-  if (batchOrders.length > 0) {
-    for (const order of batchOrders) {
-      await client.futuresOrder(order);
+    // Validasi notional value
+    const notional = roundedPrice * roundedQuantity;
+    if (notional < 5) {
+      console.error(
+        `Notional value terlalu kecil: ${notional.toFixed(
+          2
+        )} (minimal 5). Melewati order.`
+      );
+      continue;
     }
-    await placeTakeProfitAndStopLoss(batchOrders, atr, vwap, direction);
-  } else {
-    console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
+
+    const duplicateOrder = existingOrders.some(
+      (order) =>
+        parseFloat(order.price).toFixed(pricePrecision) ===
+        roundedPrice.toFixed(pricePrecision)
+    );
+
+    if (duplicateOrder) {
+      console.log(
+        chalk.yellow(
+          `Order di harga ${roundedPrice} sudah ada. Melewati iterasi.`
+        )
+      );
+      continue;
+    }
+
+    try {
+      // Tempatkan Order Grid
+      await client.futuresOrder({
+        symbol: SYMBOL,
+        side: direction === "LONG" ? "BUY" : "SELL",
+        type: "LIMIT",
+        price: roundedPrice,
+        quantity: roundedQuantity,
+        timeInForce: "GTC",
+      });
+      console.log(
+        chalk.green(
+          `Order grid berhasil ditempatkan di harga ${roundedPrice}, kuantitas ${roundedQuantity}, arah ${direction}`
+        )
+      );
+
+      // Hitung takeProfitPrice dan stop loss
+      const takeProfitPrice =
+        direction === "LONG"
+          ? roundedPrice + atr * 1.5 + buffer
+          : roundedPrice - atr * 1.5 - buffer;
+      const roundedTakeProfitPrice = parseFloat(
+        (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
+          pricePrecision
+        )
+      );
+
+      const stopLossPrice =
+        direction === "LONG"
+          ? roundedPrice - atr * 1.2 - buffer
+          : roundedPrice + atr * 1.2 + buffer;
+      const roundedStopLossPrice = parseFloat(
+        (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
+          pricePrecision
+        )
+      );
+
+      const existingOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+      const duplicateTP = existingOrders.some(
+        (order) =>
+          order.type === "TAKE_PROFIT_MARKET" &&
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            roundedTakeProfitPrice.toFixed(pricePrecision)
+      );
+      const duplicateSL = existingOrders.some(
+        (order) =>
+          order.type === "STOP_MARKET" &&
+          parseFloat(order.stopPrice).toFixed(pricePrecision) ===
+            roundedStopLossPrice.toFixed(pricePrecision)
+      );
+
+      if (!duplicateTP) {
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "TAKE_PROFIT_MARKET",
+          stopPrice: roundedTakeProfitPrice,
+          quantity: roundedQuantity,
+          timeInForce: "GTC",
+          reduceOnly: true,
+        });
+        console.log(
+          chalk.green(
+            `Take Profit di harga ${roundedTakeProfitPrice} berhasil dibuat.`
+          )
+        );
+      } else {
+        console.log(
+          chalk.yellow(
+            `Take Profit di harga ${roundedTakeProfitPrice} sudah ada.`
+          )
+        );
+      }
+
+      if (!duplicateSL) {
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction === "LONG" ? "SELL" : "BUY",
+          type: "STOP_MARKET",
+          stopPrice: roundedStopLossPrice,
+          quantity: roundedQuantity,
+          timeInForce: "GTC",
+          reduceOnly: true,
+        });
+        console.log(
+          chalk.green(
+            `Stop Loss di harga ${roundedStopLossPrice} berhasil dibuat.`
+          )
+        );
+      } else {
+        console.log(
+          chalk.yellow(`Stop Loss di harga ${roundedStopLossPrice} sudah ada.`)
+        );
+      }
+    } catch (error) {
+      console.error(
+        `Kesalahan saat menempatkan order grid atau Take Profit: ${error.message}`
+      );
+    }
   }
 }
 
