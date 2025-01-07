@@ -490,11 +490,12 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
 
       // Hitung takeProfitPrice dan stop loss
       const volatilityTpSl = atr / roundedPrice;
-      const buffer = atr * volatilityTpSl;
+      const muliple = volatilityTpSl > 0.03 ? atr * 1.5 : atr;
+      const bufferTpSl = atr * muliple;
       const takeProfitPrice =
         direction === "LONG"
-          ? roundedPrice + atr * 1.5 + buffer
-          : roundedPrice - atr * 1.5 - buffer;
+          ? roundedPrice + atr * 1.5 + bufferTpSl
+          : roundedPrice - atr * 1.5 - bufferTpSl;
       const roundedTakeProfitPrice = parseFloat(
         (Math.round(takeProfitPrice / tickSize) * tickSize).toFixed(
           pricePrecision
@@ -503,8 +504,8 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
 
       const stopLossPrice =
         direction === "LONG"
-          ? roundedPrice - atr * 1.2 - buffer
-          : roundedPrice + atr * 1.2 + buffer;
+          ? roundedPrice - atr * 1.2 - bufferTpSl
+          : roundedPrice + atr * 1.2 + bufferTpSl;
       const roundedStopLossPrice = parseFloat(
         (Math.round(stopLossPrice / tickSize) * tickSize).toFixed(
           pricePrecision
