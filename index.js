@@ -389,6 +389,7 @@ function calculateFuzzySignals(signals) {
 async function placeGridOrders(
   currentPrice,
   atr,
+  vwap,
   direction,
   historicalVolatility
 ) {
@@ -423,7 +424,7 @@ async function placeGridOrders(
   for (let i = 1; i <= adjustedGridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - adjustedGridSpacing * i
+        ? currentPrice - adjustedGridSpacing * i 
         : currentPrice + adjustedGridSpacing * i;
 
     const roundedPrice = parseFloat(
@@ -458,19 +459,14 @@ async function placeGridOrders(
     for (const order of batchOrders) {
       await client.futuresOrder(order);
     }
-    await placeTakeProfitAndStopLoss(batchOrders, atr, direction);
+    await placeTakeProfitAndStopLoss(batchOrders, atr, vwap, direction);
   } else {
     console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
   }
 }
 
 // Fungsi untuk menetapkan Take Profit dan Stop Loss
-async function placeTakeProfitAndStopLoss(
-  orders,
-  atr,
-  direction,
-  historicalVolatility
-) {
+async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
@@ -485,12 +481,18 @@ async function placeTakeProfitAndStopLoss(
       // Ambil presisi harga
       const { pricePrecision } = await getSymbolPrecision(symbol);
 
+      // Hitung volatilitas pasar (ATR relatif terhadap harga order)
+      const volatility = atr / orderPrice;
+
       // Tentukan multiplier dinamis berdasarkan volatilitas
-      const multiplier = historicalVolatility > 0.03 ? 1.5 : 1.2;
+      const multiplier = volatility > 0.03 ? 1.5 : 1.2;
 
       // Hitung buffer dinamis untuk TP dan SL
-      const buffer = atr * multiplier;
-
+      const buffer =
+        direction === "LONG"
+          ? atr * multiplier + Math.abs(vwap - orderPrice) * 0.5
+          : atr * multiplier + Math.abs(orderPrice - vwap) * 0.5;
+          
       // Hitung harga TP dan SL
       const takeProfitPrice =
         direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
@@ -828,6 +830,7 @@ async function trade() {
       await placeGridOrders(
         currentPrice,
         atr,
+        vwap,
         marketCondition,
         historicalVolatility
       );
