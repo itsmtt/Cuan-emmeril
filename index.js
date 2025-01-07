@@ -401,7 +401,13 @@ async function determineMarketCondition(
 }
 
 // Fungsi untuk menetapkan order grid
-async function placeGridOrders(currentPrice, atr, vwap, direction) {
+async function placeGridOrders(
+  currentPrice,
+  atr,
+  vwap,
+  direction,
+  historicalVolatility
+) {
   await closeOpenPositions();
   await closeOpenOrders();
 
@@ -420,6 +426,7 @@ async function placeGridOrders(currentPrice, atr, vwap, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
+  const volatility = atr / currentPrice;
   const adjustedGridCount = Math.max(
     2,
     GRID_COUNT - Math.floor(Math.sqrt(volatility) * 5)
