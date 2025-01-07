@@ -487,7 +487,8 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       const volatility = atr / orderPrice;
 
       // Tentukan multiplier dinamis berdasarkan volatilitas
-      const multiplier = volatility > 0.03 ? 1.5 : 1.2;
+     // const multiplier = volatility > 0.03 ? 1.5 : 1.2;
+      const multiplier = volatility > 0.03 ? atr * 1.5 : atr;
 
       // Hitung buffer dinamis untuk TP dan SL
       const buffer =
