@@ -465,7 +465,12 @@ async function placeGridOrders(
 }
 
 // Fungsi untuk menetapkan Take Profit dan Stop Loss
-async function placeTakeProfitAndStopLoss(orders, atr, direction) {
+async function placeTakeProfitAndStopLoss(
+  orders,
+  atr,
+  direction,
+  historicalVolatility
+) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
@@ -480,11 +485,8 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       // Ambil presisi harga
       const { pricePrecision } = await getSymbolPrecision(symbol);
 
-      // Hitung volatilitas pasar (ATR relatif terhadap harga order)
-      const volatility = atr / orderPrice;
-
       // Tentukan multiplier dinamis berdasarkan volatilitas
-      const multiplier = volatility > 0.03 ? 1.5 : 1.2;
+      const multiplier = historicalVolatility > 0.03 ? 1.5 : 1.2;
 
       // Hitung buffer dinamis untuk TP dan SL
       const buffer = atr * multiplier;
