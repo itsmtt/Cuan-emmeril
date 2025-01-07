@@ -560,7 +560,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
           type: "TAKE_PROFIT_MARKET",
           stopPrice: roundedTP,
           quantity,
-          priceProtect: true,
+          reduceOnly: true,
         });
 
         console.log(
@@ -582,7 +582,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
           type: "STOP_MARKET",
           stopPrice: roundedSL,
           quantity,
-          priceProtect: true,
+          reduceOnly: true,
         });
 
         console.log(
