@@ -386,13 +386,7 @@ function calculateFuzzySignals(signals) {
 }
 
 // Fungsi untuk menetapkan order grid
-async function placeGridOrders(
-  currentPrice,
-  atr,
-  vwap,
-  direction,
-  historicalVolatility
-) {
+async function placeGridOrders(currentPrice, atr, direction) {
   await closeOpenPositions();
   await closeOpenOrders();
 
@@ -411,8 +405,6 @@ async function placeGridOrders(
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  //const adjustedGridSpacing = atr * (historicalVolatility > 0.03 ? 1.5 : 1.2);
-  
   const volatility = atr / currentPrice;
   const adjustedGridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
   const adjustedGridCount = Math.max(
@@ -426,7 +418,7 @@ async function placeGridOrders(
   for (let i = 1; i <= adjustedGridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - adjustedGridSpacing * i 
+        ? currentPrice - adjustedGridSpacing * i
         : currentPrice + adjustedGridSpacing * i;
 
     const roundedPrice = parseFloat(
@@ -461,14 +453,14 @@ async function placeGridOrders(
     for (const order of batchOrders) {
       await client.futuresOrder(order);
     }
-    await placeTakeProfitAndStopLoss(batchOrders, atr, vwap, direction);
+    await placeTakeProfitAndStopLoss(batchOrders, atr, direction);
   } else {
     console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
   }
 }
 
 // Fungsi untuk menetapkan Take Profit dan Stop Loss
-async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
+async function placeTakeProfitAndStopLoss(orders, atr, direction) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
@@ -487,7 +479,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
       const volatility = atr / orderPrice;
 
       // Tentukan multiplier dinamis berdasarkan volatilitas
-      //const multiplier = volatility > 0.03 ? 1.5 : 1.2;
       const multiplier = volatility > 0.03 ? atr * 1.5 : atr;
 
       // Hitung buffer dinamis untuk TP dan SL
@@ -495,7 +486,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, vwap, direction) {
         direction === "LONG"
           ? atr * multiplier + orderPrice * 0.1
           : atr * multiplier + orderPrice * 0.1;
-          
+
       // Hitung harga TP dan SL
       const takeProfitPrice =
         direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
@@ -742,14 +733,6 @@ async function trade() {
     // Hitung rsi
     const rsi = await calculateRSI(candles, 14);
 
-    // Hitung historicalVolatility
-    const historicalVolatility = Math.sqrt(
-      candles
-        .slice(-20)
-        .map((c) => Math.pow(c.high - c.low, 2))
-        .reduce((sum, diffSq) => sum + diffSq, 0) / 20
-    );
-
     // Hitung volumes
     const volumes = candles.map((c) => parseFloat(c.volume));
 
@@ -830,13 +813,7 @@ async function trade() {
           `Sinyal order baru terdeteksi: ${marketCondition}. Menempatkan order grid.`
         )
       );
-      await placeGridOrders(
-        currentPrice,
-        atr,
-        vwap,
-        marketCondition,
-        historicalVolatility
-      );
+      await placeGridOrders(currentPrice, atr, vwap, marketCondition);
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
