@@ -1,6 +1,6 @@
 {
   "SYMBOL": "DOGEUSDT",
-  "GRID_COUNT": 5,
-  "LEVERAGE": 5,
-  "BASE_USDT": 1.1
+  "GRID_COUNT": 14,
+  "LEVERAGE": 10,
+  "BASE_USDT": 0.5
 }
