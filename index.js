@@ -411,7 +411,7 @@ async function placeGridOrders(
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const adjustedGridSpacing = atr * (historicalVolatility > 0.03 ? 1.5 : 1.3);
+  const adjustedGridSpacing = atr * (historicalVolatility > 0.03 ? 1.5 : 1.2);
   const volatility = atr / currentPrice;
   const adjustedGridCount = Math.max(
     2,
