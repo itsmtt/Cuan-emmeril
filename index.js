@@ -303,9 +303,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 
   console.log(
     chalk.yellow(
-      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(
-        2
-      )}% > 90%`
+      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(2)}% > 90%`
     )
   );
 
@@ -808,13 +806,7 @@ async function trade() {
           `Sinyal order baru terdeteksi: ${marketCondition}. Menempatkan order grid.`
         )
       );
-      await placeGridOrders(
-        currentPrice,
-        atr,
-        vwap,
-        marketCondition,
-        historicalVolatility
-      );
+      await placeGridOrders(currentPrice, atr, vwap, marketCondition);
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
