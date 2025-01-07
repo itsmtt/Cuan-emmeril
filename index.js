@@ -412,8 +412,9 @@ async function placeGridOrders(
   );
 
   //const adjustedGridSpacing = atr * (historicalVolatility > 0.03 ? 1.5 : 1.2);
-  const adjustedGridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
+  
   const volatility = atr / currentPrice;
+  const adjustedGridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
   const adjustedGridCount = Math.max(
     2,
     GRID_COUNT - Math.floor(Math.sqrt(volatility) * 3)
