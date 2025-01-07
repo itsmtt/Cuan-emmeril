@@ -405,8 +405,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const volatility = atr / currentPrice;
-  const adjustedGridSpacing = volatility > 0.03 ? atr * 1.5 : atr;
+  const buffer = atr ;
   const orderGrid = GRID_COUNT;
 
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
@@ -415,8 +414,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
   for (let i = 1; i <= orderGrid; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - adjustedGridSpacing * i
-        : currentPrice + adjustedGridSpacing * i;
+        ? currentPrice - buffer * i
+        : currentPrice + buffer * i;
 
     const roundedPrice = parseFloat(
       (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
@@ -472,17 +471,11 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       // Ambil presisi harga
       const { pricePrecision } = await getSymbolPrecision(symbol);
 
-      // Hitung volatilitas pasar (ATR relatif terhadap harga order)
-      const volatility = atr / orderPrice;
-
-      // Tentukan multiplier dinamis berdasarkan volatilitas
-      const multiplier = volatility > 0.03 ? atr * 1.5 : atr;
-
-      // Hitung buffer dinamis untuk TP dan SL
+      // Hitung buffer atr untuk TP dan SL
       const buffer =
         direction === "LONG"
-          ? atr * multiplier + orderPrice * 0.1
-          : atr * multiplier + orderPrice * 0.1;
+          ? atr + orderPrice * 0.1
+          : atr + orderPrice * 0.1;
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
