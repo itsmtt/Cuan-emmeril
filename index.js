@@ -306,7 +306,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 
   console.log(
     chalk.yellow(
-      `Pasar dalam kondisi ekstrem jika nilai 90 % : ${logIsExtreme} %`
+      `Pasar dalam kondisi ekstrem jika : ${logIsExtreme} % > 90 %`
     )
   );
 
@@ -385,7 +385,7 @@ async function determineMarketCondition(
 
   console.log(
     chalk.yellow(
-      `Fuzzy Signals: BUY = ${logBuySignal} % Jika lebih dari 50 %, SELL = ${logSellSignal} % Jika lebih dari 50 %`
+      `Fuzzy Signals: BUY = ${logBuySignal} % > 50 %, SELL = ${logSellSignal} % > 50 %`
     )
   );
 
