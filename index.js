@@ -419,7 +419,7 @@ async function placeGridOrders(
   );
 
   const buffer = (atr + Math.abs(currentPrice - vwap)) / 5;
-  const momentumOffset = (currentPrice - vwap) * 0.04;
+  const momentumOffset = (currentPrice - vwap) * 0.01;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
 
