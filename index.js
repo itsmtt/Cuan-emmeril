@@ -278,35 +278,32 @@ function calculateVWAP(candles) {
 
 // Fungsi untuk memeriksa kondisi pasar ekstrem
 async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
-  // Keanggotaan fuzzy
-  const highVolatility = fuzzyMembership(atr, 0.05, 0.1);
-  const extremeVolatility = fuzzyMembership(atr, 0.1, 0.2);
-  const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
-  const volumeMembership = fuzzyMembership(
-    volumes[volumes.length - 1],
-    avgVolume * 1.5,
-    avgVolume * 3
-  );
-  const priceFarBelowVWAP = fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9);
-  const priceFarAboveVWAP = fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2);
+  // Keanggotaan fuzzy untuk kondisi pasar ekstrem
+  const fuzzySignals = {
+    highVolatility: fuzzyMembership(atr, 0.05, 0.1),
+    extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
+    avgVolume: volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length,
+    volumeMembership: fuzzyMembership(
+      volumes[volumes.length - 1],
+      (volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length) * 1.5,
+      (volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length) * 3
+    ),
+    priceFarBelowVWAP: fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9),
+    priceFarAboveVWAP: fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2),
+  };
 
-  // Hitung berdasarkan Keanggotaan fuzzy
-  const valuesisExtreme = [
-    highVolatility,
-    extremeVolatility,
-    volumeMembership,
-    priceFarBelowVWAP,
-    priceFarAboveVWAP,
-  ];
-  const isExtreme =
-    valuesisExtreme.reduce((sum, value) => sum + value, 0) /
-    valuesisExtreme.length;
-
-  const logIsExtreme = isExtreme * 100;
+  // Hitung rata-rata sinyal fuzzy
+  const isExtreme = calculateFuzzySignals([
+    fuzzySignals.highVolatility,
+    fuzzySignals.extremeVolatility,
+    fuzzySignals.volumeMembership,
+    fuzzySignals.priceFarBelowVWAP,
+    fuzzySignals.priceFarAboveVWAP,
+  ]);
 
   console.log(
     chalk.yellow(
-      `Pasar dalam kondisi ekstrem jika nilai 90 % : ${logIsExtreme} %`
+      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(2)}% > 90%`
     )
   );
 
@@ -323,73 +320,54 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 }
 
 // Fungsi untuk menentukan kondisi pasar
-async function determineMarketCondition(
-  rsi,
-  vwap,
-  closinglastPricePrices,
-  lastPrice
-) {
-  const shortEMA = calculateEMA(closinglastPricePrices.slice(-10), 5);
-  const longEMA = calculateEMA(closinglastPricePrices.slice(-20), 20);
-  const { macdLine, signalLine } = calculateMACD(closinglastPricePrices);
-  const { upperBand, lowerBand } = calculateBollingerBands(
-    closinglastPricePrices
-  );
+async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
+  // Hitung indikator utama
+  const shortEMA = calculateEMA(closingPrices.slice(-10), 5);
+  const longEMA = calculateEMA(closingPrices.slice(-20), 20);
+  const { macdLine, signalLine } = calculateMACD(closingPrices);
+  const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
   // Keanggotaan fuzzy untuk kondisi pasar
-  const rsiBuy = fuzzyMembership(rsi, 30, 50);
-  const rsiSell = fuzzyMembership(rsi, 50, 70);
-  const macdBuy = macdLine > signalLine ? 1 : 0;
-  const macdSell = macdLine < signalLine ? 1 : 0;
-  const priceNearLowerBand = fuzzyMembership(
-    lastPrice,
-    lowerBand,
-    lowerBand * 1.02
-  );
-  const priceNearUpperBand = fuzzyMembership(
-    lastPrice,
-    upperBand * 0.98,
-    upperBand
-  );
-  const emaBuy = shortEMA > longEMA ? 1 : 0;
-  const emaSell = shortEMA < longEMA ? 1 : 0;
-  const priceBelowVWAP = lastPrice < vwap ? 1 : 0;
-  const priceAboveVWAP = lastPrice > vwap ? 1 : 0;
+  const fuzzySignals = {
+    rsiBuy: fuzzyMembership(rsi, 30, 50),
+    rsiSell: fuzzyMembership(rsi, 50, 70),
+    macdBuy: macdLine > signalLine ? 1 : 0,
+    macdSell: macdLine < signalLine ? 1 : 0,
+    priceNearLowerBand: fuzzyMembership(lastPrice, lowerBand, lowerBand * 1.02),
+    priceNearUpperBand: fuzzyMembership(lastPrice, upperBand * 0.98, upperBand),
+    emaBuy: shortEMA > longEMA ? 1 : 0,
+    emaSell: shortEMA < longEMA ? 1 : 0,
+    priceBelowVWAP: lastPrice < vwap ? 1 : 0,
+    priceAboveVWAP: lastPrice > vwap ? 1 : 0,
+  };
 
-  // Logika untuk BUY
-  const valuesBuySignal = [
-    rsiBuy,
-    macdBuy,
-    priceNearLowerBand,
-    priceBelowVWAP,
-    emaBuy,
-  ];
-  const buySignal =
-    valuesBuySignal.reduce((sum, value) => sum + value, 0) /
-    valuesBuySignal.length;
+  // Hitung sinyal beli dan jual berdasarkan indikator
+  const buySignal = calculateFuzzySignals([
+    fuzzySignals.rsiBuy,
+    fuzzySignals.macdBuy,
+    fuzzySignals.priceNearLowerBand,
+    fuzzySignals.priceBelowVWAP,
+    fuzzySignals.emaBuy,
+  ]);
 
-  // Logika untuk SELL
-  const valuesSellSignal = [
-    rsiSell,
-    macdSell,
-    priceNearUpperBand,
-    priceAboveVWAP,
-    emaSell,
-  ];
-  const sellSignal =
-    valuesSellSignal.reduce((sum, value) => sum + value, 0) /
-    valuesSellSignal.length;
+  const sellSignal = calculateFuzzySignals([
+    fuzzySignals.rsiSell,
+    fuzzySignals.macdSell,
+    fuzzySignals.priceNearUpperBand,
+    fuzzySignals.priceAboveVWAP,
+    fuzzySignals.emaSell,
+  ]);
 
-  const logBuySignal = buySignal.toFixed(2) * 100;
-  const logSellSignal = sellSignal.toFixed(2) * 100;
-
+  // Log hasil sinyal fuzzy
   console.log(
     chalk.yellow(
-      `Fuzzy Signals: BUY = ${logBuySignal} % Jika lebih dari 50 %, SELL = ${logSellSignal} % Jika lebih dari 50 %`
+      `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% > 50%, SELL = ${(
+        sellSignal * 100
+      ).toFixed(2)}% > 50%`
     )
   );
 
-  // fungsi untuk menentukan sinyal buy or sell
+  // Tentukan kondisi pasar berdasarkan sinyal
   if (buySignal > sellSignal && buySignal > 0.5) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
@@ -400,6 +378,11 @@ async function determineMarketCondition(
     console.log(`Posisi sekarang NEUTRAL. Menunggu.`);
     return "NEUTRAL";
   }
+}
+
+// Utilitas untuk menghitung sinyal fuzzy rata-rata
+function calculateFuzzySignals(signals) {
+  return signals.reduce((sum, value) => sum + value, 0) / signals.length;
 }
 
 // Fungsi untuk menetapkan order grid
