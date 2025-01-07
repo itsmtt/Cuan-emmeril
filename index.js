@@ -411,23 +411,23 @@ async function placeGridOrders(
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const adjustedGridSpacing = atr * (historicalVolatility > 0.03 ? 1.1 : 1.0);
+  const adjustedGridSpacing = atr * (historicalVolatility > 0.03 ? 1.5 : 1.3);
   const volatility = atr / currentPrice;
   const adjustedGridCount = Math.max(
     2,
     GRID_COUNT - Math.floor(Math.sqrt(volatility) * 3)
   );
 
-  const buffer = (atr + Math.abs(currentPrice - vwap)) / 4;
-  const momentumOffset = (currentPrice - vwap) * 0.05;
+  // const buffer = (atr + Math.abs(currentPrice - vwap)) / 4;
+  // const momentumOffset = (currentPrice - vwap) * 0.05;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
 
   for (let i = 1; i <= adjustedGridCount; i++) {
     const price =
       direction === "LONG"
-        ? currentPrice - adjustedGridSpacing * i - buffer + momentumOffset
-        : currentPrice + adjustedGridSpacing * i + buffer + momentumOffset;
+        ? currentPrice - adjustedGridSpacing * i 
+        : currentPrice + adjustedGridSpacing * i;
 
     const roundedPrice = parseFloat(
       (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
