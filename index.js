@@ -418,7 +418,7 @@ async function placeGridOrders(
     GRID_COUNT - Math.floor(Math.sqrt(volatility) * 3)
   );
 
-  const buffer = (atr + Math.abs(currentPrice - vwap)) / 10;
+  const buffer = (atr + Math.abs(currentPrice - vwap)) / 15;
   const momentumOffset = (currentPrice - vwap) * 0.01;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
