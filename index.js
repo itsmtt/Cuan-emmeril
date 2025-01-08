@@ -369,7 +369,7 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
   // Log hasil sinyal fuzzy
   console.log(
     chalk.yellow(
-      `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= 50%, SELL = ${(
+      `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= 70%, SELL = ${(
         sellSignal * 100
       ).toFixed(2)}% >= 70%`
     )
