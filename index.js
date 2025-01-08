@@ -721,6 +721,11 @@ async function trade() {
 
     // Hitung ATR
     const atr = await calculateATR(candles, 14);
+    console.log(
+      chalk.green(
+        `atr: ${atr}`
+      )
+    );
 
     // Hitung VWAP
     const vwap = await calculateVWAP(candles);
