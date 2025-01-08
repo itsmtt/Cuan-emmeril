@@ -733,7 +733,7 @@ async function trade() {
       }
 
       // Tentukan kondisi pasar
-      const marketConditionConflicting = await determineMarketCondition(
+      const marketCondition = await determineMarketCondition(
         rsi,
         vwap,
         closinglastPricePrices,
@@ -749,16 +749,13 @@ async function trade() {
         (order) => order.side === "SELL" && order.type === "LIMIT"
       );
 
-      // Periksa konflik antara limit orders dan kondisi pasar
-      const conflictingBuyOrders = limitBuyOrders.some(
-        () => marketConditionConflicting === "SHORT"
-      );
+      // Periksa apakah arah pasar bertentangan dengan limit orders
+      const conflictingBuyOrders =
+        limitBuyOrders.length > 0 && marketCondition === "SHORT";
+      const conflictingSellOrders =
+        limitSellOrders.length > 0 && marketCondition === "LONG";
 
-      const conflictingSellOrders = limitSellOrders.some(
-        () => marketConditionConflicting === "LONG"
-      );
-
-      if (conflictingBuyOrders) {
+      if (conflictingBuyOrders || conflictingSellOrders) {
         console.log(
           chalk.red(
             "Kondisi pasar berlawanan dengan limit orders yang terbuka. Menutup semua order."
@@ -767,17 +764,12 @@ async function trade() {
         await closeOpenOrders();
         await closeOpenPositions();
         return;
-      }
-
-      if (conflictingSellOrders) {
+      } else {
         console.log(
-          chalk.red(
-            "Kondisi pasar berlawanan dengan limit orders yang terbuka. Menutup semua order."
+          chalk.green(
+            "Kondisi pasar masih sesuai dengan limit orders yang ada. Tidak ada tindakan yang diperlukan."
           )
         );
-        await closeOpenOrders();
-        await closeOpenPositions();
-        return;
       }
 
       // Memantau status take profit
