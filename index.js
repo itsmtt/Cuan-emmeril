@@ -407,7 +407,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
   const buffer = atr;
   const orderGrid = GRID_COUNT;
-
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
 
