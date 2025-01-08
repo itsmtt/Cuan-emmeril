@@ -91,7 +91,7 @@ node index.js
    - Menyesuaikan grid spacing sesuai dengan volatilitas historis.
    - Menyesuaikan jumlah grid order berdasarkan volatilitas pasar.
 4. Manajemen Risiko
-   - Menetapkan Take Profit (TP) dan Stop Loss (SL) secara dinamis berdasarkan ATR dan VWAP.
+   - Menetapkan Take Profit (TP) dan Stop Loss (SL) secara dinamis berdasarkan ATR.
    - Memeriksa kondisi pasar ekstrem, seperti volatilitas tinggi atau harga jauh dari VWAP, untuk menghentikan trading sementara.
    - Menggunakan leverage yang dapat disesuaikan berdasarkan konfigurasi pengguna.
 5. Monitoring dan Logging
