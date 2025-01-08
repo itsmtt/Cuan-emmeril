@@ -804,6 +804,7 @@ async function trade() {
           `Sinyal order baru terdeteksi: ${marketCondition}. Menempatkan order grid.`
         )
       );
+
       await placeGridOrders(currentPrice, atr, marketCondition);
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
