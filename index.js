@@ -405,7 +405,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const buffer = atr ;
+  const buffer = atr;
   const orderGrid = GRID_COUNT;
 
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
@@ -473,9 +473,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
 
       // Hitung buffer atr untuk TP dan SL
       const buffer =
-        direction === "LONG"
-          ? atr + orderPrice * 0.1
-          : atr + orderPrice * 0.1;
+        direction === "LONG" ? atr + orderPrice * 0.1 : atr + orderPrice * 0.1;
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
@@ -735,7 +733,7 @@ async function trade() {
       }
 
       // Tentukan kondisi pasar
-      const marketCondition = await determineMarketCondition(
+      const marketConditionConflicting = await determineMarketCondition(
         rsi,
         vwap,
         closinglastPricePrices,
@@ -753,13 +751,25 @@ async function trade() {
 
       // Periksa konflik antara limit orders dan kondisi pasar
       const conflictingBuyOrders = limitBuyOrders.some(
-        () => marketCondition === "SHORT"
-      );
-      const conflictingSellOrders = limitSellOrders.some(
-        () => marketCondition === "LONG"
+        () => marketConditionConflicting === "SHORT"
       );
 
-      if (conflictingBuyOrders || conflictingSellOrders) {
+      const conflictingSellOrders = limitSellOrders.some(
+        () => marketConditionConflicting === "LONG"
+      );
+
+      if (conflictingBuyOrders) {
+        console.log(
+          chalk.red(
+            "Kondisi pasar berlawanan dengan limit orders yang terbuka. Menutup semua order."
+          )
+        );
+        await closeOpenOrders();
+        await closeOpenPositions();
+        return;
+      }
+
+      if (conflictingSellOrders) {
         console.log(
           chalk.red(
             "Kondisi pasar berlawanan dengan limit orders yang terbuka. Menutup semua order."
