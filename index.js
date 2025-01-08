@@ -750,11 +750,11 @@ async function trade() {
 
       // Periksa apakah arah pasar bertentangan dengan limit orders
       const conflictingBuyOrders =
-        limitBuyOrders.length > 0 && marketCondition === "SHORT";
+        limitBuyOrders.length > 0 && marketCondition === "LONG";
       const conflictingSellOrders =
-        limitSellOrders.length > 0 && marketCondition === "LONG";
+        limitSellOrders.length > 0 && marketCondition === "SHORT";
 
-      if (conflictingBuyOrders || conflictingSellOrders) {
+      if (!conflictingBuyOrders || !conflictingSellOrders) {
         console.log(
           chalk.red(
             "Kondisi pasar berlawanan dengan limit orders yang terbuka. Menutup semua order."
