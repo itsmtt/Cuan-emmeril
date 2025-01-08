@@ -319,7 +319,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
     console.log(
       chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.")
     );
-    await closeOpenPositions(); // Menutup semua posisi terbuka
+    await closeOpenPositions();
     await closeOpenOrders();
     return true;
   }
@@ -388,7 +388,7 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
   }
 }
 
-// Utilitas untuk menghitung sinyal fuzzy rata-rata
+// Fungsi untuk menghitung sinyal fuzzy rata-rata
 function calculateFuzzySignals(signals) {
   return signals.reduce((sum, value) => sum + value, 0) / signals.length;
 }
@@ -462,7 +462,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
   }
 }
 
-// Fungsi untuk menetapkan Take Profit dan Stop Loss
+// Fungsi untuk menetapkan TP dan SL
 async function placeTakeProfitAndStopLoss(orders, atr, direction) {
   try {
     console.log(
@@ -597,27 +597,28 @@ async function monitorOrders() {
     // Ambil semua order terbuka
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
 
-    // Filter order dengan tipe TAKE_PROFIT_MARKET
+    // Ambil semua data posisi terbuka
+    const positions = await client.futuresPositionRisk();
+
+    // Filter order terbuka dengan tipe TAKE_PROFIT_MARKET
     const takeProfitOrders = openOrders.filter(
       (order) => order.type === "TAKE_PROFIT_MARKET"
     );
 
-    // Filter order dengan tipe STOP_MARKET
+    // Filter order terbuka dengan tipe STOP_MARKET
     const stopLossOrders = openOrders.filter(
       (order) => order.type === "STOP_MARKET"
     );
 
-    // Filter hanya limit order
+    // Filter order terbuka dengan limit order
     const limitOrders = openOrders.filter((order) => order.type === "LIMIT");
 
-    // Ambil data posisi terbuka
-    const positions = await client.futuresPositionRisk();
-
-    // Periksa apakah tidak ada posisi terbuka
+    // Cari posisi terbuka
     const openPosition = positions.find(
       (position) => parseFloat(position.positionAmt) !== 0
     );
 
+    // Jika tidak ada TP Tutup semua order terbuka dan posisi terbuka
     if (takeProfitOrders.length === 0) {
       console.log(
         chalk.red("Tidak ada Take Profit order di daftar open orders.")
@@ -635,6 +636,7 @@ async function monitorOrders() {
       );
     }
 
+    // Jika tidak ada SL Tutup semua order terbuka dan posisi terbuka
     if (stopLossOrders.length === 0) {
       console.log(
         chalk.red("Tidak ada Stop Loss order di daftar open orders.")
@@ -652,11 +654,9 @@ async function monitorOrders() {
       );
     }
 
-    // Jika tidak ada limit order dan tidak ada posisi terbuka
+    // Jika tidak ada limit order dan tidak ada posisi terbuka Tutup semua order terbuka dan posisi terbuka
     if (limitOrders.length === 0 && !openPosition) {
       console.log(chalk.red("Tidak ada limit order atau posisi terbuka."));
-
-      // Tutup semua order dan posisi sebagai tindakan preventif
       await closeOpenOrders();
       console.log(chalk.green("Semua limit order telah dibatalkan."));
       await closeOpenPositions();
@@ -668,6 +668,7 @@ async function monitorOrders() {
         );
       }
 
+      // Posisi terbuka saat ini
       if (openPosition) {
         console.log(
           chalk.green(`Masih ada posisi terbuka pada ${openPosition.symbol}.`)
@@ -697,7 +698,7 @@ async function trade() {
       interval: "15m",
     });
 
-    //validasi candles
+    // validasi candles
     if (candles.length < 20) {
       console.warn(
         chalk.bgYellow("Data candle tidak mencukupi untuk analisis.")
@@ -713,7 +714,7 @@ async function trade() {
       )
     );
 
-    // harga penutupan fuzzy member
+    // harga penutupan pasar untuk fuzzy member
     const lastPrice = parseFloat(candles[candles.length - 1].close);
 
     // harga penutupan pasar
@@ -721,19 +722,14 @@ async function trade() {
 
     // Hitung ATR
     const atr = await calculateATR(candles, 14);
-    console.log(
-      chalk.green(
-        `atr: ${atr}`
-      )
-    );
 
     // Hitung VWAP
     const vwap = await calculateVWAP(candles);
 
-    // Hitung rsi
+    // Hitung RSI
     const rsi = await calculateRSI(candles, 14);
 
-    // Hitung volumes
+    // Hitung VOLUMES
     const volumes = candles.map((c) => parseFloat(c.volume));
 
     // Periksa apakah masih ada order terbuka
@@ -752,7 +748,7 @@ async function trade() {
         lastPrice
       );
 
-      // Ambil semua limit orders
+      // Ambil semua limit order terbuka
       const hasOpenOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
       const limitBuyOrders = hasOpenOrders.filter(
         (order) => order.side === "BUY" && order.type === "LIMIT"
@@ -761,7 +757,7 @@ async function trade() {
         (order) => order.side === "SELL" && order.type === "LIMIT"
       );
 
-      // Periksa apakah arah pasar bertentangan dengan limit orders
+      // Periksa apakah arah pasar bertentangan dengan limit order terbuka
       const conflictingBuyOrders =
         limitBuyOrders.length > 0 && marketCondition === "SHORT";
       const conflictingSellOrders =
@@ -784,10 +780,10 @@ async function trade() {
         );
       }
 
-      // Memantau status take profit
+      // Memantau status TP dan SL
       await monitorOrders();
 
-      // Logging Total Profit dan Loss
+      // Logging TP dan SL
       const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
       const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
 
@@ -829,7 +825,7 @@ async function trade() {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
 
-    // Logging Total Profit dan Loss
+    // Logging TP dan SL
     const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
     const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
 
@@ -849,14 +845,13 @@ async function trade() {
 // Loop utama untuk menjalankan bot
 async function runBot() {
   await closeOpenPositions();
-  await closeOpenOrders(); // Tutup order terbuka sebelum memulai trading
+  await closeOpenOrders();
   while (true) {
     await trade();
-    // Berikan jeda sebelum loop berikutnya
     console.log(
       chalk.magenta("Menunggu sebelum memulai iterasi berikutnya...")
     );
-    await new Promise((resolve) => setTimeout(resolve, 5000)); // Jeda 10 detik
+    await new Promise((resolve) => setTimeout(resolve, 10000));
   }
 }
 
