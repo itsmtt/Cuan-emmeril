@@ -39,14 +39,24 @@ const BASE_USDT = config.BASE_USDT;
 let totalProfit = 0;
 let totalLoss = 0;
 
+// Fungsi untuk pencatatan total TP dan SL
+function logToFile(message) {
+  const logMessage = `${new Date().toISOString()} - ${message}\n`;
+  fs.appendFileSync("profit_loss_logs.txt", logMessage, (err) => {
+    if (err) {
+      console.error(chalk.bgRed("Gagal mencatat ke file log:"), err.message);
+    }
+  });
+}
+
 // Fungsi untuk mendapatkan presisi pasangan perdagangan
 async function getSymbolPrecision(symbol) {
   try {
     const exchangeInfo = await client.futuresExchangeInfo();
     const symbolInfo = exchangeInfo.symbols.find((s) => s.symbol === symbol);
     if (!symbolInfo) throw new Error(`Symbol ${symbol} tidak ditemukan.`);
-    const pricePrecision = symbolInfo.pricePrecision; // Presisi untuk harga
-    const quantityPrecision = symbolInfo.quantityPrecision; // Presisi untuk kuantitas
+    const pricePrecision = symbolInfo.pricePrecision;
+    const quantityPrecision = symbolInfo.quantityPrecision;
     return { pricePrecision, quantityPrecision };
   } catch (error) {
     console.error(
@@ -114,20 +124,18 @@ async function closeOpenPositions() {
 
         if (pnl > 0) {
           totalProfit += pnl;
-          console.log(
-            chalk.green(
-              `Profit dari posisi pada ${position.symbol}: ${pnl.toFixed(2)}`
-            )
-          );
+          const profitMessage = `Profit dari posisi pada ${
+            position.symbol
+          }: ${pnl.toFixed(2)} USDT`;
+          console.log(chalk.green(profitMessage));
+          logToFile(profitMessage);
         } else {
           totalLoss += Math.abs(pnl);
-          console.log(
-            chalk.red(
-              `Loss dari posisi pada ${position.symbol}: ${Math.abs(
-                pnl
-              ).toFixed(2)}`
-            )
-          );
+          const lossMessage = `Loss dari posisi pada ${
+            position.symbol
+          }: ${Math.abs(pnl).toFixed(2)} USDT`;
+          console.log(chalk.red(lossMessage));
+          logToFile(lossMessage);
         }
       }
     }
@@ -774,9 +782,15 @@ async function trade() {
       // Memantau status take profit
       await monitorOrders();
 
-      // Log total profit dan loss saat ini
-      console.log(chalk.yellow(`Total Profit: ${totalProfit.toFixed(2)} USDT`));
-      console.log(chalk.yellow(`Total Loss: ${totalLoss.toFixed(2)} USDT`));
+      // Logging Total Profit dan Loss
+      const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
+      const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
+
+      console.log(chalk.yellow(totalProfitMessage));
+      console.log(chalk.yellow(totalLossMessage));
+
+      logToFile(totalProfitMessage);
+      logToFile(totalLossMessage);
 
       console.log(
         chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
@@ -810,9 +824,15 @@ async function trade() {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
 
-    // Log total profit dan loss saat ini
-    console.log(chalk.yellow(`Total Profit: ${totalProfit.toFixed(2)} USDT`));
-    console.log(chalk.yellow(`Total Loss: ${totalLoss.toFixed(2)} USDT`));
+    // Logging Total Profit dan Loss
+    const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
+    const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
+
+    console.log(chalk.yellow(totalProfitMessage));
+    console.log(chalk.yellow(totalLossMessage));
+
+    logToFile(totalProfitMessage);
+    logToFile(totalLossMessage);
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan utama dalam trading:"),
