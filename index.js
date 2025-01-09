@@ -800,6 +800,7 @@ async function trade() {
               `Kondisi pasar (${marketCondition}) bertentangan dengan posisi terbuka (${positionSide}). Menutup posisi...`
             )
           );
+          await closeOpenOrders();
           await closeOpenPositions();
           return;
         } else {
