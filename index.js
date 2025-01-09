@@ -780,6 +780,37 @@ async function trade() {
         );
       }
 
+      // Ambil semua posisi terbuka
+      const positions = await client.futuresPositionRisk();
+      const openPosition = positions.find(
+        (position) => parseFloat(position.positionAmt) !== 0
+      );
+
+      // Periksa apakah arah pasar bertentangan dengan posisi terbuka
+      if (openPosition) {
+        const positionSide =
+          parseFloat(openPosition.positionAmt) > 0 ? "LONG" : "SHORT";
+
+        if (
+          (marketCondition === "LONG" && positionSide === "SHORT") ||
+          (marketCondition === "SHORT" && positionSide === "LONG")
+        ) {
+          console.log(
+            chalk.red(
+              `Kondisi pasar (${marketCondition}) bertentangan dengan posisi terbuka (${positionSide}). Menutup posisi...`
+            )
+          );
+          await closeOpenPositions();
+          return;
+        } else {
+          console.log(
+            chalk.green(
+              `Kondisi pasar (${marketCondition}) sejalan dengan posisi terbuka (${positionSide}). Tidak ada tindakan yang diperlukan.`
+            )
+          );
+        }
+      }
+
       // Memantau status TP dan SL
       await monitorOrders();
 
