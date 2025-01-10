@@ -852,6 +852,18 @@ async function trade() {
         )
       );
 
+      
+      // Buka posisi sesuai sinyal
+      const direction = marketCondition === "LONG" ? "BUY" : "SELL";
+      const quantity = parseFloat(((BASE_USDT * LEVERAGE) / currentPrice).toFixed(6));
+      
+      await client.futuresOrder({
+        symbol: SYMBOL,
+        side: direction,
+        type: "MARKET",
+        quantity: quantity,
+      });
+
       await placeGridOrders(currentPrice, atr, marketCondition);
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
