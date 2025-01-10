@@ -849,6 +849,9 @@ async function trade() {
         )
       );
 
+      // Buka order sesuai sinyal
+      await placeGridOrders(currentPrice, atr, marketCondition);
+
       // Buka posisi sesuai sinyal
       const direction = marketCondition === "LONG" ? "BUY" : "SELL";
       const quantityPrecision = await getSymbolPrecision(SYMBOL);
@@ -868,8 +871,6 @@ async function trade() {
           `Posisi ${marketCondition} berhasil dibuka dengan kuantitas ${quantity}.`
         )
       );
-      // Buka order sesuai sinyal
-      await placeGridOrders(currentPrice, atr, marketCondition);
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
