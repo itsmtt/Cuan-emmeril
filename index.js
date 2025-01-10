@@ -100,6 +100,29 @@ async function closeOpenPositions() {
       if (parseFloat(position.positionAmt) !== 0) {
         const side = parseFloat(position.positionAmt) > 0 ? "SELL" : "BUY";
         const quantity = Math.abs(parseFloat(position.positionAmt));
+
+        // Hitung profit atau loss
+        const pnl =
+          side === "SELL"
+            ? (entryPrice - markPrice) * quantity 
+            : (markPrice - entryPrice) * quantity; 
+
+        if (pnl > 0) {
+          totalProfit += pnl;
+          const profitMessage = `Profit dari posisi ${symbol}: ${pnl.toFixed(
+            2
+          )} USDT`;
+          console.log(chalk.green(profitMessage));
+          logToFile(profitMessage);
+        } else {
+          totalLoss += Math.abs(pnl);
+          const lossMessage = `Loss dari posisi ${symbol}: ${Math.abs(
+            pnl
+          ).toFixed(2)} USDT`;
+          console.log(chalk.red(lossMessage));
+          logToFile(lossMessage);
+        }
+
         await client.futuresOrder({
           symbol: position.symbol,
           side,
@@ -111,32 +134,6 @@ async function closeOpenPositions() {
             `Posisi pada ${position.symbol} berhasil ditutup dengan kuantitas ${quantity}.`
           )
         );
-
-        // Hitung profit atau loss
-        const currentPrice = parseFloat(
-          position.markPrice || position.entryPrice
-        );
-        const entryPrice = parseFloat(position.entryPrice);
-        const pnl =
-          side === "SELL"
-            ? entryPrice - currentPrice
-            : currentPrice - entryPrice;
-
-        if (pnl > 0) {
-          totalProfit += pnl;
-          const profitMessage = `Profit dari posisi pada ${
-            position.symbol
-          }: ${pnl.toFixed(2)} USDT`;
-          console.log(chalk.green(profitMessage));
-          logToFile(profitMessage);
-        } else {
-          totalLoss += Math.abs(pnl);
-          const lossMessage = `Loss dari posisi pada ${
-            position.symbol
-          }: ${Math.abs(pnl).toFixed(2)} USDT`;
-          console.log(chalk.red(lossMessage));
-          logToFile(lossMessage);
-        }
       }
     }
   } catch (error) {
@@ -852,11 +849,12 @@ async function trade() {
         )
       );
 
-      
       // Buka posisi sesuai sinyal
       const direction = marketCondition === "LONG" ? "BUY" : "SELL";
-      const quantity = parseFloat(((BASE_USDT * LEVERAGE) / currentPrice).toFixed(6));
-      
+      const quantity = parseFloat(
+        ((BASE_USDT * LEVERAGE) / currentPrice).toFixed(6)
+      );
+
       await client.futuresOrder({
         symbol: SYMBOL,
         side: direction,
@@ -864,6 +862,12 @@ async function trade() {
         quantity: quantity,
       });
 
+      console.log(
+        chalk.green(
+          `Posisi ${marketCondition} berhasil dibuka dengan kuantitas ${quantity}.`
+        )
+      );
+      // Buka order sesuai sinyal
       await placeGridOrders(currentPrice, atr, marketCondition);
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
