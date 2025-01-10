@@ -104,8 +104,8 @@ async function closeOpenPositions() {
         // Hitung profit atau loss
         const pnl =
           side === "SELL"
-            ? (entryPrice - markPrice) * quantity 
-            : (markPrice - entryPrice) * quantity; 
+            ? (entryPrice - markPrice) * quantity
+            : (markPrice - entryPrice) * quantity;
 
         if (pnl > 0) {
           totalProfit += pnl;
@@ -851,8 +851,9 @@ async function trade() {
 
       // Buka posisi sesuai sinyal
       const direction = marketCondition === "LONG" ? "BUY" : "SELL";
+      const quantityPrecision = await getSymbolPrecision(SYMBOL);
       const quantity = parseFloat(
-        ((BASE_USDT * LEVERAGE) / currentPrice).toFixed(6)
+        ((BASE_USDT * LEVERAGE) / currentPrice).toFixed(quantityPrecision)
       );
 
       await client.futuresOrder({
