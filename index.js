@@ -369,17 +369,17 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
   // Log hasil sinyal fuzzy
   console.log(
     chalk.yellow(
-      `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% > 75%, SELL = ${(
+      `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= 80%, SELL = ${(
         sellSignal * 100
-      ).toFixed(2)}% > 75%`
+      ).toFixed(2)}% >= 80%`
     )
   );
 
   // Tentukan kondisi pasar berdasarkan sinyal
-  if (buySignal > sellSignal && buySignal > 0.75) {
+  if (buySignal > sellSignal && buySignal >= 0.8) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
-  } else if (sellSignal > buySignal && sellSignal > 0.75) {
+  } else if (sellSignal > buySignal && sellSignal >= 0.8) {
     console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
     return "SHORT";
   } else {
