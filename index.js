@@ -42,11 +42,12 @@ let totalLoss = 0;
 // Fungsi untuk pencatatan total TP dan SL
 function logToFile(message) {
   const logMessage = `${new Date().toISOString()} - ${message}\n`;
-  fs.appendFileSync("profit_loss_logs.txt", logMessage, (err) => {
-    if (err) {
-      console.error(chalk.bgRed("Gagal mencatat ke file log:"), err.message);
-    }
-  });
+  try {
+    fs.appendFileSync("profit_loss_logs.txt", logMessage);
+    console.log(`Log berhasil ditulis: ${logMessage.trim()}`);
+  } catch (err) {
+    console.error(`Gagal mencatat log: ${err.message}`);
+  }
 }
 
 // Fungsi untuk mendapatkan presisi pasangan perdagangan
