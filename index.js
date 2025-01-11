@@ -101,27 +101,6 @@ async function closeOpenPositions() {
       if (parseFloat(position.positionAmt) !== 0) {
         const side = parseFloat(position.positionAmt) > 0 ? "SELL" : "BUY";
         const quantity = Math.abs(parseFloat(position.positionAmt));
-
-       
-        // Hitung profit atau loss
-        const pnl =
-          side === "SELL"
-            ? (entryPrice - markPrice) * quantity
-            : (markPrice - entryPrice) * quantity;
-
-        if (pnl > 0) {
-          totalProfit += pnl;
-          const profitMessage = `Profit dari posisi ${position.symbol}: ${pnl.toFixed(2)} USDT`;
-          console.log(chalk.green(profitMessage));
-          logToFile(profitMessage); // Mencatat profit ke file log
-        } else {
-          totalLoss += Math.abs(pnl);
-          const lossMessage = `Loss dari posisi ${position.symbol}: ${Math.abs(pnl).toFixed(2)} USDT`;
-          console.log(chalk.red(lossMessage));
-          logToFile(lossMessage); // Mencatat loss ke file log
-        }
-
-        // menutup semua posisi 
         await client.futuresOrder({
           symbol: position.symbol,
           side,
@@ -133,17 +112,34 @@ async function closeOpenPositions() {
             `Posisi pada ${position.symbol} berhasil ditutup dengan kuantitas ${quantity}.`
           )
         );
+
+        // Hitung profit atau loss
+        const currentPrice = parseFloat(
+          position.markPrice || position.entryPrice
+        );
+        const entryPrice = parseFloat(position.entryPrice);
+        const pnl =
+          side === "SELL"
+            ? entryPrice - currentPrice
+            : currentPrice - entryPrice;
+
+        if (pnl > 0) {
+          totalProfit += pnl;
+          const profitMessage = `Profit dari posisi pada ${
+            position.symbol
+          }: ${pnl.toFixed(2)} USDT`;
+          console.log(chalk.green(profitMessage));
+          logToFile(profitMessage);
+        } else {
+          totalLoss += Math.abs(pnl);
+          const lossMessage = `Loss dari posisi pada ${
+            position.symbol
+          }: ${Math.abs(pnl).toFixed(2)} USDT`;
+          console.log(chalk.red(lossMessage));
+          logToFile(lossMessage);
+        }
       }
     }
-
-     // Rekapitulasi total profit dan loss
-    const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
-    const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
-    console.log(chalk.yellow(totalProfitMessage));
-    console.log(chalk.yellow(totalLossMessage));
-    logToFile(totalProfitMessage); // Rekapitulasi profit
-    logToFile(totalLossMessage); // Rekapitulasi loss
-    
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan saat menutup posisi terbuka:"),
@@ -151,6 +147,7 @@ async function closeOpenPositions() {
     );
   }
 }
+
 
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
