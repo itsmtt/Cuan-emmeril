@@ -468,7 +468,6 @@ async function placeGridOrders(currentPrice, atr, direction) {
 }
 
 // Fungsi untuk menetapkan TP dan SL
-// Fungsi untuk menetapkan TP dan SL
 async function placeTakeProfitAndStopLoss(orders, atr, direction) {
   try {
     console.log(
@@ -482,11 +481,11 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       const orderPrice = parseFloat(price);
 
       // Ambil presisi harga
-      const { pricePrecision } = await getSymbolPrecision(symbol);
+      const pricePrecision = await getSymbolPrecision(symbol);
 
       // Hitung buffer atr untuk TP dan SL
       const buffer =
-        direction === "LONG" ? atr + orderPrice * 0.1 : atr + orderPrice * 0.1;
+        direction === "LONG" ? atr : atr;
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
@@ -505,6 +504,11 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
         (direction === "SHORT" && roundedSL <= orderPrice)
       ) {
         console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
+        const buffer =
+        direction === "LONG" ? orderPrice * 0.1 : orderPrice * 0.1;
+
+        const stopLossPrice =
+        direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
         continue;
       }
 
@@ -515,6 +519,13 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
         console.log(
           chalk.red("Take Profit terlalu dekat, melewati order asli.")
         );
+
+        const buffer =
+        direction === "LONG" ? orderPrice * 0.1 : orderPrice * 0.1;
+        
+        const takeProfitPrice =
+        direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
+        
         continue;
       }
 
