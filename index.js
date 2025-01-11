@@ -484,7 +484,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       const { pricePrecision } = await getSymbolPrecision(symbol);
       
       // Hitung buffer atr untuk TP dan SL
-      const buffer = atr;
+      const buffer = orderPrice * 0.03;
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
@@ -502,12 +502,11 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
         (direction === "LONG" && roundedSL >= orderPrice) ||
         (direction === "SHORT" && roundedSL <= orderPrice)
       ) {
-        console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
-        const buffer = orderPrice * 0.1;
-
-        const stopLossPrice =
-        direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
-        continue;
+        console.log(
+          chalk.red("Stop Loss terlalu dekat, melewati order asli.")
+        );
+        
+         continue;
       }
 
       if (
@@ -517,11 +516,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
         console.log(
           chalk.red("Take Profit terlalu dekat, melewati order asli.")
         );
-
-        const buffer = orderPrice * 0.1;
-        
-        const takeProfitPrice =
-        direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
         
         continue;
       }
