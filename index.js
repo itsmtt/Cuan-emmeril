@@ -819,20 +819,20 @@ async function trade() {
 
       // Memantau status TP dan SL
       await monitorOrders();
+      console.log(
+        chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
+      );
 
-      // Logging TP dan SL
+      // Logging hasil profit dan loss jika ada
       const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
       const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
 
       console.log(chalk.yellow(totalProfitMessage));
       console.log(chalk.yellow(totalLossMessage));
 
-      logToFile(totalProfitMessage);
-      logToFile(totalLossMessage);
-
-      console.log(
-        chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
-      );
+      logToFile(totalProfitMessage); // Log profit
+      logToFile(totalLossMessage); // Log loss
+ 
       return;
     }
 
@@ -882,16 +882,17 @@ async function trade() {
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
+    
+      // Logging hasil profit dan loss jika ada
+      const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
+      const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
 
-    // Logging TP dan SL
-    const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
-    const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
+      console.log(chalk.yellow(totalProfitMessage));
+      console.log(chalk.yellow(totalLossMessage));
 
-    console.log(chalk.yellow(totalProfitMessage));
-    console.log(chalk.yellow(totalLossMessage));
+      logToFile(totalProfitMessage); // Log profit
+      logToFile(totalLossMessage); // Log loss
 
-    logToFile(totalProfitMessage);
-    logToFile(totalLossMessage);
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan utama dalam trading:"),
