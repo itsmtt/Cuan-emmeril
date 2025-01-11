@@ -823,15 +823,15 @@ async function trade() {
         chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
       );
 
-      // Logging hasil profit dan loss jika ada
+      // Logging Total Profit dan Loss
       const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
       const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
 
       console.log(chalk.yellow(totalProfitMessage));
       console.log(chalk.yellow(totalLossMessage));
 
-      logToFile(totalProfitMessage); // Log profit
-      logToFile(totalLossMessage); // Log loss
+      logToFile(totalProfitMessage);
+      logToFile(totalLossMessage);
  
       return;
     }
@@ -884,15 +884,15 @@ async function trade() {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
     
-      // Logging hasil profit dan loss jika ada
+      // Logging Total Profit dan Loss
       const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
       const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
 
       console.log(chalk.yellow(totalProfitMessage));
       console.log(chalk.yellow(totalLossMessage));
 
-      logToFile(totalProfitMessage); // Log profit
-      logToFile(totalLossMessage); // Log loss
+      logToFile(totalProfitMessage);
+      logToFile(totalLossMessage);
 
   } catch (error) {
     console.error(
