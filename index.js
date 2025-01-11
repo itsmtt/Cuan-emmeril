@@ -483,20 +483,19 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       // Ambil presisi harga
       const { pricePrecision } = await getSymbolPrecision(symbol);
 
-      // Hitung buffer atr untuk TP dan SL
-      const buffer =
-        direction === "LONG" ? atr + orderPrice * 0.1 : atr + orderPrice * 0.1;
+      // Hitung buffer ATR tanpa tambahan awalnya
+      let buffer = atr;
 
       // Hitung harga TP dan SL
-      const takeProfitPrice =
+      let takeProfitPrice =
         direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
 
-      const stopLossPrice =
+      let stopLossPrice =
         direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
 
       // Bulatkan harga berdasarkan presisi
-      const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
-      const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
+      let roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
+      let roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
 
       // Validasi harga agar tidak memicu langsung
       if (
@@ -504,7 +503,26 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
         (direction === "SHORT" && roundedSL <= orderPrice)
       ) {
         console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
-        continue;
+
+        // Tambahkan 10% dari orderPrice ke buffer jika terjadi kesalahan
+        buffer += orderPrice * 0.1;
+
+        // Hitung ulang harga TP dan SL
+        takeProfitPrice =
+          direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
+
+        stopLossPrice =
+          direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
+
+        // Bulatkan ulang harga
+        roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
+        roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
+
+        console.log(
+          chalk.yellow(
+            "Buffer telah ditingkatkan sebesar 10% untuk menghindari pemicu langsung."
+          )
+        );
       }
 
       if (
@@ -593,6 +611,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
     );
   }
 }
+
 
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
