@@ -102,6 +102,7 @@ async function closeOpenPositions() {
         const side = parseFloat(position.positionAmt) > 0 ? "SELL" : "BUY";
         const quantity = Math.abs(parseFloat(position.positionAmt));
 
+       
         // Hitung profit atau loss
         const pnl =
           side === "SELL"
@@ -110,20 +111,17 @@ async function closeOpenPositions() {
 
         if (pnl > 0) {
           totalProfit += pnl;
-          const profitMessage = `Profit dari posisi ${symbol}: ${pnl.toFixed(
-            2
-          )} USDT`;
+          const profitMessage = `Profit dari posisi ${position.symbol}: ${pnl.toFixed(2)} USDT`;
           console.log(chalk.green(profitMessage));
-          logToFile(profitMessage);
+          logToFile(profitMessage); // Mencatat profit ke file log
         } else {
           totalLoss += Math.abs(pnl);
-          const lossMessage = `Loss dari posisi ${symbol}: ${Math.abs(
-            pnl
-          ).toFixed(2)} USDT`;
+          const lossMessage = `Loss dari posisi ${position.symbol}: ${Math.abs(pnl).toFixed(2)} USDT`;
           console.log(chalk.red(lossMessage));
-          logToFile(lossMessage);
+          logToFile(lossMessage); // Mencatat loss ke file log
         }
 
+        // menutup semua posisi 
         await client.futuresOrder({
           symbol: position.symbol,
           side,
@@ -137,6 +135,15 @@ async function closeOpenPositions() {
         );
       }
     }
+
+     // Rekapitulasi total profit dan loss
+    const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
+    const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
+    console.log(chalk.yellow(totalProfitMessage));
+    console.log(chalk.yellow(totalLossMessage));
+    logToFile(totalProfitMessage); // Rekapitulasi profit
+    logToFile(totalLossMessage); // Rekapitulasi loss
+    
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan saat menutup posisi terbuka:"),
