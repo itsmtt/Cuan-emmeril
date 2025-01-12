@@ -377,10 +377,10 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
   );
 
   // Tentukan kondisi pasar berdasarkan sinyal
-  if (buySignal > sellSignal && buySignal >= 0.75) {
+  if (buySignal > sellSignal && buySignal >= 0.5) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
-  } else if (sellSignal > buySignal && sellSignal >= 0.75) {
+  } else if (sellSignal > buySignal && sellSignal >= 0.5) {
     console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
     return "SHORT";
   } else {
@@ -457,14 +457,14 @@ async function placeGridOrders(currentPrice, atr, direction) {
     for (const order of batchOrders) {
       await client.futuresOrder(order);
     }
-    await placeTakeProfitAndStopLoss(batchOrders, atr, direction);
+    await placeTakeProfitAndStopLoss(batchOrders, direction);
   } else {
     console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
   }
 }
 
 // Fungsi untuk menetapkan TP dan SL
-async function placeTakeProfitAndStopLoss(orders, atr, direction) {
+async function placeTakeProfitAndStopLoss(orders, direction) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
@@ -477,9 +477,9 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       const orderPrice = parseFloat(price);
 
       // Ambil presisi harga
-      const { pricePrecision } = await getSymbolPrecision(symbol);
+      const pricePrecision = await getSymbolPrecision(symbol);
       
-      // Hitung buffer atr untuk TP dan SL
+      // Hitung buffer 3%
       const buffer =  orderPrice * 0.03;
 
       // Hitung harga TP dan SL
