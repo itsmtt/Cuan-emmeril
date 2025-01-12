@@ -377,10 +377,10 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
   );
 
   // Tentukan kondisi pasar berdasarkan sinyal
-  if (buySignal > sellSignal && buySignal >= 0.5) {
+  if (buySignal > sellSignal && buySignal >= 0.75) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
-  } else if (sellSignal > buySignal && sellSignal >= 0.5) {
+  } else if (sellSignal > buySignal && sellSignal >= 0.75) {
     console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
     return "SHORT";
   } else {
@@ -477,10 +477,10 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
       const orderPrice = parseFloat(price);
 
       // Ambil presisi harga
-      const pricePrecision = await getSymbolPrecision(symbol);
+      const { pricePrecision } = await getSymbolPrecision(symbol);
       
-      // Hitung buffer 3%
-      const buffer =  orderPrice * 0.05;
+      // Hitung buffer 3% 
+      const buffer = orderPrice * 0.03;
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
