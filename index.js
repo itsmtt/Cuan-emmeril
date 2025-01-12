@@ -377,10 +377,10 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
   );
 
   // Tentukan kondisi pasar berdasarkan sinyal
-  if (buySignal > sellSignal && buySignal >= 0.75) {
+  if (buySignal > sellSignal && buySignal >= 0.5) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
-  } else if (sellSignal > buySignal && sellSignal >= 0.75) {
+  } else if (sellSignal > buySignal && sellSignal >= 0.5) {
     console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
     return "SHORT";
   } else {
