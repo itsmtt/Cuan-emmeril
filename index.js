@@ -559,8 +559,8 @@ async function trade() {
     });
 
     // validasi candles
-    if (candles.length < 20) {
-      console.warn(chalk.bgYellow("Data candle tidak mencukupi untuk analisis."));
+    if (candles.length < 26) {
+      console.warn(chalk.bgYellow("Jumlah data tidak mencukupi untuk menghitung EMA."));
       return;
     }
 
@@ -573,12 +573,6 @@ async function trade() {
 
     // harga penutupan pasar
     const closingPrices = candles.map((c) => parseFloat(c.close));
-
-    // Pastikan ada cukup data untuk menghitung EMA
-    if (closingPrices.length < 26) {
-      console.warn(chalk.bgYellow("Jumlah data tidak mencukupi untuk menghitung EMA."));
-      return;
-    }
 
     // Hitung ATR, VWAP, RSI, dan VOLUMES
     const [atr, vwap, rsi] = await Promise.all([
