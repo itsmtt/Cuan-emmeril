@@ -156,12 +156,15 @@ async function calculateATR(candles, period) {
   if (candles.length < period) {
     throw new Error("Jumlah candle tidak mencukupi untuk menghitung ATR.");
   }
-
+  const highs = candles.map((c) => parseFloat(c.high));
+  const lows = candles.map((c) => parseFloat(c.low));
+  const closes = candles.map((c) => parseFloat(c.close));
   const trs = [];
+
   for (let i = 1; i < candles.length; i++) {
-    const highLow = parseFloat(candles[i].high) - parseFloat(candles[i].low);
-    const highClose = Math.abs(parseFloat(candles[i].high) - parseFloat(candles[i - 1].close));
-    const lowClose = Math.abs(parseFloat(candles[i].low) - parseFloat(candles[i - 1].close));
+    const highLow = highs[i] - lows[i];
+    const highClose = Math.abs(highs[i] - closes[i - 1]);
+    const lowClose = Math.abs(lows[i] - closes[i - 1]);
     trs.push(Math.max(highLow, highClose, lowClose));
   }
 
@@ -176,10 +179,11 @@ function calculateEMA(prices, period) {
   }
 
   const multiplier = 2 / (period + 1);
-  let ema = prices.slice(0, period).reduce((sum, price) => sum + price, 0) / period;
+  let ema =
+    prices.slice(0, period).reduce((sum, price) => sum + price, 0) / period;
 
   for (let i = period; i < prices.length; i++) {
-    ema += (prices[i] - ema) * multiplier;
+    ema = (prices[i] - ema) * multiplier + ema;
   }
 
   return ema;
@@ -190,66 +194,61 @@ async function calculateRSI(candles, period) {
   const closes = candles.map((c) => parseFloat(c.close));
   const changes = closes.slice(1).map((close, i) => close - closes[i]);
 
-  let gains = 0;
-  let losses = 0;
+  const gains = changes.map((change) => (change > 0 ? change : 0));
+  const losses = changes.map((change) => (change < 0 ? Math.abs(change) : 0));
 
-  for (let i = 0; i < period; i++) {
-    const change = changes[i];
-    if (change > 0) {
-      gains += change;
-    } else {
-      losses -= change;
-    }
-  }
-
-  let avgGain = gains / period;
-  let avgLoss = losses / period;
+  const avgGain =
+    gains.slice(0, period).reduce((sum, gain) => sum + gain, 0) / period;
+  const avgLoss =
+    losses.slice(0, period).reduce((sum, loss) => sum + loss, 0) / period;
 
   let rsi = 100 - 100 / (1 + avgGain / avgLoss);
 
   for (let i = period; i < changes.length; i++) {
-    const change = changes[i];
-    avgGain = (avgGain * (period - 1) + (change > 0 ? change : 0)) / period;
-    avgLoss = (avgLoss * (period - 1) + (change < 0 ? -change : 0)) / period;
-    rsi = 100 - 100 / (1 + avgGain / avgLoss);
+    const gain = gains[i];
+    const loss = losses[i];
+
+    const newAvgGain = (avgGain * (period - 1) + gain) / period;
+    const newAvgLoss = (avgLoss * (period - 1) + loss) / period;
+
+    rsi = 100 - 100 / (1 + newAvgGain / newAvgLoss);
   }
 
   return rsi;
 }
 
 // Fungsi untuk menghitung MACD
-function calculateMACD(closingPrices, shortPeriod = 12, longPeriod = 26, signalPeriod = 9) {
-  if (closingPrices.length < longPeriod) {
-    throw new Error("Jumlah data tidak mencukupi untuk menghitung MACD.");
-  }
+function calculateMACD(
+  closingPrices,
+  shortPeriod = 12,
+  longPeriod = 26,
+  signalPeriod = 9
+) {
+  const macdLine = closingPrices
+    .map((_, i) =>
+      i >= longPeriod
+        ? calculateEMA(closingPrices.slice(i - shortPeriod, i), shortPeriod) -
+          calculateEMA(closingPrices.slice(i - longPeriod, i), longPeriod)
+        : null
+    )
+    .filter((v) => v !== null);
 
-  const shortEMA = calculateEMA(closingPrices.slice(-longPeriod), shortPeriod);
-  const longEMA = calculateEMA(closingPrices.slice(-longPeriod), longPeriod);
-  const macdLine = shortEMA - longEMA;
-
-  const signalLine = calculateEMA(
-    closingPrices.slice(-longPeriod + signalPeriod).map((_, i) => {
-      const shortEMA = calculateEMA(closingPrices.slice(i - shortPeriod, i), shortPeriod);
-      const longEMA = calculateEMA(closingPrices.slice(i - longPeriod, i), longPeriod);
-      return shortEMA - longEMA;
-    }),
-    signalPeriod
-  );
-
-  return { macdLine, signalLine };
+  const signalLine = calculateEMA(macdLine, signalPeriod);
+  return { macdLine: macdLine[macdLine.length - 1], signalLine };
 }
 
 // Fungsi untuk menghitung Bollinger Bands
 function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
-  if (closingPrices.length < period) {
-    throw new Error("Jumlah data tidak mencukupi untuk menghitung Bollinger Bands.");
-  }
+  const avgPrice =
+    closingPrices.slice(-period).reduce((sum, price) => sum + price, 0) /
+    period;
 
-  const slice = closingPrices.slice(-period);
-  const avgPrice = slice.reduce((sum, price) => sum + price, 0) / period;
-
-  const variance = slice.reduce((sum, price) => sum + Math.pow(price - avgPrice, 2), 0) / period;
-  const stdDev = Math.sqrt(variance);
+  const stdDev = Math.sqrt(
+    closingPrices
+      .slice(-period)
+      .map((price) => Math.pow(price - avgPrice, 2))
+      .reduce((sum, sq) => sum + sq, 0) / period
+  );
 
   return {
     upperBand: avgPrice + multiplier * stdDev,
@@ -259,7 +258,9 @@ function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
 
 // Fungsi untuk menghitung keanggotaan fuzzy
 function fuzzyMembership(value, low, high) {
-  return Math.max(0, Math.min(1, (high - value) / (high - low)));
+  if (value <= low) return 1;
+  if (value >= high) return 0;
+  return (high - value) / (high - low);
 }
 
 // Fungsi untuk menghitung VWAP
@@ -268,9 +269,12 @@ function calculateVWAP(candles) {
   let cumulativePriceVolume = 0;
 
   for (const candle of candles) {
-    const typicalPrice = (parseFloat(candle.high) + parseFloat(candle.low) + parseFloat(candle.close)) / 3;
+    const high = parseFloat(candle.high);
+    const low = parseFloat(candle.low);
+    const close = parseFloat(candle.close);
     const volume = parseFloat(candle.volume);
 
+    const typicalPrice = (high + low + close) / 3;
     cumulativeVolume += volume;
     cumulativePriceVolume += typicalPrice * volume;
   }
@@ -280,18 +284,28 @@ function calculateVWAP(candles) {
 
 // Fungsi untuk memeriksa kondisi pasar ekstrem
 async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
-  const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
-  const lastVolume = volumes[volumes.length - 1];
+  // Keanggotaan fuzzy untuk kondisi pasar ekstrem
+  const fuzzySignals = {
+    highVolatility: fuzzyMembership(atr, 0.05, 0.1),
+    extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
+    avgVolume: volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length,
+    volumeMembership: fuzzyMembership(
+      volumes[volumes.length - 1],
+      (volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length) * 1.5,
+      (volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length) * 3
+    ),
+    priceFarBelowVWAP: fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9),
+    priceFarAboveVWAP: fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2),
+  };
 
-  const fuzzySignals = [
-    fuzzyMembership(atr, 0.05, 0.1),
-    fuzzyMembership(atr, 0.1, 0.2),
-    fuzzyMembership(lastVolume, avgVolume * 1.5, avgVolume * 3),
-    fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9),
-    fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2),
-  ];
-
-  const isExtreme = calculateFuzzySignals(fuzzySignals);
+  // Hitung rata-rata sinyal fuzzy
+  const isExtreme = calculateFuzzySignals([
+    fuzzySignals.highVolatility,
+    fuzzySignals.extremeVolatility,
+    fuzzySignals.volumeMembership,
+    fuzzySignals.priceFarBelowVWAP,
+    fuzzySignals.priceFarAboveVWAP,
+  ]);
 
   console.log(
     chalk.yellow(
@@ -320,34 +334,34 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
   // Keanggotaan fuzzy untuk kondisi pasar
-  const fuzzySignals = [
-    fuzzyMembership(rsi, 30, 50),
-    fuzzyMembership(rsi, 50, 70),
-    macdLine > signalLine ? 1 : 0,
-    macdLine < signalLine ? 1 : 0,
-    fuzzyMembership(lastPrice, lowerBand, lowerBand * 1.02),
-    fuzzyMembership(lastPrice, upperBand * 0.98, upperBand),
-    shortEMA > longEMA ? 1 : 0,
-    shortEMA < longEMA ? 1 : 0,
-    lastPrice < vwap ? 1 : 0,
-    lastPrice > vwap ? 1 : 0,
-  ];
+  const fuzzySignals = {
+    rsiBuy: fuzzyMembership(rsi, 30, 50),
+    rsiSell: fuzzyMembership(rsi, 50, 70),
+    macdBuy: macdLine > signalLine ? 1 : 0,
+    macdSell: macdLine < signalLine ? 1 : 0,
+    priceNearLowerBand: fuzzyMembership(lastPrice, lowerBand, lowerBand * 1.02),
+    priceNearUpperBand: fuzzyMembership(lastPrice, upperBand * 0.98, upperBand),
+    emaBuy: shortEMA > longEMA ? 1 : 0,
+    emaSell: shortEMA < longEMA ? 1 : 0,
+    priceBelowVWAP: lastPrice < vwap ? 1 : 0,
+    priceAboveVWAP: lastPrice > vwap ? 1 : 0,
+  };
 
   // Hitung sinyal beli dan jual berdasarkan indikator
   const buySignal = calculateFuzzySignals([
-    fuzzySignals[0], // rsiBuy
-    fuzzySignals[2], // macdBuy
-    fuzzySignals[4], // priceNearLowerBand
-    fuzzySignals[8], // priceBelowVWAP
-    fuzzySignals[6], // emaBuy
+    fuzzySignals.rsiBuy,
+    fuzzySignals.macdBuy,
+    fuzzySignals.priceNearLowerBand,
+    fuzzySignals.priceBelowVWAP,
+    fuzzySignals.emaBuy,
   ]);
 
   const sellSignal = calculateFuzzySignals([
-    fuzzySignals[1], // rsiSell
-    fuzzySignals[3], // macdSell
-    fuzzySignals[5], // priceNearUpperBand
-    fuzzySignals[9], // priceAboveVWAP
-    fuzzySignals[7], // emaSell
+    fuzzySignals.rsiSell,
+    fuzzySignals.macdSell,
+    fuzzySignals.priceNearUpperBand,
+    fuzzySignals.priceAboveVWAP,
+    fuzzySignals.emaSell,
   ]);
 
   // Log hasil sinyal fuzzy
@@ -382,8 +396,20 @@ async function placeGridOrders(currentPrice, atr, direction) {
   await closeOpenPositions();
   await closeOpenOrders();
 
-  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(SYMBOL);
-  const tickSize = parseFloat((await client.futuresExchangeInfo()).symbols.find((s) => s.symbol === SYMBOL).filters.find((f) => f.tickSize).tickSize);
+  const exchangeInfo = await client.futuresExchangeInfo();
+  const symbolInfo = exchangeInfo.symbols.find((s) => s.symbol === SYMBOL);
+  if (!symbolInfo) {
+    console.error(`Symbol ${SYMBOL} tidak ditemukan di Binance.`);
+    return;
+  }
+
+  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
+    SYMBOL
+  );
+
+  const tickSize = parseFloat(
+    symbolInfo.filters.find((f) => f.tickSize).tickSize
+  );
 
   const buffer = atr;
   const orderGrid = GRID_COUNT;
@@ -391,11 +417,26 @@ async function placeGridOrders(currentPrice, atr, direction) {
   const batchOrders = [];
 
   for (let i = 1; i <= orderGrid; i++) {
-    const price = direction === "LONG" ? currentPrice - buffer * i : currentPrice + buffer * i;
-    const roundedPrice = parseFloat((Math.round(price / tickSize) * tickSize).toFixed(pricePrecision));
-    const quantity = parseFloat(((BASE_USDT * LEVERAGE) / currentPrice).toFixed(quantityPrecision));
+    const price =
+      direction === "LONG"
+        ? currentPrice - buffer * i
+        : currentPrice + buffer * i;
 
-    if (openOrders.some((order) => parseFloat(order.price).toFixed(pricePrecision) === roundedPrice.toFixed(pricePrecision))) {
+    const roundedPrice = parseFloat(
+      (Math.round(price / tickSize) * tickSize).toFixed(pricePrecision)
+    );
+
+    const quantity = parseFloat(
+      ((BASE_USDT * LEVERAGE) / currentPrice).toFixed(quantityPrecision)
+    );
+
+    if (
+      openOrders.some(
+        (order) =>
+          parseFloat(order.price).toFixed(pricePrecision) ===
+          roundedPrice.toFixed(pricePrecision)
+      )
+    ) {
       continue;
     }
 
@@ -422,44 +463,85 @@ async function placeGridOrders(currentPrice, atr, direction) {
 // Fungsi untuk menetapkan TP dan SL
 async function placeTakeProfitAndStopLoss(orders, direction) {
   try {
-    console.log(chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order..."));
-
-    const { pricePrecision } = await getSymbolPrecision(SYMBOL);
+    console.log(
+      chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
+    );
 
     for (const order of orders) {
       const { price, quantity, symbol } = order;
+
+      // Gunakan harga order sebagai referensi
       const orderPrice = parseFloat(price);
+
+      // Ambil presisi harga
+      const { pricePrecision } = await getSymbolPrecision(symbol);
+
+      // Hitung buffer 3%
       const buffer = orderPrice * 0.03;
 
-      const takeProfitPrice = direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
-      const stopLossPrice = direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
+      // Hitung harga TP dan SL
+      const takeProfitPrice =
+        direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
 
+      const stopLossPrice =
+        direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
+
+      // Bulatkan harga berdasarkan presisi
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
       const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
 
-      if ((direction === "LONG" && roundedSL >= orderPrice) || (direction === "SHORT" && roundedSL <= orderPrice)) {
+      // Validasi harga agar tidak memicu langsung
+      if (
+        (direction === "LONG" && roundedSL >= orderPrice) ||
+        (direction === "SHORT" && roundedSL <= orderPrice)
+      ) {
         console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
+
         continue;
       }
 
-      if ((direction === "LONG" && roundedTP <= orderPrice) || (direction === "SHORT" && roundedTP >= orderPrice)) {
-        console.log(chalk.red("Take Profit terlalu dekat, melewati order asli."));
+      if (
+        (direction === "LONG" && roundedTP <= orderPrice) ||
+        (direction === "SHORT" && roundedTP >= orderPrice)
+      ) {
+        console.log(
+          chalk.red("Take Profit terlalu dekat, melewati order asli.")
+        );
+
         continue;
       }
 
+      // Jeda waktu untuk memastikan Binance memproses order sebelumnya
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Tunggu 1 detik
 
-      const updatedOpenOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+      // Perbarui daftar order terbuka
+      const updatedOpenOrders = await client.futuresOpenOrders({
+        symbol: SYMBOL,
+      });
 
+      // Cek apakah TP sudah ada
       const tpExists = updatedOpenOrders.some(
-        (o) => o.type === "TAKE_PROFIT_MARKET" && parseFloat(o.stopPrice).toFixed(pricePrecision) === roundedTP.toFixed(pricePrecision)
+        (o) =>
+          o.type === "TAKE_PROFIT_MARKET" &&
+          parseFloat(o.stopPrice).toFixed(pricePrecision) ===
+            roundedTP.toFixed(pricePrecision)
       );
 
+      // Cek apakah SL sudah ada
       const slExists = updatedOpenOrders.some(
-        (o) => o.type === "STOP_MARKET" && parseFloat(o.stopPrice).toFixed(pricePrecision) === roundedSL.toFixed(pricePrecision)
+        (o) =>
+          o.type === "STOP_MARKET" &&
+          parseFloat(o.stopPrice).toFixed(pricePrecision) ===
+            roundedSL.toFixed(pricePrecision)
       );
 
-      if (!tpExists) {
+      // Skip jika TP atau SL sudah ada
+      if (tpExists) {
+        console.log(
+          chalk.yellow(`Take Profit pada harga ${roundedTP} sudah ada.`)
+        );
+      } else {
+        // Buat order Take Profit
         await client.futuresOrder({
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
@@ -468,12 +550,20 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
           quantity,
           reduceOnly: true,
         });
-        console.log(chalk.green(`Take Profit untuk ${symbol} pada harga ${roundedTP} berhasil ditempatkan.`));
-      } else {
-        console.log(chalk.yellow(`Take Profit pada harga ${roundedTP} sudah ada.`));
+
+        console.log(
+          chalk.green(
+            `Take Profit untuk ${symbol} pada harga ${roundedTP} berhasil ditempatkan.`
+          )
+        );
       }
 
-      if (!slExists) {
+      if (slExists) {
+        console.log(
+          chalk.yellow(`Stop Loss pada harga ${roundedSL} sudah ada.`)
+        );
+      } else {
+        // Buat order Stop Loss
         await client.futuresOrder({
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
@@ -482,13 +572,19 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
           quantity,
           reduceOnly: true,
         });
-        console.log(chalk.green(`Stop Loss untuk ${symbol} pada harga ${roundedSL} berhasil ditempatkan.`));
-      } else {
-        console.log(chalk.yellow(`Stop Loss pada harga ${roundedSL} sudah ada.`));
+
+        console.log(
+          chalk.green(
+            `Stop Loss untuk ${symbol} pada harga ${roundedSL} berhasil ditempatkan.`
+          )
+        );
       }
     }
   } catch (error) {
-    console.error(chalk.bgRed("Kesalahan saat menetapkan Take Profit dan Stop Loss:"), error.message || error);
+    console.error(
+      chalk.bgRed("Kesalahan saat menetapkan Take Profit dan Stop Loss:"),
+      error.message || error
+    );
   }
 }
 
@@ -503,27 +599,61 @@ async function monitorOrders() {
     // Ambil semua data posisi terbuka
     const positions = await client.futuresPositionRisk();
 
-    // Filter order terbuka dengan tipe TAKE_PROFIT_MARKET dan STOP_MARKET
-    const takeProfitOrders = openOrders.filter(order => order.type === "TAKE_PROFIT_MARKET");
-    const stopLossOrders = openOrders.filter(order => order.type === "STOP_MARKET");
+    // Filter order terbuka dengan tipe TAKE_PROFIT_MARKET
+    const takeProfitOrders = openOrders.filter(
+      (order) => order.type === "TAKE_PROFIT_MARKET"
+    );
+
+    // Filter order terbuka dengan tipe STOP_MARKET
+    const stopLossOrders = openOrders.filter(
+      (order) => order.type === "STOP_MARKET"
+    );
+
+    // Filter order terbuka dengan limit order
+    const limitOrders = openOrders.filter((order) => order.type === "LIMIT");
 
     // Cari posisi terbuka
-    const openPosition = positions.find(position => parseFloat(position.positionAmt) !== 0);
+    const openPosition = positions.find(
+      (position) => parseFloat(position.positionAmt) !== 0
+    );
 
-    // Jika tidak ada TP atau SL, tutup semua order terbuka dan posisi terbuka
-    if (takeProfitOrders.length === 0 || stopLossOrders.length === 0) {
-      console.log(chalk.red("Tidak ada Take Profit atau Stop Loss order di daftar open orders."));
+    // Jika tidak ada TP Tutup semua order terbuka dan posisi terbuka
+    if (takeProfitOrders.length === 0) {
+      console.log(
+        chalk.red("Tidak ada Take Profit order di daftar open orders.")
+      );
       console.log(chalk.blue("Menutup semua posisi dan order..."));
       await closeOpenPositions();
       console.log(chalk.green("Semua posisi telah ditutup."));
       await closeOpenOrders();
       console.log(chalk.green("Semua order telah dibatalkan."));
     } else {
-      console.log(chalk.green(`Masih ada ${takeProfitOrders.length} Take Profit order dan ${stopLossOrders.length} Stop Loss order yang aktif.`));
+      console.log(
+        chalk.green(
+          `Masih ada ${takeProfitOrders.length} Take Profit order yang aktif.`
+        )
+      );
     }
 
-    // Jika tidak ada limit order dan tidak ada posisi terbuka, tutup semua order terbuka dan posisi terbuka
-    const limitOrders = openOrders.filter(order => order.type === "LIMIT");
+    // Jika tidak ada SL Tutup semua order terbuka dan posisi terbuka
+    if (stopLossOrders.length === 0) {
+      console.log(
+        chalk.red("Tidak ada Stop Loss order di daftar open orders.")
+      );
+      console.log(chalk.blue("Menutup semua posisi dan order..."));
+      await closeOpenPositions();
+      console.log(chalk.green("Semua posisi telah ditutup."));
+      await closeOpenOrders();
+      console.log(chalk.green("Semua order telah dibatalkan."));
+    } else {
+      console.log(
+        chalk.green(
+          `Masih ada ${stopLossOrders.length} Stop Loss order yang aktif.`
+        )
+      );
+    }
+
+    // Jika tidak ada limit order dan tidak ada posisi terbuka Tutup semua order terbuka dan posisi terbuka
     if (limitOrders.length === 0 && !openPosition) {
       console.log(chalk.red("Tidak ada limit order atau posisi terbuka."));
       await closeOpenOrders();
@@ -532,14 +662,23 @@ async function monitorOrders() {
       console.log(chalk.green("Semua posisi telah ditutup."));
     } else {
       if (limitOrders.length > 0) {
-        console.log(chalk.green(`Masih ada ${limitOrders.length} limit order yang aktif.`));
+        console.log(
+          chalk.green(`Masih ada ${limitOrders.length} limit order yang aktif.`)
+        );
       }
+
+      // Posisi terbuka saat ini
       if (openPosition) {
-        console.log(chalk.green(`Masih ada posisi terbuka pada ${openPosition.symbol}.`));
+        console.log(
+          chalk.green(`Masih ada posisi terbuka pada ${openPosition.symbol}.`)
+        );
       }
     }
   } catch (error) {
-    console.error(chalk.bgRed("Kesalahan saat memantau order terbuka:"), error.message || error);
+    console.error(
+      chalk.bgRed("Kesalahan saat memantau order terbuka:"),
+      error.message || error
+    );
   }
 }
 
@@ -555,31 +694,41 @@ async function trade() {
     // Mengambil data candle
     const candles = await client.futuresCandles({
       symbol: SYMBOL,
-      interval: "4h",
+      interval: "15m",
     });
 
     // validasi candles
-    if (candles.length < 26) {
-      console.warn(chalk.bgYellow("Jumlah data tidak mencukupi untuk menghitung EMA."));
+    if (candles.length < 20) {
+      console.warn(
+        chalk.bgYellow("Data candle tidak mencukupi untuk analisis.")
+      );
       return;
     }
 
     // harga pasar terkini
     const currentPrice = parseFloat(ticker[SYMBOL]);
-    console.log(chalk.yellow(`Harga pasar terkini untuk ${SYMBOL}: ${currentPrice.toFixed(6)}`));
+    console.log(
+      chalk.yellow(
+        `Harga pasar terkini untuk ${SYMBOL}: ${currentPrice.toFixed(6)}`
+      )
+    );
 
     // harga penutupan pasar untuk fuzzy member
     const lastPrice = parseFloat(candles[candles.length - 1].close);
 
     // harga penutupan pasar
-    const closingPrices = candles.map((c) => parseFloat(c.close));
+    const closinglastPricePrices = candles.map((c) => parseFloat(c.close));
 
-    // Hitung ATR, VWAP, RSI, dan VOLUMES
-    const [atr, vwap, rsi] = await Promise.all([
-      calculateATR(candles, 14),
-      calculateVWAP(candles),
-      calculateRSI(candles, 14),
-    ]);
+    // Hitung ATR
+    const atr = await calculateATR(candles, 14);
+
+    // Hitung VWAP
+    const vwap = await calculateVWAP(candles);
+
+    // Hitung RSI
+    const rsi = await calculateRSI(candles, 14);
+
+    // Hitung VOLUMES
     const volumes = candles.map((c) => parseFloat(c.volume));
 
     // Periksa apakah masih ada order terbuka
@@ -591,46 +740,82 @@ async function trade() {
       }
 
       // Tentukan kondisi pasar
-      const marketCondition = await determineMarketCondition(rsi, vwap, closingPrices, lastPrice);
+      const marketCondition = await determineMarketCondition(
+        rsi,
+        vwap,
+        closinglastPricePrices,
+        lastPrice
+      );
 
       // Ambil semua limit order terbuka
-      const limitBuyOrders = openOrders.filter((order) => order.side === "BUY" && order.type === "LIMIT");
-      const limitSellOrders = openOrders.filter((order) => order.side === "SELL" && order.type === "LIMIT");
+      const hasOpenOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+      const limitBuyOrders = hasOpenOrders.filter(
+        (order) => order.side === "BUY" && order.type === "LIMIT"
+      );
+      const limitSellOrders = hasOpenOrders.filter(
+        (order) => order.side === "SELL" && order.type === "LIMIT"
+      );
 
       // Periksa apakah arah pasar bertentangan dengan limit order terbuka
-      const conflictingBuyOrders = limitBuyOrders.length > 0 && marketCondition === "SHORT";
-      const conflictingSellOrders = limitSellOrders.length > 0 && marketCondition === "LONG";
+      const conflictingBuyOrders =
+        limitBuyOrders.length > 0 && marketCondition === "SHORT";
+      const conflictingSellOrders =
+        limitSellOrders.length > 0 && marketCondition === "LONG";
 
       if (conflictingBuyOrders || conflictingSellOrders) {
-        console.log(chalk.red("Kondisi pasar berlawanan dengan limit orders yang terbuka. Menutup semua order."));
+        console.log(
+          chalk.red(
+            "Kondisi pasar berlawanan dengan limit orders yang terbuka. Menutup semua order."
+          )
+        );
         await closeOpenOrders();
         await closeOpenPositions();
         return;
       } else {
-        console.log(chalk.green("Kondisi pasar masih sesuai dengan limit orders yang ada. Tidak ada tindakan yang diperlukan."));
+        console.log(
+          chalk.green(
+            "Kondisi pasar masih sesuai dengan limit orders yang ada. Tidak ada tindakan yang diperlukan."
+          )
+        );
       }
 
       // Ambil semua posisi terbuka
       const positions = await client.futuresPositionRisk();
-      const openPosition = positions.find((position) => parseFloat(position.positionAmt) !== 0);
+      const openPosition = positions.find(
+        (position) => parseFloat(position.positionAmt) !== 0
+      );
 
       // Periksa apakah arah pasar bertentangan dengan posisi terbuka
       if (openPosition) {
-        const positionSide = parseFloat(openPosition.positionAmt) > 0 ? "LONG" : "SHORT";
+        const positionSide =
+          parseFloat(openPosition.positionAmt) > 0 ? "LONG" : "SHORT";
 
-        if ((marketCondition === "LONG" && positionSide === "SHORT") || (marketCondition === "SHORT" && positionSide === "LONG")) {
-          console.log(chalk.red(`Kondisi pasar (${marketCondition}) bertentangan dengan posisi terbuka (${positionSide}). Menutup posisi...`));
+        if (
+          (marketCondition === "LONG" && positionSide === "SHORT") ||
+          (marketCondition === "SHORT" && positionSide === "LONG")
+        ) {
+          console.log(
+            chalk.red(
+              `Kondisi pasar (${marketCondition}) bertentangan dengan posisi terbuka (${positionSide}). Menutup posisi...`
+            )
+          );
           await closeOpenOrders();
           await closeOpenPositions();
           return;
         } else {
-          console.log(chalk.green(`Kondisi pasar (${marketCondition}) sejalan dengan posisi terbuka (${positionSide}). Tidak ada tindakan yang diperlukan.`));
+          console.log(
+            chalk.green(
+              `Kondisi pasar (${marketCondition}) sejalan dengan posisi terbuka (${positionSide}). Tidak ada tindakan yang diperlukan.`
+            )
+          );
         }
       }
 
       // Memantau status TP dan SL
       await monitorOrders();
-      console.log(chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`));
+      console.log(
+        chalk.blue(`Masih ada ${openOrders.length} order terbuka. Menunggu...`)
+      );
 
       // Logging Total Profit dan Loss
       const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
@@ -651,11 +836,20 @@ async function trade() {
     }
 
     // Tentukan kondisi pasar
-    const marketCondition = await determineMarketCondition(rsi, vwap, closingPrices, lastPrice);
+    const marketCondition = await determineMarketCondition(
+      rsi,
+      vwap,
+      closinglastPricePrices,
+      lastPrice
+    );
 
     // Tempatkan order grid jika ada sinyal trading
     if (marketCondition === "LONG" || marketCondition === "SHORT") {
-      console.log(chalk.blue(`Sinyal order baru terdeteksi: ${marketCondition}. Menempatkan order grid.`));
+      console.log(
+        chalk.blue(
+          `Sinyal order baru terdeteksi: ${marketCondition}. Menempatkan order grid.`
+        )
+      );
 
       // Buka order sesuai sinyal
       await placeGridOrders(currentPrice, atr, marketCondition);
@@ -663,7 +857,9 @@ async function trade() {
       // Buka posisi sesuai sinyal
       const direction = marketCondition === "LONG" ? "BUY" : "SELL";
       const quantityPrecision = await getSymbolPrecision(SYMBOL);
-      const quantity = parseFloat(((BASE_USDT * LEVERAGE) / currentPrice).toFixed(quantityPrecision));
+      const quantity = parseFloat(
+        ((BASE_USDT * LEVERAGE) / currentPrice).toFixed(quantityPrecision)
+      );
 
       await client.futuresOrder({
         symbol: SYMBOL,
@@ -672,7 +868,11 @@ async function trade() {
         quantity: quantity,
       });
 
-      console.log(chalk.green(`Posisi ${marketCondition} berhasil dibuka dengan kuantitas ${quantity}.`));
+      console.log(
+        chalk.green(
+          `Posisi ${marketCondition} berhasil dibuka dengan kuantitas ${quantity}.`
+        )
+      );
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
@@ -687,7 +887,10 @@ async function trade() {
     logToFile(totalProfitMessage);
     logToFile(totalLossMessage);
   } catch (error) {
-    console.error(chalk.bgRed("Kesalahan utama dalam trading:"), error.message || error);
+    console.error(
+      chalk.bgRed("Kesalahan utama dalam trading:"),
+      error.message || error
+    );
   }
 }
 
@@ -697,7 +900,9 @@ async function runBot() {
   await closeOpenOrders();
   while (true) {
     await trade();
-    console.log(chalk.magenta("Menunggu sebelum memulai iterasi berikutnya..."));
+    console.log(
+      chalk.magenta("Menunggu sebelum memulai iterasi berikutnya...")
+    );
     await new Promise((resolve) => setTimeout(resolve, 10000));
   }
 }
