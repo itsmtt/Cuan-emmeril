@@ -480,7 +480,7 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
       const pricePrecision = await getSymbolPrecision(symbol);
       
       // Hitung buffer 3%
-      const buffer =  orderPrice * 0.03;
+      const buffer =  orderPrice * 0.05;
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
