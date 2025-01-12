@@ -100,42 +100,40 @@ async function closeOpenPositions() {
       if (parseFloat(position.positionAmt) !== 0) {
         const side = parseFloat(position.positionAmt) > 0 ? "SELL" : "BUY";
         const quantity = Math.abs(parseFloat(position.positionAmt));
-        await client.futuresOrder({
-          symbol: position.symbol,
-          side,
-          type: "MARKET",
-          quantity,
-        });
-        console.log(
-          chalk.green(
-            `Posisi pada ${position.symbol} berhasil ditutup dengan kuantitas ${quantity}.`
-          )
-        );
+        try {
+          await client.futuresOrder({
+            symbol: position.symbol,
+            side,
+            type: "MARKET",
+            quantity,
+          });
+          console.log(
+            chalk.green(
+              `Posisi pada ${position.symbol} berhasil ditutup dengan kuantitas ${quantity}.`
+            )
+          );
 
-        // Hitung profit atau loss
-        const currentPrice = parseFloat(
-          position.markPrice || position.entryPrice
-        );
-        const entryPrice = parseFloat(position.entryPrice);
-        const pnl =
-          side === "SELL"
-            ? (entryPrice - currentPrice) * quantity
-            : (currentPrice - entryPrice) * quantity;
+          // Hitung profit atau loss
+          const currentPrice = parseFloat(position.markPrice || position.entryPrice);
+          const entryPrice = parseFloat(position.entryPrice);
+          const pnl =
+            side === "SELL"
+              ? (entryPrice - currentPrice) * quantity
+              : (currentPrice - entryPrice) * quantity;
 
-        if (pnl > 0) {
-          totalProfit += pnl;
-          const profitMessage = `Profit dari posisi pada ${
-            position.symbol
-          }: ${pnl.toFixed(2)} USDT`;
-          console.log(chalk.green(profitMessage));
-          logToFile(profitMessage);
-        } else {
-          totalLoss += Math.abs(pnl);
-          const lossMessage = `Loss dari posisi pada ${
-            position.symbol
-          }: ${Math.abs(pnl).toFixed(2)} USDT`;
-          console.log(chalk.red(lossMessage));
-          logToFile(lossMessage);
+          if (pnl > 0) {
+            totalProfit += pnl;
+            const profitMessage = `Profit dari posisi pada ${position.symbol}: ${pnl.toFixed(2)} USDT`;
+            console.log(chalk.green(profitMessage));
+            logToFile(profitMessage);
+          } else {
+            totalLoss += Math.abs(pnl);
+            const lossMessage = `Loss dari posisi pada ${position.symbol}: ${Math.abs(pnl).toFixed(2)} USDT`;
+            console.log(chalk.red(lossMessage));
+            logToFile(lossMessage);
+          }
+        } catch (error) {
+          console.error(chalk.bgRed(`Gagal menutup posisi pada ${position.symbol}:`), error.message || error);
         }
       }
     }
