@@ -147,7 +147,6 @@ async function closeOpenPositions() {
   }
 }
 
-
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
   if (!candles.every((c) => c.high && c.low && c.close)) {
@@ -478,8 +477,8 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
 
       // Ambil presisi harga
       const { pricePrecision } = await getSymbolPrecision(symbol);
-      
-      // Hitung buffer 3% 
+
+      // Hitung buffer 3%
       const buffer = orderPrice * 0.03;
 
       // Hitung harga TP dan SL
@@ -498,11 +497,9 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
         (direction === "LONG" && roundedSL >= orderPrice) ||
         (direction === "SHORT" && roundedSL <= orderPrice)
       ) {
-        console.log(
-          chalk.red("Stop Loss terlalu dekat, melewati order asli.")
-        );
-        
-         continue;
+        console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
+
+        continue;
       }
 
       if (
@@ -512,7 +509,7 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
         console.log(
           chalk.red("Take Profit terlalu dekat, melewati order asli.")
         );
-        
+
         continue;
       }
 
@@ -592,7 +589,6 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
     );
   }
 }
-
 
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
@@ -832,7 +828,7 @@ async function trade() {
 
       logToFile(totalProfitMessage);
       logToFile(totalLossMessage);
- 
+
       return;
     }
 
@@ -859,7 +855,7 @@ async function trade() {
 
       // Buka order sesuai sinyal
       await placeGridOrders(currentPrice, atr, marketCondition);
-      
+
       // Buka posisi sesuai sinyal
       const direction = marketCondition === "LONG" ? "BUY" : "SELL";
       const quantityPrecision = await getSymbolPrecision(SYMBOL);
@@ -879,21 +875,19 @@ async function trade() {
           `Posisi ${marketCondition} berhasil dibuka dengan kuantitas ${quantity}.`
         )
       );
-
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
-    
-      // Logging Total Profit dan Loss
-      const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
-      const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
 
-      console.log(chalk.yellow(totalProfitMessage));
-      console.log(chalk.yellow(totalLossMessage));
+    // Logging Total Profit dan Loss
+    const totalProfitMessage = `Total Profit: ${totalProfit.toFixed(2)} USDT`;
+    const totalLossMessage = `Total Loss: ${totalLoss.toFixed(2)} USDT`;
 
-      logToFile(totalProfitMessage);
-      logToFile(totalLossMessage);
+    console.log(chalk.yellow(totalProfitMessage));
+    console.log(chalk.yellow(totalLossMessage));
 
+    logToFile(totalProfitMessage);
+    logToFile(totalLossMessage);
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan utama dalam trading:"),
