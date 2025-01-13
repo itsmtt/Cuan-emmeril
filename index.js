@@ -452,7 +452,11 @@ async function placeGridOrders(currentPrice, atr, direction) {
 
   if (batchOrders.length > 0) {
     for (const order of batchOrders) {
-      await client.futuresOrder(order);
+      try {
+        await client.futuresOrder(order);
+      } catch (error) {
+        console.error(chalk.bgRed(`Gagal menempatkan order: ${error.message || error}`));
+      }
     }
     await placeTakeProfitAndStopLoss(batchOrders, direction);
   } else {
@@ -689,7 +693,12 @@ async function trade() {
     if (!ticker[SYMBOL]) throw new Error(`Symbol ${SYMBOL} tidak ditemukan.`);
 
     // Set leverage untuk trading
-    await client.futuresLeverage({ symbol: SYMBOL, leverage: LEVERAGE });
+    try {
+      await client.futuresLeverage({ symbol: SYMBOL, leverage: LEVERAGE });
+    } catch (error) {
+      console.error(chalk.bgRed(`Gagal menetapkan leverage: ${error.message || error}`));
+      return;
+    }
 
     // Mengambil data candle
     const candles = await client.futuresCandles({
@@ -856,23 +865,26 @@ async function trade() {
 
       // Buka posisi sesuai sinyal
       const direction = marketCondition === "LONG" ? "BUY" : "SELL";
-      const quantityPrecision = await getSymbolPrecision(SYMBOL);
+      const { quantityPrecision } = await getSymbolPrecision(SYMBOL);
       const quantity = parseFloat(
         ((BASE_USDT * LEVERAGE) / currentPrice).toFixed(quantityPrecision)
       );
 
-      await client.futuresOrder({
-        symbol: SYMBOL,
-        side: direction,
-        type: "MARKET",
-        quantity: quantity,
-      });
-
-      console.log(
-        chalk.green(
-          `Posisi ${marketCondition} berhasil dibuka dengan kuantitas ${quantity}.`
-        )
-      );
+      try {
+        await client.futuresOrder({
+          symbol: SYMBOL,
+          side: direction,
+          type: "MARKET",
+          quantity: quantity,
+        });
+        console.log(
+          chalk.green(
+            `Posisi ${marketCondition} berhasil dibuka dengan kuantitas ${quantity}.`
+          )
+        );
+      } catch (error) {
+        console.error(chalk.bgRed(`Gagal membuka posisi: ${error.message || error}`));
+      }
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
     }
