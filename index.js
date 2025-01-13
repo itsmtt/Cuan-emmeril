@@ -118,8 +118,8 @@ async function closeOpenPositions() {
           const entryPrice = parseFloat(position.entryPrice);
           const pnl =
             side === "SELL"
-              ? (entryPrice - currentPrice) * quantity
-              : (currentPrice - entryPrice) * quantity;
+              ? (currentPrice - entryPrice) * quantity
+              : (entryPrice - currentPrice) * quantity;
 
           if (pnl > 0) {
             totalProfit += pnl;
