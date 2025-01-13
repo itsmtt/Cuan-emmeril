@@ -13,7 +13,7 @@
 ---
 
 <p align="center">
-  <i align="center">Aplikasi ini di bangun menggunakan javaScript 🚀</i>
+  <i align="center">Aplikasi ini dibangun menggunakan JavaScript 🚀</i>
 </p>
 <p align="center">
   Hi, 🚀 Salam developer 🚀 I ❤️ Happy Hardcore ❤️
@@ -21,8 +21,8 @@
 
 ## Read About
 
-Ini adalah bot trading futures binance
-dengan mengkombinasikan strategi RSI,MACD,EMA DAN BOLINGER BANDS dengan anilisa AI dengan metode logical Fuzzy dan VWAP untuk menentukan kondisi pasar dan penempatan take profit dan stop loss. di bangun dengan javascript
+Ini adalah bot trading futures Binance
+dengan mengkombinasikan strategi RSI, MACD, EMA, dan Bollinger Bands dengan analisa AI menggunakan metode logika Fuzzy dan VWAP untuk menentukan kondisi pasar dan penempatan take profit dan stop loss. Dibangun dengan JavaScript.
 
 <!-- GETTING STARTED -->
 
@@ -40,7 +40,7 @@ Jalankan perintah berikut di terminal:
 
 ### Konfigurasi File .env
 
-Buat file .env , lalu tambahkan API key dan secret dari akun Binance Anda:
+Buat file .env, lalu tambahkan API key dan secret dari akun Binance Anda:
 
 - .env
   ```sh
@@ -53,15 +53,12 @@ Buat file .env , lalu tambahkan API key dan secret dari akun Binance Anda:
 File ini digunakan untuk menyimpan parameter grid trading. Contoh isi file config.json:
 
 - config.json
-
-  ```sh
+  ```json
   {
-
-  "SYMBOL": "BTCUSDT",
-  "GRID_COUNT": 5,
-  "LEVERAGE": 10,
-  "BASE_USDT": 10
-
+    "SYMBOL": "BTCUSDT",
+    "GRID_COUNT": 5,
+    "LEVERAGE": 10,
+    "BASE_USDT": 10
   }
   ```
 
@@ -73,39 +70,39 @@ Pastikan semua konfigurasi sudah benar, lalu jalankan bot dengan perintah:
 node index.js
 ```
 
-### fitur bot :
+### Fitur Bot
 
-1. Manajemen Order dan Posisi
+1. **Manajemen Order dan Posisi**
    - Menutup semua order terbuka sebelum memulai trading untuk mencegah konflik strategi.
    - Menutup semua posisi terbuka untuk memastikan bot memulai dari kondisi bersih.
    - Memeriksa dan membatalkan order terbuka jika kondisi pasar berubah drastis.
-2. Analisis Teknikal untuk Trading
+2. **Analisis Teknikal untuk Trading**
    - ATR (Average True Range) untuk mengukur volatilitas pasar.
    - VWAP (Volume Weighted Average Price) untuk menentukan level harga yang wajar.
    - RSI (Relative Strength Index) untuk mengidentifikasi kondisi overbought dan oversold.
    - MACD (Moving Average Convergence Divergence) untuk melihat tren pasar.
    - Bollinger Bands untuk mengukur volatilitas dan kemungkinan breakout.
-   - Fuzzy Logic untuk menentukan kondisi pasar ekstrem.
-3. Strategi Grid Trading
+   - Logika Fuzzy untuk menentukan kondisi pasar ekstrem.
+3. **Strategi Grid Trading**
    - Menempatkan order grid berdasarkan volatilitas dan kondisi pasar.
    - Menyesuaikan grid spacing sesuai dengan volatilitas historis.
    - Menyesuaikan jumlah grid order berdasarkan volatilitas pasar.
-4. Manajemen Risiko
+4. **Manajemen Risiko**
    - Menetapkan Take Profit (TP) dan Stop Loss (SL) secara dinamis berdasarkan ATR.
    - Memeriksa kondisi pasar ekstrem, seperti volatilitas tinggi atau harga jauh dari VWAP, untuk menghentikan trading sementara.
    - Menggunakan leverage yang dapat disesuaikan berdasarkan konfigurasi pengguna.
-5. Monitoring dan Logging
+5. **Monitoring dan Logging**
    - Memantau status order terbuka dan menutup posisi jika tidak ada Take Profit atau Stop Loss.
    - Melakukan evaluasi profit dan loss setiap iterasi untuk mencatat performa trading.
    - Loop trading terus-menerus dengan jeda waktu tertentu.
 
-### Simulasi apliksi berjalan:
+### Simulasi Aplikasi Berjalan
 
 <div align="center">
 <a href="z"><img src="https://github.com/itsmtt/Cuan-emmeril/blob/main/img/code_runing.png"/></a>
 </div>
 
-### Note\*
+### Note
 
-Risiko Trading: Trading futures melibatkan risiko besar. Pastikan Anda memahami risiko sebelum menggunakan bot ini.
-Gunakan VPN luar negeri karna untuk binance di Indonesia sudah di blokir.
+**Risiko Trading:** Trading futures melibatkan risiko besar. Pastikan Anda memahami risiko sebelum menggunakan bot ini.
+Gunakan VPN luar negeri karena Binance di Indonesia sudah diblokir.
