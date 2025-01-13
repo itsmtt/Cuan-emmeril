@@ -21,8 +21,7 @@
 
 ## Read About
 
-Ini adalah bot trading futures Binance
-dengan mengkombinasikan strategi RSI, MACD, EMA, dan Bollinger Bands dengan analisa AI menggunakan metode logika Fuzzy dan VWAP untuk menentukan kondisi pasar dan penempatan take profit dan stop loss. Dibangun dengan JavaScript.
+Ini adalah bot trading futures Binance yang mengkombinasikan strategi RSI, MACD, EMA, dan Bollinger Bands dengan analisa AI menggunakan metode logika Fuzzy dan VWAP. Bot ini digunakan untuk menentukan kondisi pasar dan penempatan take profit serta stop loss secara otomatis. Dibangun dengan JavaScript, bot ini dirancang untuk membantu trader dalam mengelola order dan posisi, melakukan analisis teknikal, menerapkan strategi grid trading, serta memantau dan mencatat performa trading.
 
 <!-- GETTING STARTED -->
 
