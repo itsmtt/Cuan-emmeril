@@ -298,14 +298,14 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
     priceFarAboveVWAP: fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2),
   };
 
-  // Hitung rata-rata sinyal fuzzy
+// Hitung rata-rata sinyal fuzzy
   const isExtreme = calculateFuzzySignals([
-    fuzzySignals.highVolatility,
-    fuzzySignals.extremeVolatility,
-    fuzzySignals.volumeMembership,
-    fuzzySignals.priceFarBelowVWAP,
-    fuzzySignals.priceFarAboveVWAP,
-  ]);
+  fuzzySignals.highVolatility * 0.3, // Bobot 30%
+  fuzzySignals.extremeVolatility * 0.3, // Bobot 30%
+  fuzzySignals.volumeMembership * 0.2, // Bobot 20%
+  fuzzySignals.priceFarBelowVWAP * 0.1, // Bobot 10%
+  fuzzySignals.priceFarAboveVWAP * 0.1, // Bobot 10%
+]);
 
   console.log(
     chalk.yellow(
