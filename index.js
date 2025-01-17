@@ -309,11 +309,11 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 
   console.log(
     chalk.yellow(
-      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(2)}% > 90%`
+      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(2)}% > 75%`
     )
   );
 
-  if (isExtreme >= 0.9) {
+  if (isExtreme >= 0.75) {
     console.log(
       chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.")
     );
