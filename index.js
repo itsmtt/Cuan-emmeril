@@ -480,8 +480,20 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
       // Ambil presisi harga
       const { pricePrecision } = await getSymbolPrecision(symbol);
 
-      // Hitung buffer 3%
-      const buffer = orderPrice * 0.03;
+      // Hitung ATR untuk volatilitas
+      const candles = await client.futuresCandles({
+        symbol,
+        interval: "15m",
+      });
+      const atr = await calculateATR(candles, 14);
+
+      // Hitung keanggotaan fuzzy volatilitas
+      const fuzzySignals = {
+        highVolatility: fuzzyMembership(atr, 0.05, 0.1),
+        extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
+      };
+      const volatilityFactor = fuzzySignals.highVolatility * 2; // Buffer adaptif
+      const buffer = atr * volatilityFactor; // Buffer berbasis ATR dan volatilitas
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
@@ -500,7 +512,6 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
         (direction === "SHORT" && roundedSL <= orderPrice)
       ) {
         console.log(chalk.red("Stop Loss terlalu dekat, melewati order asli."));
-
         continue;
       }
 
@@ -508,10 +519,7 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
         (direction === "LONG" && roundedTP <= orderPrice) ||
         (direction === "SHORT" && roundedTP >= orderPrice)
       ) {
-        console.log(
-          chalk.red("Take Profit terlalu dekat, melewati order asli.")
-        );
-
+        console.log(chalk.red("Take Profit terlalu dekat, melewati order asli."));
         continue;
       }
 
