@@ -114,7 +114,9 @@ async function closeOpenPositions() {
           );
 
           // Hitung profit atau loss
-          const currentPrice = parseFloat(position.markPrice || position.entryPrice);
+          const currentPrice = parseFloat(
+            position.markPrice || position.entryPrice
+          );
           const entryPrice = parseFloat(position.entryPrice);
           const pnl =
             side === "SELL"
@@ -123,17 +125,24 @@ async function closeOpenPositions() {
 
           if (pnl > 0) {
             totalProfit += pnl;
-            const profitMessage = `Profit dari posisi pada ${position.symbol}: ${pnl.toFixed(2)} USDT`;
+            const profitMessage = `Profit dari posisi pada ${
+              position.symbol
+            }: ${pnl.toFixed(2)} USDT`;
             console.log(chalk.green(profitMessage));
             logToFile(profitMessage);
           } else {
             totalLoss += Math.abs(pnl);
-            const lossMessage = `Loss dari posisi pada ${position.symbol}: ${Math.abs(pnl).toFixed(2)} USDT`;
+            const lossMessage = `Loss dari posisi pada ${
+              position.symbol
+            }: ${Math.abs(pnl).toFixed(2)} USDT`;
             console.log(chalk.red(lossMessage));
             logToFile(lossMessage);
           }
         } catch (error) {
-          console.error(chalk.bgRed(`Gagal menutup posisi pada ${position.symbol}:`), error.message || error);
+          console.error(
+            chalk.bgRed(`Gagal menutup posisi pada ${position.symbol}:`),
+            error.message || error
+          );
         }
       }
     }
@@ -298,14 +307,14 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
     priceFarAboveVWAP: fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2),
   };
 
-// Hitung rata-rata sinyal fuzzy
+  // Hitung rata-rata sinyal fuzzy
   const isExtreme = calculateFuzzySignals([
-  fuzzySignals.highVolatility * 0.3, // Bobot 30%
-  fuzzySignals.extremeVolatility * 0.3, // Bobot 30%
-  fuzzySignals.volumeMembership * 0.2, // Bobot 20%
-  fuzzySignals.priceFarBelowVWAP * 0.1, // Bobot 10%
-  fuzzySignals.priceFarAboveVWAP * 0.1, // Bobot 10%
-]);
+    fuzzySignals.highVolatility * 0.3, // Bobot 30%
+    fuzzySignals.extremeVolatility * 0.3, // Bobot 30%
+    fuzzySignals.volumeMembership * 0.2, // Bobot 20%
+    fuzzySignals.priceFarBelowVWAP * 0.1, // Bobot 10%
+    fuzzySignals.priceFarAboveVWAP * 0.1, // Bobot 10%
+  ]);
 
   console.log(
     chalk.yellow(
@@ -455,17 +464,19 @@ async function placeGridOrders(currentPrice, atr, direction) {
       try {
         await client.futuresOrder(order);
       } catch (error) {
-        console.error(chalk.bgRed(`Gagal menempatkan order: ${error.message || error}`));
+        console.error(
+          chalk.bgRed(`Gagal menempatkan order: ${error.message || error}`)
+        );
       }
     }
-    await placeTakeProfitAndStopLoss(batchOrders, direction);
+    await placeTakeProfitAndStopLoss(batchOrders, atr, direction);
   } else {
     console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
   }
 }
 
 // Fungsi untuk menetapkan TP dan SL
-async function placeTakeProfitAndStopLoss(orders, direction) {
+async function placeTakeProfitAndStopLoss(orders, atr, direction) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
@@ -479,13 +490,6 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
 
       // Ambil presisi harga
       const { pricePrecision } = await getSymbolPrecision(symbol);
-
-      // Hitung ATR untuk volatilitas
-      const candles = await client.futuresCandles({
-        symbol,
-        interval: "15m",
-      });
-      const atr = await calculateATR(candles, 14);
 
       // Hitung keanggotaan fuzzy volatilitas
       const fuzzySignals = {
@@ -519,7 +523,9 @@ async function placeTakeProfitAndStopLoss(orders, direction) {
         (direction === "LONG" && roundedTP <= orderPrice) ||
         (direction === "SHORT" && roundedTP >= orderPrice)
       ) {
-        console.log(chalk.red("Take Profit terlalu dekat, melewati order asli."));
+        console.log(
+          chalk.red("Take Profit terlalu dekat, melewati order asli.")
+        );
         continue;
       }
 
@@ -704,7 +710,9 @@ async function trade() {
     try {
       await client.futuresLeverage({ symbol: SYMBOL, leverage: LEVERAGE });
     } catch (error) {
-      console.error(chalk.bgRed(`Gagal menetapkan leverage: ${error.message || error}`));
+      console.error(
+        chalk.bgRed(`Gagal menetapkan leverage: ${error.message || error}`)
+      );
       return;
     }
 
@@ -891,7 +899,9 @@ async function trade() {
           )
         );
       } catch (error) {
-        console.error(chalk.bgRed(`Gagal membuka posisi: ${error.message || error}`));
+        console.error(
+          chalk.bgRed(`Gagal membuka posisi: ${error.message || error}`)
+        );
       }
     } else {
       console.log(chalk.blue("Tidak ada sinyal order baru, menunggu..."));
