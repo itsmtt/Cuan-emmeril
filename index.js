@@ -667,10 +667,26 @@ async function monitorOrders() {
     // Filter order terbuka dengan limit order
     const limitOrders = openOrders.filter((order) => order.type === "LIMIT");
 
+    // Filter order terbuka dengan tipe TRAILING_STOP_MARKET
+    const trailingStopOrders = openOrders.filter(
+      (order) => order.type === "TRAILING_STOP_MARKET"
+    );
+
     // Cari posisi terbuka
     const openPosition = positions.find(
       (position) => parseFloat(position.positionAmt) !== 0
     );
+
+    // monitoring trailing stop
+    if (trailingStopOrders.length === 0) {
+      console.log(chalk.red("Tidak ada Trailing Stop order di daftar open orders."));
+    } else {
+      if (trailingStopOrders.length > 0) {
+        console.log(
+          chalk.green(`Masih ada ${trailingStopOrders.length} Trailing Stop order yang aktif.`)
+        );
+      }
+    }
 
     // Jika tidak ada TP Tutup semua order terbuka dan posisi terbuka
     if (takeProfitOrders.length === 0) {
