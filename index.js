@@ -616,8 +616,17 @@ async function placeTrailingStop(order, atr, direction) {
     const { price, quantity, symbol } = order;
     const orderPrice = parseFloat(price);
     const { pricePrecision } = await getSymbolPrecision(symbol);
+
+    // Hitung keanggotaan fuzzy volatilitas
+    const fuzzySignals = {
+      highVolatility: fuzzyMembership(atr, 0.05, 0.1),
+      extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
+    };
+    const volatilityFactor = fuzzySignals.highVolatility * 2; // Buffer adaptif
+    const buffer = atr * volatilityFactor; // Buffer berbasis ATR dan volatilitas
+
     const trailingStopPrice =
-      direction === "LONG" ? orderPrice + atr : orderPrice - atr;
+      direction === "LONG" ? orderPrice + buffer : orderPrice - buffer; // Adjust activation price to avoid immediate trigger
     const roundedTrailingStop = parseFloat(
       trailingStopPrice.toFixed(pricePrecision)
     );
@@ -627,7 +636,7 @@ async function placeTrailingStop(order, atr, direction) {
       side: direction === "LONG" ? "SELL" : "BUY",
       type: "TRAILING_STOP_MARKET",
       activationPrice: roundedTrailingStop,
-      callbackRate: 1, 
+      callbackRate: 0.5, // Set callback rate to 0.5% (adjust as needed)
       quantity,
       reduceOnly: true,
     });
