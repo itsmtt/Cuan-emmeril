@@ -420,7 +420,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const buffer = atr;
+  const bufferMultiplier = 1.5; // Increase buffer multiplier for more conservative trades
+  const buffer = atr * bufferMultiplier; // Buffer based on ATR and multiplier
   const orderGrid = GRID_COUNT;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
@@ -679,11 +680,15 @@ async function monitorOrders() {
 
     // monitoring trailing stop
     if (trailingStopOrders.length === 0) {
-      console.log(chalk.red("Tidak ada Trailing Stop order di daftar open orders."));
+      console.log(
+        chalk.red("Tidak ada Trailing Stop order di daftar open orders.")
+      );
     } else {
       if (trailingStopOrders.length > 0) {
         console.log(
-          chalk.green(`Masih ada ${trailingStopOrders.length} Trailing Stop order yang aktif.`)
+          chalk.green(
+            `Masih ada ${trailingStopOrders.length} Trailing Stop order yang aktif.`
+          )
         );
       }
     }
