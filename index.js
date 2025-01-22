@@ -653,6 +653,15 @@ async function placeTrailingStop(order, atr, direction) {
   }
 }
 
+// Fungsi untuk menghitung callback dinamis 
+function calculateDynamicCallbackRate(atr) {
+  const minRate = 0.1; // Minimum callback rate (0.1%)
+  const maxRate = 5; // Maximum callback rate (5%)
+  const normalizedATR = Math.min(Math.max(atr, 0.05), 0.2); // Normalisasi ATR
+  const dynamicRate = ((normalizedATR - 0.05) / (0.2 - 0.05)) * (maxRate - minRate) + minRate;
+  return parseFloat(dynamicRate.toFixed(1)); // Bulatkan hingga 1 desimal
+}
+
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
   try {
