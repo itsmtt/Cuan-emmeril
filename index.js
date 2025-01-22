@@ -420,8 +420,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const bufferMultiplier = 1.5; // Increase buffer multiplier for more conservative trades
-  const buffer = atr * bufferMultiplier; // Buffer based on ATR and multiplier
+  const buffer = atr; 
   const orderGrid = GRID_COUNT;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
@@ -627,6 +626,7 @@ async function placeTrailingStop(order, atr, direction) {
       side: direction === "LONG" ? "SELL" : "BUY",
       type: "TRAILING_STOP_MARKET",
       activationPrice: roundedTrailingStop,
+      callbackRate: 1, 
       quantity,
       reduceOnly: true,
     });
