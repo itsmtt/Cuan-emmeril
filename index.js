@@ -420,7 +420,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const buffer = atr; 
+  const bufferMultiplier = 1.5; // Increase buffer multiplier for more conservative trades
+  const buffer = atr * bufferMultiplier; // Buffer based on ATR and multiplier
   const orderGrid = GRID_COUNT;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
