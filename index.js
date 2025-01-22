@@ -621,8 +621,8 @@ async function placeTrailingStop(order, atr, direction) {
       highVolatility: fuzzyMembership(atr, 0.05, 0.1),
       extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
     };
-    const volatilityFactor = fuzzySignals.highVolatility * 2; // Buffer adaptif
-    const buffer = atr * volatilityFactor; // Buffer berbasis ATR dan volatilitas
+    const volatilityFactor = fuzzySignals.highVolatility * 1.5; 
+    const buffer = atr * volatilityFactor; 
 
     const trailingStopPrice =
       direction === "LONG" ? orderPrice + buffer : orderPrice - buffer; // Adjust activation price to avoid immediate trigger
