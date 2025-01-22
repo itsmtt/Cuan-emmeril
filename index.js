@@ -420,7 +420,8 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const buffer = atr;
+  const bufferMultiplier = 1.5; // Increase buffer multiplier for more conservative trades
+  const buffer = atr * bufferMultiplier; // Buffer based on ATR and multiplier
   const orderGrid = GRID_COUNT;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
@@ -597,10 +598,44 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
           )
         );
       }
+
+      // Place trailing stop
+      await placeTrailingStop(order, atr, direction);
     }
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan saat menetapkan Take Profit dan Stop Loss:"),
+      error.message || error
+    );
+  }
+}
+
+// Add a trailing stop mechanism
+async function placeTrailingStop(order, atr, direction) {
+  try {
+    const { price, quantity, symbol } = order;
+    const orderPrice = parseFloat(price);
+    const { pricePrecision } = await getSymbolPrecision(symbol);
+    const trailingStopPrice = direction === "LONG" ? orderPrice + atr : orderPrice - atr;
+    const roundedTrailingStop = parseFloat(trailingStopPrice.toFixed(pricePrecision));
+
+    await client.futuresOrder({
+      symbol,
+      side: direction === "LONG" ? "SELL" : "BUY",
+      type: "TRAILING_STOP_MARKET",
+      activationPrice: roundedTrailingStop,
+      quantity,
+      reduceOnly: true,
+    });
+
+    console.log(
+      chalk.green(
+        `Trailing Stop for ${symbol} at price ${roundedTrailingStop} successfully placed.`
+      )
+    );
+  } catch (error) {
+    console.error(
+      chalk.bgRed("Error placing trailing stop:"),
       error.message || error
     );
   }
