@@ -630,19 +630,25 @@ async function placeTrailingStop(order, atr, direction) {
       trailingStopPrice.toFixed(pricePrecision)
     );
 
+    // Determine callbackRate based on the percentage of trailingStopPrice from orderPrice
+    const percentageDifference = Math.abs(
+      ((trailingStopPrice - orderPrice) / orderPrice) * 100
+    );
+    let callbackRate = Math.min(Math.max(percentageDifference, 0.1), 5.0);
+
     await client.futuresOrder({
       symbol,
       side: direction === "LONG" ? "SELL" : "BUY",
       type: "TRAILING_STOP_MARKET",
       activationPrice: roundedTrailingStop,
-      callbackRate: 2.5,
+      callbackRate: callbackRate,
       quantity,
       reduceOnly: true,
     });
 
     console.log(
       chalk.green(
-        `Trailing Stop for ${symbol} at price ${roundedTrailingStop} successfully placed.`
+        `Trailing Stop for ${symbol} at price ${roundedTrailingStop} with callback rate ${callbackRate}% successfully placed.`
       )
     );
   } catch (error) {
