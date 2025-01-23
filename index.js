@@ -420,7 +420,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
     symbolInfo.filters.find((f) => f.tickSize).tickSize
   );
 
-  const buffer = atr ; 
+  const buffer = atr;
   const orderGrid = GRID_COUNT;
   const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
   const batchOrders = [];
@@ -616,46 +616,41 @@ async function placeTrailingStop(order, atr, direction) {
     const orderPrice = parseFloat(price);
     const { pricePrecision } = await getSymbolPrecision(symbol);
 
-    // Hitung callback rate dinamis
-    const callbackRate = calculateDynamicCallbackRate(atr);
-    console.log(`Callback rate dinamis: ${callbackRate}%`);
+    // Hitung keanggotaan fuzzy volatilitas
+    const fuzzySignals = {
+      highVolatility: fuzzyMembership(atr, 0.05, 0.1),
+      extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
+    };
+    const volatilityFactor = fuzzySignals.highVolatility * 1.5;
+    const buffer = atr * volatilityFactor;
 
-    // Hitung trailing stop price
     const trailingStopPrice =
-      direction === "LONG" ? orderPrice + atr * 1.5 : orderPrice - atr * 1.5;
+      direction === "LONG" ? orderPrice + buffer : orderPrice - buffer; // Adjust activation price to avoid immediate trigger
     const roundedTrailingStop = parseFloat(
       trailingStopPrice.toFixed(pricePrecision)
     );
 
-    // Tempatkan trailing stop order
     await client.futuresOrder({
       symbol,
       side: direction === "LONG" ? "SELL" : "BUY",
       type: "TRAILING_STOP_MARKET",
       activationPrice: roundedTrailingStop,
-      callbackRate,
+      callbackRate: 2.5,
       quantity,
       reduceOnly: true,
     });
 
     console.log(
-      `Trailing Stop untuk ${symbol} berhasil ditempatkan pada ${roundedTrailingStop} dengan callback rate ${callbackRate}%.`
+      chalk.green(
+        `Trailing Stop for ${symbol} at price ${roundedTrailingStop} successfully placed.`
+      )
     );
   } catch (error) {
     console.error(
-      "Kesalahan saat menempatkan Trailing Stop:",
+      chalk.bgRed("Error placing trailing stop:"),
       error.message || error
     );
   }
-}
-
-// Fungsi untuk menghitung callback dinamis 
-function calculateDynamicCallbackRate(atr) {
-  const minRate = 0.1; // Minimum callback rate (0.1%)
-  const maxRate = 5; // Maximum callback rate (5%)
-  const normalizedATR = Math.min(Math.max(atr, 0.05), 0.2); // Normalisasi ATR
-  const dynamicRate = ((normalizedATR - 0.05) / (0.2 - 0.05)) * (maxRate - minRate) + minRate;
-  return parseFloat(dynamicRate.toFixed(1)); // Bulatkan hingga 1 desimal
 }
 
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
