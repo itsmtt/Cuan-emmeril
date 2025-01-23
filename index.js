@@ -634,7 +634,7 @@ async function placeTrailingStop(order, atr, direction) {
     const percentageDifference = Math.abs(
       ((trailingStopPrice - orderPrice) / orderPrice) * 100
     );
-    let rate = Math.min(Math.max(percentageDifference, 0.1), 5.0);
+    let rate = Math.min(Math.max(percentageDifference, 0.1), 5.0); // Ensure rate is between 0.1 and 5.0
 
     await client.futuresOrder({
       symbol,
@@ -648,7 +648,7 @@ async function placeTrailingStop(order, atr, direction) {
 
     console.log(
       chalk.green(
-        `Trailing Stop for ${symbol} at price ${roundedTrailingStop} with callback rate ${callbackRate}% successfully placed.`
+        `Trailing Stop for ${symbol} at price ${roundedTrailingStop} with callback rate ${rate}% successfully placed.`
       )
     );
   } catch (error) {
