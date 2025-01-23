@@ -641,7 +641,7 @@ async function placeTrailingStop(order, atr, direction) {
       side: direction === "LONG" ? "SELL" : "BUY",
       type: "TRAILING_STOP_MARKET",
       activationPrice: roundedTrailingStop,
-      callbackRate: rate,
+      callbackRate: rate.toFixed(1),
       quantity,
       reduceOnly: true,
     });
