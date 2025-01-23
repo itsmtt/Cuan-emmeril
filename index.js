@@ -634,14 +634,14 @@ async function placeTrailingStop(order, atr, direction) {
     const percentageDifference = Math.abs(
       ((trailingStopPrice - orderPrice) / orderPrice) * 100
     );
-    let callbackRate = Math.min(Math.max(percentageDifference, 0.1), 5.0);
+    let rate = Math.min(Math.max(percentageDifference, 0.1), 5.0);
 
     await client.futuresOrder({
       symbol,
       side: direction === "LONG" ? "SELL" : "BUY",
       type: "TRAILING_STOP_MARKET",
       activationPrice: roundedTrailingStop,
-      callbackRate: callbackRate,
+      callbackRate: rate,
       quantity,
       reduceOnly: true,
     });
