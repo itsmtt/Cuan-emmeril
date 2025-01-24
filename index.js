@@ -307,6 +307,29 @@ function aggregateFuzzySignals(signals, weights = []) {
   );
 }
 
+// Fungsi untuk menyesuaikan bobot berdasarkan kondisi pasar
+function adjustWeights({ atr, emaDifference, volume, macdSignal }) {
+  // Kondisi volatilitas tinggi atau rendah
+  const atrFactor = atr > 0.1 ? 1.5 : atr < 0.05 ? 0.5 : 1.0;
+
+  // Tren kuat vs sideways
+  const trendFactor = Math.abs(emaDifference) > 0.02 ? 1.5 : 0.75;
+
+  // Aktivitas volume
+  const volumeFactor = volume > 1.5 ? 1.2 : 0.8;
+
+  // Koreksi sinyal MACD
+  const macdFactor = macdSignal > 0 ? 1.3 : 0.7;
+
+  // Bobot akhir untuk setiap indikator
+  return {
+    rsi: 0.2 * atrFactor * trendFactor,
+    macd: 0.3 * macdFactor,
+    bollinger: 0.3 * atrFactor,
+    ema: 0.2 * trendFactor * volumeFactor,
+  };
+}
+
 // Fungsi untuk menghitung VWAP
 function calculateVWAP(candles) {
   let cumulativeVolume = 0;
@@ -383,12 +406,14 @@ async function determineMarketCondition(
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  const weights = {
-    rsi: atr > 0.1 ? 0.2 : 0.3,
-    macd: atr > 0.1 ? 0.25 : 0.3,
-    bollinger: atr > 0.1 ? 0.35 : 0.25,
-    ema: atr > 0.1 ? 0.2 : 0.15,
-  };
+  const weights = adjustWeights({
+    atr,
+    emaDifference: shortEMA - longEMA, // Selisih EMA untuk tren
+    volume:
+      volumes[volumes.length - 1] /
+      (volumes.reduce((a, b) => a + b, 0) / volumes.length), // Rasio volume terkini
+    macdSignal: macdLine - signalLine, // Sinyal MACD
+  });
 
   const fuzzySignals = {
     rsiBuy: fuzzyMembership(rsi, 30, 50),
