@@ -856,7 +856,7 @@ async function trade() {
     // Mengambil data candle
     const candles = await client.futuresCandles({
       symbol: SYMBOL,
-      interval: "4h",
+      interval: "1d",
     });
 
     // validasi candles
