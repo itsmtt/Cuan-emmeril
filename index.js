@@ -398,6 +398,16 @@ async function determineMarketCondition(
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
+  // Penyesuaian Threshold Berdasarkan ATR (Volatilitas)
+  let threshold;
+  if (atr > 0.1) {
+    threshold = 0.8; // Pasar volatil
+  } else if (atr < 0.05) {
+    threshold = 0.65; // Pasar stabil
+  } else {
+    threshold = 0.75; // Default
+  }
+
   const weights = adjustWeights({
     atr,
     emaDifference: shortEMA - longEMA, // Selisih EMA untuk tren
@@ -437,15 +447,15 @@ async function determineMarketCondition(
   ]);
 
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= 75%, SELL = ${(
-      sellSignal * 100
-    ).toFixed(2)}% >= 75%`
+    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${
+      threshold * 100
+    }%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${threshold * 100}%`
   );
 
-  if (buySignal > sellSignal && buySignal >= 0.75) {
+  if (buySignal > sellSignal && buySignal >= threshold) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
-  } else if (sellSignal > buySignal && sellSignal >= 0.75) {
+  } else if (sellSignal > buySignal && sellSignal >= threshold) {
     console.log(`Posisi sekarang SHORT (indikator menunjukkan peluang jual).`);
     return "SHORT";
   } else {
