@@ -431,19 +431,19 @@ async function determineMarketCondition(
   };
 
   const buySignal = aggregateFuzzySignals([
-    fuzzySignals.rsiBuy * weights.rsi,
-    fuzzySignals.macdBuy * weights.macd,
-    fuzzySignals.priceNearLowerBand * weights.bollinger,
-    fuzzySignals.priceBelowVWAP * weights.ema,
-    fuzzySignals.emaBuy * weights.ema,
+    fuzzySignals.rsiBuy,
+    fuzzySignals.macdBuy,
+    fuzzySignals.priceNearLowerBand,
+    fuzzySignals.priceBelowVWAP,
+    fuzzySignals.emaBuy,
   ]);
 
   const sellSignal = aggregateFuzzySignals([
-    fuzzySignals.rsiSell * weights.rsi,
-    fuzzySignals.macdSell * weights.macd,
-    fuzzySignals.priceNearUpperBand * weights.bollinger,
-    fuzzySignals.priceAboveVWAP * weights.ema,
-    fuzzySignals.emaSell * weights.ema,
+    fuzzySignals.rsiSell,
+    fuzzySignals.macdSell,
+    fuzzySignals.priceNearUpperBand,
+    fuzzySignals.priceAboveVWAP,
+    fuzzySignals.emaSell,
   ]);
 
   console.log(
@@ -856,7 +856,7 @@ async function trade() {
     // Mengambil data candle
     const candles = await client.futuresCandles({
       symbol: SYMBOL,
-      interval: "1m",
+      interval: "15m",
     });
 
     // validasi candles
