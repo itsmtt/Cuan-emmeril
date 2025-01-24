@@ -400,12 +400,11 @@ async function determineMarketCondition(
 
   const weights = adjustWeights({
     atr,
-    emaDifference,
-    volume:
-      closingPrices[closingPrices.length - 1] /
-      (closingPrices.reduce((a, b) => a + b, 0) / closingPrices.length),
-    macdSignal: macdLine - signalLine,
+    emaDifference: shortEMA - longEMA, // Selisih EMA untuk tren
+    volume: volumes[volumes.length - 1] / (volumes.reduce((a, b) => a + b, 0) / volumes.length), // Rasio volume terkini
+    macdSignal: macdLine - signalLine, // Sinyal MACD
   });
+  
 
   const fuzzySignals = {
     rsiBuy: fuzzyMembership(rsi, 30, 50),
