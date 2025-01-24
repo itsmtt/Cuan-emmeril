@@ -266,10 +266,45 @@ function calculateBollingerBands(closingPrices, period = 20, multiplier = 2) {
 }
 
 // Fungsi untuk menghitung keanggotaan fuzzy
-function fuzzyMembership(value, low, high) {
-  if (value <= low) return 1;
-  if (value >= high) return 0;
-  return (high - value) / (high - low);
+function fuzzyMembership(value, low, high, type = "linear") {
+  switch (type) {
+    case "triangle":
+      const mid = (low + high) / 2;
+      return value <= low
+        ? 0
+        : value >= high
+        ? 0
+        : value <= mid
+        ? (value - low) / (mid - low)
+        : (high - value) / (high - mid);
+    case "trapezoid":
+      const buffer = (high - low) * 0.1; // 10% margin
+      return value <= low - buffer || value >= high + buffer
+        ? 0
+        : value >= low && value <= high
+        ? 1
+        : value < low
+        ? (value - (low - buffer)) / buffer
+        : (high + buffer - value) / buffer;
+    case "linear":
+    default:
+      return value <= low
+        ? 1
+        : value >= high
+        ? 0
+        : (high - value) / (high - low);
+  }
+}
+
+// Fungsi untuk menghitung sinyal fuzzy berdasarkan bobot
+function aggregateFuzzySignals(signals, weights = []) {
+  if (weights.length === 0)
+    weights = Array(signals.length).fill(1 / signals.length); // Equal weights
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+  return (
+    signals.reduce((sum, signal, i) => sum + signal * weights[i], 0) /
+    totalWeight
+  );
 }
 
 // Fungsi untuk menghitung VWAP
@@ -293,46 +328,45 @@ function calculateVWAP(candles) {
 
 // Fungsi untuk memeriksa kondisi pasar ekstrem
 async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
-  // Keanggotaan fuzzy untuk kondisi pasar ekstrem
+  const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
   const fuzzySignals = {
-    highVolatility: fuzzyMembership(atr, 0.05, 0.1),
-    extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
-    avgVolume: volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length,
-    volumeMembership: fuzzyMembership(
+    highVolatility: fuzzyMembership(atr, 0.05, 0.1, "trapezoid"),
+    extremeVolatility: fuzzyMembership(atr, 0.1, 0.2, "trapezoid"),
+    avgVolumeSpike: fuzzyMembership(
       volumes[volumes.length - 1],
-      (volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length) * 1.5,
-      (volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length) * 3
+      avgVolume * 1.5,
+      avgVolume * 3,
+      "triangle"
     ),
-    priceFarBelowVWAP: fuzzyMembership(lastPrice, vwap * 0.8, vwap * 0.9),
-    priceFarAboveVWAP: fuzzyMembership(lastPrice, vwap * 1.1, vwap * 1.2),
+    priceFarBelowVWAP: fuzzyMembership(
+      lastPrice,
+      vwap * 0.8,
+      vwap * 0.9,
+      "linear"
+    ),
+    priceFarAboveVWAP: fuzzyMembership(
+      lastPrice,
+      vwap * 1.1,
+      vwap * 1.2,
+      "linear"
+    ),
   };
 
-  // Hitung rata-rata sinyal fuzzy
-  const isExtreme = calculateFuzzySignals([
-    fuzzySignals.highVolatility * 0.3, // Bobot 30%
-    fuzzySignals.extremeVolatility * 0.3, // Bobot 30%
-    fuzzySignals.volumeMembership * 0.2, // Bobot 20%
-    fuzzySignals.priceFarBelowVWAP * 0.1, // Bobot 10%
-    fuzzySignals.priceFarAboveVWAP * 0.1, // Bobot 10%
-  ]);
+  const weights = [0.3, 0.3, 0.2, 0.1, 0.1]; // Custom weights
+  const isExtreme = aggregateFuzzySignals(Object.values(fuzzySignals), weights);
 
   console.log(
-    chalk.yellow(
-      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(
-        2
-      )}% >= 75%`
-    )
+    `Kondisi pasar ekstrem: ${(isExtreme * 100).toFixed(2)}% (ATR=${atr.toFixed(
+      2
+    )}, VWAP=${vwap.toFixed(2)}, Harga=${lastPrice.toFixed(2)})`
   );
 
   if (isExtreme >= 0.75) {
-    console.log(
-      chalk.red("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.")
-    );
+    console.log("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.");
     await closeOpenPositions();
     await closeOpenOrders();
     return true;
   }
-
   return false;
 }
 
@@ -344,21 +378,18 @@ async function determineMarketCondition(
   lastPrice,
   atr
 ) {
-  // Hitung indikator utama
   const shortEMA = calculateEMA(closingPrices.slice(-10), 5);
   const longEMA = calculateEMA(closingPrices.slice(-20), 20);
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  // Tentukan bobot dinamis berdasarkan ATR (volatilitas)
   const weights = {
-    rsi: atr > 0.1 ? 0.2 : 0.3, // ATR tinggi -> bobot RSI menurun
+    rsi: atr > 0.1 ? 0.2 : 0.3,
     macd: atr > 0.1 ? 0.25 : 0.3,
     bollinger: atr > 0.1 ? 0.35 : 0.25,
     ema: atr > 0.1 ? 0.2 : 0.15,
   };
 
-  // Keanggotaan fuzzy untuk kondisi pasar
   const fuzzySignals = {
     rsiBuy: fuzzyMembership(rsi, 30, 50),
     rsiSell: fuzzyMembership(rsi, 50, 70),
@@ -372,8 +403,7 @@ async function determineMarketCondition(
     priceAboveVWAP: lastPrice > vwap ? 1 : 0,
   };
 
-  // Hitung sinyal beli dan jual berdasarkan bobot dinamis
-  const buySignal = calculateFuzzySignals([
+  const buySignal = aggregateFuzzySignals([
     fuzzySignals.rsiBuy * weights.rsi,
     fuzzySignals.macdBuy * weights.macd,
     fuzzySignals.priceNearLowerBand * weights.bollinger,
@@ -381,7 +411,7 @@ async function determineMarketCondition(
     fuzzySignals.emaBuy * weights.ema,
   ]);
 
-  const sellSignal = calculateFuzzySignals([
+  const sellSignal = aggregateFuzzySignals([
     fuzzySignals.rsiSell * weights.rsi,
     fuzzySignals.macdSell * weights.macd,
     fuzzySignals.priceNearUpperBand * weights.bollinger,
@@ -389,16 +419,12 @@ async function determineMarketCondition(
     fuzzySignals.emaSell * weights.ema,
   ]);
 
-  // Log hasil sinyal fuzzy
   console.log(
-    chalk.yellow(
-      `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= 75%, SELL = ${(
-        sellSignal * 100
-      ).toFixed(2)}% >= 75%`
-    )
+    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= 75%, SELL = ${(
+      sellSignal * 100
+    ).toFixed(2)}% >= 75%`
   );
 
-  // Tentukan kondisi pasar berdasarkan sinyal
   if (buySignal > sellSignal && buySignal >= 0.75) {
     console.log(`Posisi sekarang LONG (indikator menunjukkan peluang beli).`);
     return "LONG";
@@ -409,11 +435,6 @@ async function determineMarketCondition(
     console.log(`Posisi sekarang NEUTRAL. Menunggu.`);
     return "NEUTRAL";
   }
-}
-
-// Fungsi untuk menghitung sinyal fuzzy rata-rata
-function calculateFuzzySignals(signals) {
-  return signals.reduce((sum, value) => sum + value, 0) / signals.length;
 }
 
 // Fungsi untuk menetapkan order grid
