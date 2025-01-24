@@ -550,8 +550,8 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
 
       // Hitung keanggotaan fuzzy volatilitas
       const fuzzySignals = {
-        highVolatility: fuzzyMembership(atr, 0.05, 0.1, "trapezoid"),
-        extremeVolatility: fuzzyMembership(atr, 0.1, 0.2, "trapezoid"),
+        highVolatility: fuzzyMembership(atr, 0.05, 0.1),
+        extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
       };
       const volatilityFactor = fuzzySignals.highVolatility * 5; // Buffer adaptif
       const buffer = atr * volatilityFactor; // Buffer berbasis ATR dan volatilitas
@@ -675,8 +675,8 @@ async function placeTrailingStop(order, atr, direction) {
 
     // Hitung keanggotaan fuzzy volatilitas
     const fuzzySignals = {
-      highVolatility: fuzzyMembership(atr, 0.05, 0.1, "trapezoid"),
-      extremeVolatility: fuzzyMembership(atr, 0.1, 0.2, "trapezoid"),
+      highVolatility: fuzzyMembership(atr, 0.05, 0.1),
+      extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
     };
     const volatilityFactor = fuzzySignals.highVolatility * 2.5;
     const buffer = atr * volatilityFactor;
