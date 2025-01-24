@@ -411,16 +411,16 @@ async function determineMarketCondition(
   const weights = [0.2, 0.2, 0.2, 0.2, 0.2];
 
   const fuzzySignals = {
-    rsiBuy: fuzzyMembership(rsi, 30, 50),
-    rsiSell: fuzzyMembership(rsi, 50, 70),
+    rsiBuy: fuzzyMembership(rsi, 30, 50, "linear"),
+    rsiSell: fuzzyMembership(rsi, 50, 70, "linear"),
     macdBuy: macdLine > signalLine ? 1 : 0,
     macdSell: macdLine < signalLine ? 1 : 0,
-    priceNearLowerBand: fuzzyMembership(lastPrice, lowerBand, lowerBand * 1.02),
-    priceNearUpperBand: fuzzyMembership(lastPrice, upperBand * 0.98, upperBand),
+    priceNearLowerBand: fuzzyMembership(lastPrice, lowerBand, lowerBand * 1.02, "trapezoid"),
+    priceNearUpperBand: fuzzyMembership(lastPrice, upperBand * 0.98, upperBand, "trapezoid"),
     emaBuy: shortEMA > longEMA ? 1 : 0,
     emaSell: shortEMA < longEMA ? 1 : 0,
-    priceBelowVWAP: lastPrice < vwap ? 1 : 0,
-    priceAboveVWAP: lastPrice > vwap ? 1 : 0,
+    priceBelowVWAP: fuzzyMembership(lastPrice, vwap * 0.95, vwap, "linear"),
+    priceAboveVWAP: fuzzyMembership(lastPrice, vwap, vwap * 1.05, "linear"),
   };
 
   const buySignal = aggregateFuzzySignals([
