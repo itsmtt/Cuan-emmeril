@@ -376,7 +376,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
     )}, VWAP=${vwap.toFixed(2)}, Harga=${lastPrice.toFixed(2)})`
   );
 
-  if (isExtreme >= 0.75) {
+  if (isExtreme >= 0.2) {
     console.log("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.");
     await closeOpenPositions();
     await closeOpenOrders();
@@ -401,11 +401,11 @@ async function determineMarketCondition(
   // Penyesuaian Threshold Berdasarkan ATR (Volatilitas)
   let threshold;
   if (atr > 0.1) {
-    threshold = 0.8; // Pasar volatil
+    threshold = 0.15; // Pasar volatil
   } else if (atr < 0.05) {
-    threshold = 0.65; // Pasar stabil
+    threshold = 0.06; // Pasar stabil
   } else {
-    threshold = 0.75; // Default
+    threshold = 0.10; // Default
   }
 
   const weights = adjustWeights({
