@@ -367,7 +367,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
     ),
   };
 
-  const weights = [0.3, 0.3, 0.2, 0.1, 0.1]; // Custom weights
+  const weights = []; // Custom weights
   const isExtreme = aggregateFuzzySignals(Object.values(fuzzySignals), weights);
 
   console.log(
