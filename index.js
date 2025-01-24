@@ -367,7 +367,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
     ),
   };
 
-  const weights = []; // Custom weights
+  const weights = [0.2, 0.2, 0.2, 0.2, 0.2]; // Custom weights
   const isExtreme = aggregateFuzzySignals(Object.values(fuzzySignals), weights);
 
   console.log(
@@ -408,14 +408,7 @@ async function determineMarketCondition(
     threshold = 0.75; // Default
   }
 
-  const weights = adjustWeights({
-    atr,
-    emaDifference: shortEMA - longEMA, // Selisih EMA untuk tren
-    volume:
-      closingPrices[closingPrices.length - 1] /
-      (closingPrices.reduce((a, b) => a + b, 0) / closingPrices.length),
-    macdSignal: macdLine - signalLine, // Sinyal MACD
-  });
+  const weights = [0.2, 0.2, 0.2, 0.2, 0.2];
 
   const fuzzySignals = {
     rsiBuy: fuzzyMembership(rsi, 30, 50),
@@ -436,7 +429,7 @@ async function determineMarketCondition(
     fuzzySignals.priceNearLowerBand,
     fuzzySignals.priceBelowVWAP,
     fuzzySignals.emaBuy,
-  ]);
+  ],weights);
 
   const sellSignal = aggregateFuzzySignals([
     fuzzySignals.rsiSell,
@@ -444,7 +437,7 @@ async function determineMarketCondition(
     fuzzySignals.priceNearUpperBand,
     fuzzySignals.priceAboveVWAP,
     fuzzySignals.emaSell,
-  ]);
+  ],weights);
 
   console.log(
     `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${
