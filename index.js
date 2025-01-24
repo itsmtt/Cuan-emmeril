@@ -307,21 +307,13 @@ function aggregateFuzzySignals(signals, weights = []) {
   );
 }
 
-// Fungsi untuk menyesuaikan bobot berdasarkan kondisi pasar
+// Fungsi untuk menyesuaikan bobot dinamis
 function adjustWeights({ atr, emaDifference, volume, macdSignal }) {
-  // Kondisi volatilitas tinggi atau rendah
   const atrFactor = atr > 0.1 ? 1.5 : atr < 0.05 ? 0.5 : 1.0;
-
-  // Tren kuat vs sideways
   const trendFactor = Math.abs(emaDifference) > 0.02 ? 1.5 : 0.75;
-
-  // Aktivitas volume
   const volumeFactor = volume > 1.5 ? 1.2 : 0.8;
-
-  // Koreksi sinyal MACD
   const macdFactor = macdSignal > 0 ? 1.3 : 0.7;
 
-  // Bobot akhir untuk setiap indikator
   return {
     rsi: 0.2 * atrFactor * trendFactor,
     macd: 0.3 * macdFactor,
@@ -408,11 +400,11 @@ async function determineMarketCondition(
 
   const weights = adjustWeights({
     atr,
-    emaDifference: shortEMA - longEMA, // Selisih EMA untuk tren
+    emaDifference,
     volume:
-      volumes[volumes.length - 1] /
-      (volumes.reduce((a, b) => a + b, 0) / volumes.length), // Rasio volume terkini
-    macdSignal: macdLine - signalLine, // Sinyal MACD
+      closingPrices[closingPrices.length - 1] /
+      (closingPrices.reduce((a, b) => a + b, 0) / closingPrices.length),
+    macdSignal: macdLine - signalLine,
   });
 
   const fuzzySignals = {
