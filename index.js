@@ -318,7 +318,9 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 
   console.log(
     chalk.yellow(
-      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(2)}% >= 75%`
+      `Pasar dalam kondisi ekstrem jika: ${(isExtreme * 100).toFixed(
+        2
+      )}% >= 75%`
     )
   );
 
@@ -335,12 +337,26 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 }
 
 // Fungsi untuk menentukan kondisi pasar
-async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
+async function determineMarketCondition(
+  rsi,
+  vwap,
+  closingPrices,
+  lastPrice,
+  atr
+) {
   // Hitung indikator utama
   const shortEMA = calculateEMA(closingPrices.slice(-10), 5);
   const longEMA = calculateEMA(closingPrices.slice(-20), 20);
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
+
+  // Tentukan bobot dinamis berdasarkan ATR (volatilitas)
+  const weights = {
+    rsi: atr > 0.1 ? 0.2 : 0.3, // ATR tinggi -> bobot RSI menurun
+    macd: atr > 0.1 ? 0.25 : 0.3,
+    bollinger: atr > 0.1 ? 0.35 : 0.25,
+    ema: atr > 0.1 ? 0.2 : 0.15,
+  };
 
   // Keanggotaan fuzzy untuk kondisi pasar
   const fuzzySignals = {
@@ -356,21 +372,21 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice) {
     priceAboveVWAP: lastPrice > vwap ? 1 : 0,
   };
 
-  // Hitung sinyal beli dan jual berdasarkan indikator
+  // Hitung sinyal beli dan jual berdasarkan bobot dinamis
   const buySignal = calculateFuzzySignals([
-    fuzzySignals.rsiBuy,
-    fuzzySignals.macdBuy,
-    fuzzySignals.priceNearLowerBand,
-    fuzzySignals.priceBelowVWAP,
-    fuzzySignals.emaBuy,
+    fuzzySignals.rsiBuy * weights.rsi,
+    fuzzySignals.macdBuy * weights.macd,
+    fuzzySignals.priceNearLowerBand * weights.bollinger,
+    fuzzySignals.priceBelowVWAP * weights.ema,
+    fuzzySignals.emaBuy * weights.ema,
   ]);
 
   const sellSignal = calculateFuzzySignals([
-    fuzzySignals.rsiSell,
-    fuzzySignals.macdSell,
-    fuzzySignals.priceNearUpperBand,
-    fuzzySignals.priceAboveVWAP,
-    fuzzySignals.emaSell,
+    fuzzySignals.rsiSell * weights.rsi,
+    fuzzySignals.macdSell * weights.macd,
+    fuzzySignals.priceNearUpperBand * weights.bollinger,
+    fuzzySignals.priceAboveVWAP * weights.ema,
+    fuzzySignals.emaSell * weights.ema,
   ]);
 
   // Log hasil sinyal fuzzy
