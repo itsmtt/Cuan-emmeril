@@ -548,13 +548,8 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       // Ambil presisi harga
       const { pricePrecision } = await getSymbolPrecision(symbol);
 
-      // Hitung keanggotaan fuzzy volatilitas
-      const fuzzySignals = {
-        highVolatility: fuzzyMembership(atr, 0.05, 0.1),
-        extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
-      };
-      const volatilityFactor = fuzzySignals.highVolatility * 3; // Buffer adaptif
-      const buffer = atr * volatilityFactor; // Buffer berbasis ATR dan volatilitas
+      // Hitung buffer 
+      const buffer = atr * 0.1;
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
@@ -673,13 +668,8 @@ async function placeTrailingStop(order, atr, direction) {
     const orderPrice = parseFloat(price);
     const { pricePrecision } = await getSymbolPrecision(symbol);
 
-    // Hitung keanggotaan fuzzy volatilitas
-    const fuzzySignals = {
-      highVolatility: fuzzyMembership(atr, 0.05, 0.1),
-      extremeVolatility: fuzzyMembership(atr, 0.1, 0.2),
-    };
-    const volatilityFactor = fuzzySignals.highVolatility * 1.5;
-    const buffer = atr * volatilityFactor;
+  // Hitung buffer 
+    const buffer = atr * 0.05;
 
     const trailingStopPrice =
       direction === "LONG" ? orderPrice + buffer : orderPrice - buffer; // Adjust activation price to avoid immediate trigger
