@@ -549,7 +549,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       const { pricePrecision } = await getSymbolPrecision(symbol);
 
       // Hitung buffer 
-      const buffer = atr * 0.1;
+      const buffer = atr + 0.1;
 
       // Hitung harga TP dan SL
       const takeProfitPrice =
@@ -669,7 +669,7 @@ async function placeTrailingStop(order, atr, direction) {
     const { pricePrecision } = await getSymbolPrecision(symbol);
 
   // Hitung buffer 
-    const buffer = atr * 0.05;
+    const buffer = atr + 0.05;
 
     const trailingStopPrice =
       direction === "LONG" ? orderPrice + buffer : orderPrice - buffer; // Adjust activation price to avoid immediate trigger
