@@ -674,7 +674,7 @@ async function placeTrailingStop(order, atr, direction, currentPrice) {
       const buffer = atr + addOns;
 
     const trailingStopPrice =
-      direction === "LONG" ? currentPrice + buffer : orderPrice - buffer; // Adjust activation price to avoid immediate trigger
+      direction === "LONG" ? currentPrice + buffer : currentPrice - buffer; // Adjust activation price to avoid immediate trigger
     const roundedTrailingStop = parseFloat(
       trailingStopPrice.toFixed(pricePrecision)
     );
@@ -683,7 +683,7 @@ async function placeTrailingStop(order, atr, direction, currentPrice) {
     const percentageDifference = Math.abs(
       trailingStopPrice - currentPrice
     );
-    let rate = Math.min(Math.max(percentageDifference, 0.1), 5.0); // Ensure rate is between 0.1 and 5.0
+    let rate = Math.min(Math.max(percentageDifference, 3.0), 5.0); // Ensure rate is between 0.1 and 5.0
 
     await client.futuresOrder({
       symbol,
