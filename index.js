@@ -681,7 +681,7 @@ async function placeTrailingStop(order, atr, direction, currentPrice) {
 
     // Determine callbackRate based on the percentage of trailingStopPrice from orderPrice
     const percentageDifference = Math.abs(
-      (trailingStopPrice - currentPrice)  * 100
+      trailingStopPrice - currentPrice
     );
     let rate = Math.min(Math.max(percentageDifference, 0.1), 5.0); // Ensure rate is between 0.1 and 5.0
 
