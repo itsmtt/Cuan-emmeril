@@ -533,7 +533,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
 }
 
 // Fungsi untuk menetapkan TP dan SL
-async function placeTakeProfitAndStopLoss(orders, atr, direction, currentPrice ) {
+async function placeTakeProfitAndStopLoss(orders, atr, direction) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
@@ -651,8 +651,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction, currentPrice )
         );
       }
 
-      // Place trailing stop
-      await placeTrailingStop(order, atr, direction, currentPrice);
     }
   } catch (error) {
     console.error(
@@ -662,52 +660,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction, currentPrice )
   }
 }
 
-// Add a trailing stop mechanism
-async function placeTrailingStop(order, atr, direction, currentPrice) {
-  try {
-    const { price, quantity, symbol } = order;
-    const orderPrice = parseFloat(price);
-    const { pricePrecision } = await getSymbolPrecision(symbol);
-
-  // Hitung buffer
-      const addOns = atr * 0.05;
-      const buffer = atr + addOns;
-
-    const trailingStopPrice =
-      direction === "LONG" ? currentPrice + buffer : currentPrice - buffer; // Adjust activation price to avoid immediate trigger
-    const roundedTrailingStop = parseFloat(
-      trailingStopPrice.toFixed(pricePrecision)
-    );
-
-    // Determine callbackRate based on the percentage of trailingStopPrice from orderPrice
-    const percentageDifference = Math.abs(
-      trailingStopPrice - currentPrice
-    );
-    let rate = Math.min(Math.max(percentageDifference, 3.0), 5.0); // Ensure rate is between 0.1 and 5.0
-
-    await client.futuresOrder({
-      symbol,
-      side: direction === "LONG" ? "SELL" : "BUY",
-      type: "TRAILING_STOP_MARKET",
-      activationPrice: roundedTrailingStop,
-      callbackRate: rate.toFixed(1),
-      quantity,
-      reduceOnly: true,
-    });
-
-    console.log(
-      chalk.green(
-        `Trailing Stop for ${symbol} at price ${roundedTrailingStop} with callback rate ${rate}% successfully placed.`
-      )
-    );
-  } catch (error) {
-    console.error(
-      chalk.bgRed("Error placing trailing stop:"),
-      error.message || error
-    );
-  }
-}
-
+  
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
   try {
@@ -732,30 +685,10 @@ async function monitorOrders() {
     // Filter order terbuka dengan limit order
     const limitOrders = openOrders.filter((order) => order.type === "LIMIT");
 
-    // Filter order terbuka dengan tipe TRAILING_STOP_MARKET
-    const trailingStopOrders = openOrders.filter(
-      (order) => order.type === "TRAILING_STOP_MARKET"
-    );
-
     // Cari posisi terbuka
     const openPosition = positions.find(
       (position) => parseFloat(position.positionAmt) !== 0
     );
-
-    // monitoring trailing stop
-    if (trailingStopOrders.length === 0) {
-      console.log(
-        chalk.red("Tidak ada Trailing Stop order di daftar open orders.")
-      );
-    } else {
-      if (trailingStopOrders.length > 0) {
-        console.log(
-          chalk.green(
-            `Masih ada ${trailingStopOrders.length} Trailing Stop order yang aktif.`
-          )
-        );
-      }
-    }
 
     // Jika tidak ada TP Tutup semua order terbuka dan posisi terbuka
     if (takeProfitOrders.length === 0) {
