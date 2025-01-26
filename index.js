@@ -344,11 +344,13 @@ function calculateVWAP(candles) {
 // Fungsi untuk memeriksa kondisi pasar ekstrem
 async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
   const avgVolume = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length;
+  const lastVolume = volumes[volumes.length - 1];
+
   const fuzzySignals = {
     highVolatility: fuzzyMembership(atr, 0.05, 0.1, "trapezoid"),
     extremeVolatility: fuzzyMembership(atr, 0.1, 0.2, "trapezoid"),
     avgVolumeSpike: fuzzyMembership(
-      volumes[volumes.length - 1],
+      lastVolume,
       avgVolume * 1.5,
       avgVolume * 3,
       "triangle"
@@ -367,7 +369,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
     ),
   };
 
-  const weights = [0.2, 0.2, 0.2, 0.2, 0.2]; // Custom weights
+  const weights = [0.2, 0.2, 0.2, 0.2, 0.2];
   const isExtreme = aggregateFuzzySignals(Object.values(fuzzySignals), weights);
 
   console.log(
@@ -398,25 +400,25 @@ async function determineMarketCondition(
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  // Penyesuaian Threshold Berdasarkan ATR (Volatilitas)
-  let threshold;
-  if (atr > 0.1) {
-    threshold = 0.8; // Pasar volatil
-  } else if (atr < 0.05) {
-    threshold = 0.65; // Pasar stabil
-  } else {
-    threshold = 0.75; // Default
-  }
-
-  const weights = [0.2, 0.2, 0.2, 0.2, 0.2];
+  const threshold = atr > 0.1 ? 0.8 : atr < 0.05 ? 0.65 : 0.75;
 
   const fuzzySignals = {
     rsiBuy: fuzzyMembership(rsi, 30, 50, "linear"),
     rsiSell: fuzzyMembership(rsi, 50, 70, "linear"),
     macdBuy: macdLine > signalLine ? 1 : 0,
     macdSell: macdLine < signalLine ? 1 : 0,
-    priceNearLowerBand: fuzzyMembership(lastPrice, lowerBand, lowerBand * 1.02, "trapezoid"),
-    priceNearUpperBand: fuzzyMembership(lastPrice, upperBand * 0.98, upperBand, "trapezoid"),
+    priceNearLowerBand: fuzzyMembership(
+      lastPrice,
+      lowerBand,
+      lowerBand * 1.02,
+      "trapezoid"
+    ),
+    priceNearUpperBand: fuzzyMembership(
+      lastPrice,
+      upperBand * 0.98,
+      upperBand,
+      "trapezoid"
+    ),
     emaBuy: shortEMA > longEMA ? 1 : 0,
     emaSell: shortEMA < longEMA ? 1 : 0,
     priceBelowVWAP: fuzzyMembership(lastPrice, vwap * 0.95, vwap, "linear"),
@@ -429,7 +431,7 @@ async function determineMarketCondition(
     fuzzySignals.priceNearLowerBand,
     fuzzySignals.priceBelowVWAP,
     fuzzySignals.emaBuy,
-  ],weights);
+  ]);
 
   const sellSignal = aggregateFuzzySignals([
     fuzzySignals.rsiSell,
@@ -437,7 +439,7 @@ async function determineMarketCondition(
     fuzzySignals.priceNearUpperBand,
     fuzzySignals.priceAboveVWAP,
     fuzzySignals.emaSell,
-  ],weights);
+  ]);
 
   console.log(
     `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${
@@ -539,31 +541,21 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
     );
 
+    const { pricePrecision } = await getSymbolPrecision(orders[0].symbol);
+    const buffer = atr * 1.1; // ATR + 10% buffer
+
     for (const order of orders) {
       const { price, quantity, symbol } = order;
-
-      // Gunakan harga order sebagai referensi
       const orderPrice = parseFloat(price);
 
-      // Ambil presisi harga
-      const { pricePrecision } = await getSymbolPrecision(symbol);
-
-      // Hitung buffer
-      const addOns = atr * 0.1;
-      const buffer = atr + addOns;
-
-      // Hitung harga TP dan SL
       const takeProfitPrice =
         direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
-
       const stopLossPrice =
         direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
 
-      // Bulatkan harga berdasarkan presisi
       const roundedTP = parseFloat(takeProfitPrice.toFixed(pricePrecision));
       const roundedSL = parseFloat(stopLossPrice.toFixed(pricePrecision));
 
-      // Validasi harga agar tidak memicu langsung
       if (
         (direction === "LONG" && roundedSL >= orderPrice) ||
         (direction === "SHORT" && roundedSL <= orderPrice)
@@ -582,15 +574,12 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
         continue;
       }
 
-      // Jeda waktu untuk memastikan Binance memproses order sebelumnya
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Tunggu 1 detik
 
-      // Perbarui daftar order terbuka
       const updatedOpenOrders = await client.futuresOpenOrders({
         symbol: SYMBOL,
       });
 
-      // Cek apakah TP sudah ada
       const tpExists = updatedOpenOrders.some(
         (o) =>
           o.type === "TAKE_PROFIT_MARKET" &&
@@ -598,7 +587,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
             roundedTP.toFixed(pricePrecision)
       );
 
-      // Cek apakah SL sudah ada
       const slExists = updatedOpenOrders.some(
         (o) =>
           o.type === "STOP_MARKET" &&
@@ -606,13 +594,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
             roundedSL.toFixed(pricePrecision)
       );
 
-      // Skip jika TP atau SL sudah ada
-      if (tpExists) {
-        console.log(
-          chalk.yellow(`Take Profit pada harga ${roundedTP} sudah ada.`)
-        );
-      } else {
-        // Buat order Take Profit
+      if (!tpExists) {
         await client.futuresOrder({
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
@@ -621,20 +603,18 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
           quantity,
           reduceOnly: true,
         });
-
         console.log(
           chalk.green(
             `Take Profit untuk ${symbol} pada harga ${roundedTP} berhasil ditempatkan.`
           )
         );
+      } else {
+        console.log(
+          chalk.yellow(`Take Profit pada harga ${roundedTP} sudah ada.`)
+        );
       }
 
-      if (slExists) {
-        console.log(
-          chalk.yellow(`Stop Loss pada harga ${roundedSL} sudah ada.`)
-        );
-      } else {
-        // Buat order Stop Loss
+      if (!slExists) {
         await client.futuresOrder({
           symbol,
           side: direction === "LONG" ? "SELL" : "BUY",
@@ -643,14 +623,16 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
           quantity,
           reduceOnly: true,
         });
-
         console.log(
           chalk.green(
             `Stop Loss untuk ${symbol} pada harga ${roundedSL} berhasil ditempatkan.`
           )
         );
+      } else {
+        console.log(
+          chalk.yellow(`Stop Loss pada harga ${roundedSL} sudah ada.`)
+        );
       }
-
     }
   } catch (error) {
     console.error(
@@ -660,7 +642,6 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
   }
 }
 
-  
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
   try {
