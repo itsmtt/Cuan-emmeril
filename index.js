@@ -652,7 +652,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
       }
 
       // Place trailing stop
-      await placeTrailingStop(order, atr, direction);
+      await placeTrailingStop(order, atr, direction, currentPrice);
     }
   } catch (error) {
     console.error(
@@ -663,7 +663,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
 }
 
 // Add a trailing stop mechanism
-async function placeTrailingStop(order, atr, direction) {
+async function placeTrailingStop(order, atr, direction, currentPrice) {
   try {
     const { price, quantity, symbol } = order;
     const orderPrice = parseFloat(price);
@@ -674,14 +674,14 @@ async function placeTrailingStop(order, atr, direction) {
       const buffer = atr + addOns;
 
     const trailingStopPrice =
-      direction === "LONG" ? orderPrice + buffer : orderPrice - buffer; // Adjust activation price to avoid immediate trigger
+      direction === "LONG" ? currentPrice + buffer : orderPrice - buffer; // Adjust activation price to avoid immediate trigger
     const roundedTrailingStop = parseFloat(
       trailingStopPrice.toFixed(pricePrecision)
     );
 
     // Determine callbackRate based on the percentage of trailingStopPrice from orderPrice
     const percentageDifference = Math.abs(
-      ((trailingStopPrice - orderPrice) / orderPrice) * 100
+      ((trailingStopPrice - currentPrice) / currentPrice) * 100
     );
     let rate = Math.min(Math.max(percentageDifference, 0.1), 5.0); // Ensure rate is between 0.1 and 5.0
 
