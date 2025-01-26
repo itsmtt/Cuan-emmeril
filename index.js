@@ -533,7 +533,7 @@ async function placeGridOrders(currentPrice, atr, direction) {
 }
 
 // Fungsi untuk menetapkan TP dan SL
-async function placeTakeProfitAndStopLoss(orders, atr, direction) {
+async function placeTakeProfitAndStopLoss(orders, atr, direction, currentPrice ) {
   try {
     console.log(
       chalk.blue("Menetapkan Take Profit dan Stop Loss untuk order...")
