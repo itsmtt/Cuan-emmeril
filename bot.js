@@ -499,8 +499,14 @@ async function determineMarketCondition(
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  //const threshold = atr > 0.1 ? 0.8 : atr < 0.05 ? 0.65 : 0.75;
+  const minATR = 0.01;
+  const maxATR = 0.1;
+  const minTol = 0.03;
+  const maxTol = 0.08;
 
+  const clampedATR = Math.max(minATR, Math.min(maxATR, atr));
+  const tolerance = minTol + ((clampedATR - minATR) / (maxATR - minATR)) * (maxTol - minTol);
+  
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
   const macdBuy = macdLine > signalLine ? 1 : 0;
@@ -535,10 +541,10 @@ async function determineMarketCondition(
     ).toFixed(2)}%`
   );
 
-  if (buySignal > sellSignal) {
+  if (buySignal > sellSignal + tolerance) {
     console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
     return "LONG";
-  } else if (sellSignal > buySignal) {
+  } else if (sellSignal > buySignal + tolerance) {
     console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
     return "SHORT";
   } else {
