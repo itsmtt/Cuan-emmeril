@@ -486,27 +486,20 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 }
 
 // Fungsi untuk menentukan kondisi pasar
-async function determineMarketCondition(
-  rsi,
-  vwap,
-  closingPrices,
-  lastPrice,
-  atr
-) {
+async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr) {
   const len = closingPrices.length;
   const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
   const longEMA = calculateEMA(closingPrices.slice(len - 20), 20);
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  const minATR = 0.0005;      
-  const maxATR = 0.005;       
-  const minTol = 0.02;        
-  const maxTol = 0.06;
+  const isTrending = Math.abs(shortEMA - longEMA) / longEMA; // persentase deviasi EMA
+  const atrLevel = atr;
 
-  const clampedATR = Math.max(minATR, Math.min(maxATR, atr));
-  const tolerance = minTol + ((clampedATR - minATR) / (maxATR - minATR)) * (maxTol - minTol);
-  
+  // Threshold dinamis berbasis ATR dan kekuatan tren (EMA divergence)
+  const threshold = 0.6 + Math.min(atrLevel * 2, 0.1) + Math.min(isTrending * 2, 0.15);
+  // Hasil akhir threshold akan berada di rentang kira-kira [0.6, 0.85]
+
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
   const macdBuy = macdLine > signalLine ? 1 : 0;
@@ -518,35 +511,29 @@ async function determineMarketCondition(
   const vwapHigh = vwap * 1.05;
 
   const buySignal = aggregateFuzzySignals([
-    fuzzyMembership(rsi, 30, 50, "linear"),
+    fuzzyMembership(rsi, 30, 50, "linear"),                 // oversold
     macdBuy,
-    fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
-    fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
+    fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"), // bawah BB
+    fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),   // di bawah VWAP
     emaBuy,
-  ]);
+  ], [0.2, 0.2, 0.2, 0.2, 0.2]); // bisa disesuaikan dinamis juga
 
   const sellSignal = aggregateFuzzySignals([
-    fuzzyMembership(rsi, 50, 70, "linear"),
+    fuzzyMembership(rsi, 50, 70, "linear"),                 // overbought
     macdSell,
-    fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
-    fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
+    fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"), // atas BB
+    fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),  // di atas VWAP
     emaSell,
-  ]);
+  ], [0.2, 0.2, 0.2, 0.2, 0.2]);
 
-  console.log("ATR:", atr);
-  
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(
-     sellSignal * 100
-    ).toFixed(2)}%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${(
-     buySignal * 100
-    ).toFixed(2)}%`
+    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% | SELL = ${(sellSignal * 100).toFixed(2)}% | Threshold: ${(threshold * 100).toFixed(2)}%`
   );
 
-  if (buySignal > sellSignal + tolerance) {
+  if (buySignal > sellSignal && buySignal >= threshold) {
     console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
     return "LONG";
-  } else if (sellSignal > buySignal + tolerance) {
+  } else if (sellSignal > buySignal && sellSignal >= threshold) {
     console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
     return "SHORT";
   } else {
