@@ -505,15 +505,12 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  // Threshold yang lebih adaptif terhadap ATR dan RSI
-  const threshold =
-    atr > 0.1
-      ? (rsi < 40 ? 0.7 : 0.8)
-      : atr < 0.05
-      ? (rsi > 60 ? 0.6 : 0.65)
-      : rsi < 45
-      ? 0.7
-      : 0.75;
+  const isTrending = Math.abs(shortEMA - longEMA) / longEMA; // persentase deviasi EMA
+  const atrLevel = atr;
+
+  // Threshold dinamis berbasis ATR dan kekuatan tren (EMA divergence)
+  const threshold = 0.6 + Math.min(atrLevel * 2, 0.1) + Math.min(isTrending * 2, 0.15);
+  // Hasil akhir threshold akan berada di rentang kira-kira [0.6, 0.85]
 
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
@@ -526,23 +523,23 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const vwapHigh = vwap * 1.05;
 
   const buySignal = aggregateFuzzySignals([
-    fuzzyMembership(rsi, 30, 50, "linear"),
+    fuzzyMembership(rsi, 30, 50, "linear"),                 // oversold
     macdBuy,
-    fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
-    fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
+    fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"), // bawah BB
+    fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),   // di bawah VWAP
     emaBuy,
-  ]);
+  ], [0.2, 0.2, 0.2, 0.2, 0.2]); // bisa disesuaikan dinamis juga
 
   const sellSignal = aggregateFuzzySignals([
-    fuzzyMembership(rsi, 50, 70, "linear"),
+    fuzzyMembership(rsi, 50, 70, "linear"),                 // overbought
     macdSell,
-    fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
-    fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
+    fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"), // atas BB
+    fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),  // di atas VWAP
     emaSell,
-  ]);
+  ], [0.2, 0.2, 0.2, 0.2, 0.2]);
 
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(2)}%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(2)}%`
+    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% | SELL = ${(sellSignal * 100).toFixed(2)}% | Threshold: ${(threshold * 100).toFixed(2)}%`
   );
 
   if (buySignal > sellSignal && buySignal >= threshold) {
