@@ -493,83 +493,147 @@ async function determineMarketCondition(
   lastPrice,
   atr
 ) {
-  const len = closingPrices.length;
-  
-  // Optimasi: Gunakan slice yang lebih pendek untuk EMA cepat
-  const shortEMALength = Math.min(5, len);
-  const longEMALength = Math.min(10, len);
-  const shortEMA = calculateEMA(closingPrices.slice(len - shortEMALength), shortEMALength);
-  const longEMA = calculateEMA(closingPrices.slice(len - longEMALength), longEMALength);
-  
-  // Optimasi: Gunakan parameter MACD yang lebih responsif
-  const { macdLine, signalLine } = calculateMACD(closingPrices, 8, 16, 5);
-  const { upperBand, lowerBand } = calculateBollingerBands(closingPrices, 14, 1.8); // BB lebih ketat
+  try {
+    // Validasi input
+    if (!closingPrices || closingPrices.length === 0 || 
+        isNaN(lastPrice) || isNaN(vwap) || isNaN(rsi) || isNaN(atr)) {
+      console.error("Data input tidak valid:", {lastPrice, vwap, rsi, atr});
+      return "NEUTRAL";
+    }
 
-  // Optimasi threshold: Lebih agresif dalam market trending
-  const threshold = atr > 0.1 
-    ? 0.7  // Market volatile - ambil sinyal lebih awal
-    : atr < 0.03 
-      ? 0.6  // Market tenang - butuh konfirmasi lebih sedikit
-      : 0.65; // Kondisi normal
+    const len = closingPrices.length;
+    
+    // Pastikan ada cukup data untuk perhitungan
+    if (len < 10) {
+      console.warn("Data harga tidak cukup untuk analisis");
+      return "NEUTRAL";
+    }
 
-  // Optimasi: Berikan bobot lebih pada crossover EMA dan MACD
-  const emaBuy = shortEMA > longEMA ? 1.2 : 0; // Bobot lebih besar
-  const emaSell = shortEMA < longEMA ? 1.2 : 0;
-  const macdBuy = macdLine > signalLine ? 1.2 : 0;
-  const macdSell = macdLine < signalLine ? 1.2 : 0;
+    // Hitung indikator dengan error handling
+    let shortEMA, longEMA, macdLine, signalLine, upperBand, lowerBand;
+    
+    try {
+      const shortEMALength = Math.min(5, len);
+      const longEMALength = Math.min(10, len);
+      shortEMA = calculateEMA(closingPrices.slice(len - shortEMALength), shortEMALength);
+      longEMA = calculateEMA(closingPrices.slice(len - longEMALength), longEMALength);
+      
+      const macdResult = calculateMACD(closingPrices, 8, 16, 5);
+      macdLine = macdResult.macdLine;
+      signalLine = macdResult.signalLine;
+      
+      const bbResult = calculateBollingerBands(closingPrices, 14, 1.8);
+      upperBand = bbResult.upperBand;
+      lowerBand = bbResult.lowerBand;
+    } catch (err) {
+      console.error("Error menghitung indikator:", err);
+      return "NEUTRAL";
+    }
 
-  // Optimasi: Persempit band untuk entry lebih awal
-  const lowerBandUp = lowerBand * 1.01; // Dari 1.02 ke 1.01
-  const upperBandDown = upperBand * 0.99; // Dari 0.98 ke 0.99
-  const vwapLow = vwap * 0.97; // Dari 0.95 ke 0.97
-  const vwapHigh = vwap * 1.03; // Dari 1.05 ke 1.03
+    // Validasi nilai indikator
+    if ([shortEMA, longEMA, macdLine, signalLine, upperBand, lowerBand].some(isNaN)) {
+      console.error("Nilai indikator tidak valid:", {
+        shortEMA, longEMA, macdLine, signalLine, upperBand, lowerBand
+      });
+      return "NEUTRAL";
+    }
 
-  // Optimasi: Tambahkan kondisi breakout untuk entry lebih cepat
-  const isBreakoutAboveUpper = lastPrice > upperBand;
-  const isBreakoutBelowLower = lastPrice < lowerBand;
+    // Threshold dinamis dengan batas minimum/maksimum
+    const atrAdjusted = Math.min(Math.max(atr, 0.01), 0.2); // Batasi ATR antara 0.01-0.2
+    const threshold = atrAdjusted > 0.1 
+      ? 0.7
+      : atrAdjusted < 0.03 
+        ? 0.6
+        : 0.65;
 
-  const buySignal = aggregateFuzzySignals([
-    fuzzyMembership(rsi, 35, 45, "linear"), // Range RSI lebih ketat
-    macdBuy,
-    isBreakoutAboveUpper ? 0.8 : fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
-    fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
-    emaBuy,
-    isBreakoutBelowLower ? 0 : 1 // Hindari buy saat breakout bawah
-  ], [0.15, 0.25, 0.25, 0.2, 0.15]); // Bobot khusus
+    // Hitung sinyal EMA dan MACD dengan default 0 jika invalid
+    const emaBuy = !isNaN(shortEMA) && !isNaN(longEMA) && shortEMA > longEMA ? 1.2 : 0;
+    const emaSell = !isNaN(shortEMA) && !isNaN(longEMA) && shortEMA < longEMA ? 1.2 : 0;
+    const macdBuy = !isNaN(macdLine) && !isNaN(signalLine) && macdLine > signalLine ? 1.2 : 0;
+    const macdSell = !isNaN(macdLine) && !isNaN(signalLine) && macdLine < signalLine ? 1.2 : 0;
 
-  const sellSignal = aggregateFuzzySignals([
-    fuzzyMembership(rsi, 55, 65, "linear"), // Range RSI lebih ketat
-    macdSell,
-    isBreakoutBelowLower ? 0.8 : fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
-    fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
-    emaSell,
-    isBreakoutAboveUpper ? 0 : 1 // Hindari sell saat breakout atas
-  ], [0.15, 0.25, 0.25, 0.2, 0.15]); // Bobot khusus
+    // Hitung level band dengan batasan
+    const lowerBandUp = Math.max(lowerBand * 1.01, lowerBand + 0.0001);
+    const upperBandDown = Math.min(upperBand * 0.99, upperBand - 0.0001);
+    const vwapLow = Math.max(vwap * 0.97, vwap - (vwap * 0.03));
+    const vwapHigh = Math.min(vwap * 1.03, vwap + (vwap * 0.03));
 
-  console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% (Threshold: ${(threshold * 100).toFixed(2)}%), ` +
-    `SELL = ${(sellSignal * 100).toFixed(2)}% (Threshold: ${(threshold * 100).toFixed(2)}%)`
-  );
+    // Deteksi breakout dengan validasi
+    const isBreakoutAboveUpper = !isNaN(upperBand) && lastPrice > upperBand;
+    const isBreakoutBelowLower = !isNaN(lowerBand) && lastPrice < lowerBand;
 
-  // Optimasi: Prioritaskan breakout untuk entry cepat
-  if (isBreakoutAboveUpper && macdBuy && shortEMA > longEMA) {
-    console.log("Breakout atas terdeteksi. Posisi sekarang LONG.");
-    return "LONG";
-  }
-  
-  if (isBreakoutBelowLower && macdSell && shortEMA < longEMA) {
-    console.log("Breakout bawah terdeteksi. Posisi sekarang SHORT.");
-    return "SHORT";
-  }
+    // Fungsi fuzzy membership dengan error handling
+    const safeFuzzyMembership = (value, low, high, type = "linear") => {
+      if (isNaN(value) || isNaN(low) || isNaN(high)) return 0;
+      try {
+        return fuzzyMembership(value, low, high, type);
+      } catch {
+        return 0;
+      }
+    };
 
-  if (buySignal > sellSignal && buySignal >= threshold) {
-    console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
-    return "LONG";
-  } else if (sellSignal > buySignal && sellSignal >= threshold) {
-    console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
-    return "SHORT";
-  } else {
+    // Hitung sinyal buy dengan validasi
+    const buySignalComponents = [
+      safeFuzzyMembership(rsi, 35, 45, "linear"),
+      macdBuy,
+      isBreakoutAboveUpper ? 0.8 : safeFuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
+      safeFuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
+      emaBuy,
+      isBreakoutBelowLower ? 0 : 1
+    ];
+    
+    const buySignal = aggregateFuzzySignals(
+      buySignalComponents,
+      [0.15, 0.25, 0.25, 0.2, 0.15]
+    ) || 0; // Default 0 jika NaN
+
+    // Hitung sinyal sell dengan validasi
+    const sellSignalComponents = [
+      safeFuzzyMembership(rsi, 55, 65, "linear"),
+      macdSell,
+      isBreakoutBelowLower ? 0.8 : safeFuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
+      safeFuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
+      emaSell,
+      isBreakoutAboveUpper ? 0 : 1
+    ];
+    
+    const sellSignal = aggregateFuzzySignals(
+      sellSignalComponents,
+      [0.15, 0.25, 0.25, 0.2, 0.15]
+    ) || 0; // Default 0 jika NaN
+
+    console.log(
+      `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% (Threshold: ${(threshold * 100).toFixed(2)}%), ` +
+      `SELL = ${(sellSignal * 100).toFixed(2)}% (Threshold: ${(threshold * 100).toFixed(2)}%)`
+    );
+
+    // Log komponen sinyal untuk debugging
+    console.debug("Buy components:", buySignalComponents);
+    console.debug("Sell components:", sellSignalComponents);
+
+    // Aturan keputusan trading
+    if (isBreakoutAboveUpper && macdBuy && emaBuy) {
+      console.log("Breakout atas terdeteksi. Posisi sekarang LONG.");
+      return "LONG";
+    }
+    
+    if (isBreakoutBelowLower && macdSell && emaSell) {
+      console.log("Breakout bawah terdeteksi. Posisi sekarang SHORT.");
+      return "SHORT";
+    }
+
+    if (buySignal > sellSignal && buySignal >= threshold) {
+      console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
+      return "LONG";
+    } else if (sellSignal > buySignal && sellSignal >= threshold) {
+      console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
+      return "SHORT";
+    }
+
     console.log("Posisi sekarang NEUTRAL. Menunggu sinyal lebih kuat.");
+    return "NEUTRAL";
+  } catch (error) {
+    console.error("Error dalam determineMarketCondition:", error);
     return "NEUTRAL";
   }
 }
