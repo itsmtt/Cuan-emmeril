@@ -858,6 +858,7 @@ async function trade() {
       calculateVWAP(candles),
       calculateRSI(candles, 14),
     ]);
+    console.log("ATR:", atr);
 
     // Cek kondisi ekstrem
     if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes))
