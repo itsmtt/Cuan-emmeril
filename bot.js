@@ -193,36 +193,31 @@ async function closeOpenPositions() {
 
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
-  if (!Array.isArray(candles) || candles.length < period + 1) {
-    throw new Error(`Jumlah candle minimal harus ${period + 1} untuk ATR.`);
+  if (!candles.every((c) => c.high && c.low && c.close)) {
+    throw new Error(
+      "Format candle tidak valid. Pastikan data memiliki high, low, dan close."
+    );
+  }
+
+  const len = candles.length;
+  if (len < period + 1) {
+    throw new Error("Jumlah candle tidak mencukupi untuk menghitung ATR.");
   }
 
   let trSum = 0;
-
-  for (let i = candles.length - period; i < candles.length; i++) {
-    const current = candles[i];
-    const previous = candles[i - 1];
-
-    const high = Number(current?.high);
-    const low = Number(current?.low);
-    const prevClose = Number(previous?.close);
-
-    if (![high, low, prevClose].every(Number.isFinite)) {
-      throw new Error(`ATR gagal: Data tidak valid di index ${i}, high=${high}, low=${low}, prevClose=${prevClose}`);
-    }
+  for (let i = len - period; i < len; i++) {
+    const high = parseFloat(candles[i].high);
+    const low = parseFloat(candles[i].low);
+    const prevClose = parseFloat(candles[i - 1].close);
 
     const highLow = high - low;
     const highClose = Math.abs(high - prevClose);
     const lowClose = Math.abs(low - prevClose);
-    const tr = Math.max(highLow, highClose, lowClose);
 
-    trSum += tr;
+    trSum += Math.max(highLow, highClose, lowClose);
   }
 
-  const atr = trSum / period;
-  if (!Number.isFinite(atr)) throw new Error("Hasil ATR bukan angka.");
-
-  return atr;
+  return trSum / period;
 }
 
 // Fungsi untuk menghitung EMA
@@ -491,50 +486,38 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 }
 
 // Fungsi untuk menentukan kondisi pasar
-async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr) {
+async function determineMarketCondition(
+  rsi,
+  vwap,
+  closingPrices,
+  lastPrice,
+  atr
+) {
   const len = closingPrices.length;
   const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
   const longEMA = calculateEMA(closingPrices.slice(len - 20), 20);
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  const atrLevel = Number(atr);
-  const safeLongEMA = Number(longEMA);
+  const threshold = atr > 0.1 ? 0.8 : atr < 0.05 ? 0.65 : 0.75;
 
-  if (!Number.isFinite(atrLevel) || !Number.isFinite(shortEMA) || !Number.isFinite(safeLongEMA)) {
-    console.error("ATR atau EMA tidak valid:", { atrLevel, shortEMA, safeLongEMA });
-    return "NEUTRAL";
-  }
-
-  // Dynamic threshold based on ATR + EMA divergence
-  const isTrending = safeLongEMA !== 0
-    ? Math.abs(shortEMA - safeLongEMA) / safeLongEMA
-    : 0;
-
-  const threshold = 0.6 +
-    Math.min(atrLevel * 2, 0.1) +
-    Math.min(isTrending * 2, 0.15); // final threshold between ~0.6–0.85
-
-  // Logic dasar sinyal
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
   const macdBuy = macdLine > signalLine ? 1 : 0;
   const macdSell = macdLine < signalLine ? 1 : 0;
 
-  // Price banding
   const lowerBandUp = lowerBand * 1.02;
   const upperBandDown = upperBand * 0.98;
   const vwapLow = vwap * 0.95;
   const vwapHigh = vwap * 1.05;
 
-  // Aggregate sinyal fuzzy
   const buySignal = aggregateFuzzySignals([
     fuzzyMembership(rsi, 30, 50, "linear"),
     macdBuy,
     fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
     fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
     emaBuy,
-  ], [0.2, 0.2, 0.2, 0.2, 0.2]);
+  ]);
 
   const sellSignal = aggregateFuzzySignals([
     fuzzyMembership(rsi, 50, 70, "linear"),
@@ -542,10 +525,14 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
     fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
     fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
     emaSell,
-  ], [0.2, 0.2, 0.2, 0.2, 0.2]);
+  ]);
 
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% | SELL = ${(sellSignal * 100).toFixed(2)}% | Threshold: ${(threshold * 100).toFixed(2)}%`
+    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(
+      threshold * 100
+    ).toFixed(2)}%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${(
+      threshold * 100
+    ).toFixed(2)}%`
   );
 
   if (buySignal > sellSignal && buySignal >= threshold) {
