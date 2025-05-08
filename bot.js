@@ -505,8 +505,10 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  const isTrending = Math.abs(shortEMA - longEMA) / longEMA; // persentase deviasi EMA
-  const atrLevel = atr;
+  const isTrending = longEMA !== 0 ? Math.abs(shortEMA - longEMA) / longEMA : 0;
+  const atrLevel = Number(atr);
+  if (isNaN(atrLevel)) throw new Error("ATR tidak valid");
+
 
   // Threshold dinamis berbasis ATR dan kekuatan tren (EMA divergence)
   const threshold = 0.6 + Math.min(atrLevel * 2, 0.1) + Math.min(isTrending * 2, 0.15);
