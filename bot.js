@@ -499,10 +499,10 @@ async function determineMarketCondition(
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  const minATR = 0.0005;
-  const maxATR = 0.01;
-  const minTol = 0.01;
-  const maxTol = 0.05;
+  const minATR = 0.0005;      
+  const maxATR = 0.005;       
+  const minTol = 0.02;        
+  const maxTol = 0.06;
 
   const clampedATR = Math.max(minATR, Math.min(maxATR, atr));
   const tolerance = minTol + ((clampedATR - minATR) / (maxATR - minATR)) * (maxTol - minTol);
