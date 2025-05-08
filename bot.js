@@ -499,7 +499,7 @@ async function determineMarketCondition(
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  const threshold = atr > 0.1 ? 0.8 : atr < 0.05 ? 0.65 : 0.75;
+  //const threshold = atr > 0.1 ? 0.8 : atr < 0.05 ? 0.65 : 0.75;
 
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
@@ -529,16 +529,16 @@ async function determineMarketCondition(
 
   console.log(
     `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(
-      threshold * 100
+     sellSignal * 100
     ).toFixed(2)}%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${(
-      threshold * 100
+     buySignal * 100
     ).toFixed(2)}%`
   );
 
-  if (buySignal > sellSignal && buySignal >= threshold) {
+  if (buySignal > sellSignal) {
     console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
     return "LONG";
-  } else if (sellSignal > buySignal && sellSignal >= threshold) {
+  } else if (sellSignal > buySignal) {
     console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
     return "SHORT";
   } else {
