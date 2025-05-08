@@ -200,27 +200,29 @@ async function calculateATR(candles, period) {
   let trSum = 0;
 
   for (let i = candles.length - period; i < candles.length; i++) {
-    const c = candles[i];
-    const prev = candles[i - 1];
+    const current = candles[i];
+    const previous = candles[i - 1];
 
-    const high = parseFloat(c.high);
-    const low = parseFloat(c.low);
-    const prevClose = parseFloat(prev?.close);
+    const high = Number(current?.high);
+    const low = Number(current?.low);
+    const prevClose = Number(previous?.close);
 
     if (![high, low, prevClose].every(Number.isFinite)) {
-      throw new Error(`Data tidak valid di ATR loop: high=${high}, low=${low}, prevClose=${prevClose}`);
+      throw new Error(`ATR gagal: Data tidak valid di index ${i}, high=${high}, low=${low}, prevClose=${prevClose}`);
     }
 
-    const tr = Math.max(
-      high - low,
-      Math.abs(high - prevClose),
-      Math.abs(low - prevClose)
-    );
+    const highLow = high - low;
+    const highClose = Math.abs(high - prevClose);
+    const lowClose = Math.abs(low - prevClose);
+    const tr = Math.max(highLow, highClose, lowClose);
 
     trSum += tr;
   }
 
-  return trSum / period;
+  const atr = trSum / period;
+  if (!Number.isFinite(atr)) throw new Error("Hasil ATR bukan angka.");
+
+  return atr;
 }
 
 // Fungsi untuk menghitung EMA
