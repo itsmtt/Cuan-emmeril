@@ -887,7 +887,8 @@ async function trade() {
       rsi,
       vwap,
       closingPrices,
-      lastPrice
+      lastPrice,
+      volumes
     );
 
     const [openOrders, positions] = await Promise.all([
