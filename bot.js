@@ -491,84 +491,58 @@ async function determineMarketCondition(
   vwap,
   closingPrices,
   lastPrice,
-  atr,
-  volumes
+  atr
 ) {
   const len = closingPrices.length;
-
-  // Indikator EMA
   const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
   const longEMA = calculateEMA(closingPrices.slice(len - 20), 20);
-  const fastEMA = calculateEMA(closingPrices.slice(len - 6), 5); // fast momentum
-
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  // Volatilitas relatif untuk threshold dinamis
-  const volatility = Math.abs(upperBand - lowerBand) / vwap;
-  const threshold = Math.min(1, 0.65 + volatility); // biasanya ~0.75–0.85
+  const threshold = atr > 0.1 ? 0.8 : atr < 0.05 ? 0.65 : 0.75;
 
-  // Indikator binary
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
-  const fastBuy = lastPrice > fastEMA ? 1 : 0;
-  const fastSell = lastPrice < fastEMA ? 1 : 0;
   const macdBuy = macdLine > signalLine ? 1 : 0;
   const macdSell = macdLine < signalLine ? 1 : 0;
 
-  // Range band
   const lowerBandUp = lowerBand * 1.02;
   const upperBandDown = upperBand * 0.98;
   const vwapLow = vwap * 0.95;
   const vwapHigh = vwap * 1.05;
 
-  // Volume confirmation
-  const avgVol = volumes.slice(-15).reduce((a, b) => a + b, 0) / 15;
-  const volRatio = volumes.at(-1) / avgVol;
-  const volumeConfirm = fuzzyMembership(volRatio, 1, 1.5, "linear"); // 1.0–1.5x avg volume
+  const buySignal = aggregateFuzzySignals([
+    fuzzyMembership(rsi, 30, 50, "linear"),
+    macdBuy,
+    fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
+    fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
+    emaBuy,
+  ]);
 
-  // Fuzzy sinyal + bobot
-  const buyWeights = [0.15, 0.2, 0.15, 0.15, 0.15, 0.2];
-  const sellWeights = [0.15, 0.2, 0.15, 0.15, 0.15, 0.2];
-
-  const buySignal = aggregateFuzzySignals(
-    [
-      fuzzyMembership(rsi, 30, 50, "linear"),
-      macdBuy,
-      fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
-      fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
-      emaBuy,
-      fastBuy,
-    ],
-    buyWeights
-  ) * volumeConfirm;
-
-  const sellSignal = aggregateFuzzySignals(
-    [
-      fuzzyMembership(rsi, 50, 70, "linear"),
-      macdSell,
-      fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
-      fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
-      emaSell,
-      fastSell,
-    ],
-    sellWeights
-  ) * volumeConfirm;
+  const sellSignal = aggregateFuzzySignals([
+    fuzzyMembership(rsi, 50, 70, "linear"),
+    macdSell,
+    fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
+    fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
+    emaSell,
+  ]);
 
   console.log(
-    `Sinyal Fuzzy: BUY = ${(buySignal * 100).toFixed(2)}% | SELL = ${(sellSignal * 100).toFixed(
-      2
-    )}% | Threshold = ${(threshold * 100).toFixed(2)}%`
+    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(
+      threshold * 100
+    ).toFixed(2)}%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${(
+      threshold * 100
+    ).toFixed(2)}%`
   );
 
   if (buySignal > sellSignal && buySignal >= threshold) {
-    console.log("📈 Sinyal: LONG — peluang beli terkonfirmasi.");
+    console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
     return "LONG";
   } else if (sellSignal > buySignal && sellSignal >= threshold) {
-    console.log("📉 Sinyal: SHORT — peluang jual terkonfirmasi.");
+    console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
     return "SHORT";
   } else {
-    console.log("⏸️ Sinyal: NEUTRAL — menunggu kepastian arah.");
+    console.log("Posisi sekarang NEUTRAL. Menunggu.");
     return "NEUTRAL";
   }
 }
@@ -887,8 +861,7 @@ async function trade() {
       rsi,
       vwap,
       closingPrices,
-      lastPrice,
-      volumes
+      lastPrice
     );
 
     const [openOrders, positions] = await Promise.all([
