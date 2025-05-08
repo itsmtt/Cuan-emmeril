@@ -486,24 +486,20 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 }
 
 // Fungsi untuk menentukan kondisi pasar
-async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr) {
+async function determineMarketCondition(
+  rsi,
+  vwap,
+  closingPrices,
+  lastPrice,
+  atr
+) {
   const len = closingPrices.length;
   const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
   const longEMA = calculateEMA(closingPrices.slice(len - 20), 20);
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  const atrWeight = Math.min(1, atr / 0.1);
-  const signalBoost = 1 + (1 - atrWeight) * 0.2;
-
-  const threshold =
-    atr < 0.05
-      ? 0.6
-      : atr < 0.1
-      ? 0.68
-      : rsi < 45
-      ? 0.7
-      : 0.75;
+  const threshold = atr > 0.1 ? 0.8 : atr < 0.05 ? 0.65 : 0.75;
 
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
@@ -515,34 +511,28 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const vwapLow = vwap * 0.95;
   const vwapHigh = vwap * 1.05;
 
-  const signalsBuy = [
+  const buySignal = aggregateFuzzySignals([
     fuzzyMembership(rsi, 30, 50, "linear"),
-    Number(macdBuy),
+    macdBuy,
     fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
     fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
-    Number(emaBuy),
-  ];
+    emaBuy,
+  ]);
 
-  const signalsSell = [
+  const sellSignal = aggregateFuzzySignals([
     fuzzyMembership(rsi, 50, 70, "linear"),
-    Number(macdSell),
+    macdSell,
     fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
     fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
-    Number(emaSell),
-  ];
-
-  let buySignal = aggregateFuzzySignals(signalsBuy);
-  let sellSignal = aggregateFuzzySignals(signalsSell);
-
-  // Jaga-jaga terhadap NaN
-  if (isNaN(buySignal)) buySignal = 0;
-  if (isNaN(sellSignal)) sellSignal = 0;
-
-  buySignal *= signalBoost;
-  sellSignal *= signalBoost;
+    emaSell,
+  ]);
 
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(2)}%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(2)}%`
+    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(
+      threshold * 100
+    ).toFixed(2)}%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${(
+      threshold * 100
+    ).toFixed(2)}%`
   );
 
   if (buySignal > sellSignal && buySignal >= threshold) {
