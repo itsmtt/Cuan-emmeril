@@ -38,25 +38,33 @@ const BASE_USDT = config.BASE_USDT;
 
 let totalProfit = 0;
 let totalLoss = 0;
+let _cachedExchangeInfo = null;
 
 // Fungsi untuk pencatatan total TP dan SL
 function logToFile(message) {
-  const logMessage = `${new Date().toISOString()} - ${message}\n`;
-  fs.appendFileSync("profit_loss_logs.txt", logMessage, (err) => {
-    if (err) {
-      console.error(chalk.bgRed("Gagal mencatat ke file log:"), err.message);
-    }
-  });
+  try {
+    const logMessage = `${new Date().toISOString()} - ${message}\n`;
+    fs.appendFileSync("profit_loss_logs.txt", logMessage);
+  } catch (err) {
+    console.error(chalk.bgRed("Gagal mencatat ke file log:"), err.message);
+  }
 }
 
 // Fungsi untuk mendapatkan presisi pasangan perdagangan
 async function getSymbolPrecision(symbol) {
   try {
-    const exchangeInfo = await client.futuresExchangeInfo();
-    const symbolInfo = exchangeInfo.symbols.find((s) => s.symbol === symbol);
-    if (!symbolInfo) throw new Error(`Symbol ${symbol} tidak ditemukan.`);
-    const pricePrecision = symbolInfo.pricePrecision;
-    const quantityPrecision = symbolInfo.quantityPrecision;
+    if (!_cachedExchangeInfo) {
+      _cachedExchangeInfo = await client.futuresExchangeInfo();
+    }
+
+    const symbolInfo = _cachedExchangeInfo.symbols.find(
+      (s) => s.symbol === symbol
+    );
+    if (!symbolInfo) {
+      throw new Error(`Symbol ${symbol} tidak ditemukan.`);
+    }
+
+    const { pricePrecision = 2, quantityPrecision = 2 } = symbolInfo;
     return { pricePrecision, quantityPrecision };
   } catch (error) {
     console.error(
@@ -72,21 +80,37 @@ async function closeOpenOrders() {
   try {
     console.log(chalk.blue("Memeriksa dan menutup semua order terbuka..."));
     const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-    if (openOrders.length > 0) {
-      for (const order of openOrders) {
-        await client.futuresCancelOrder({
-          symbol: SYMBOL,
-          orderId: order.orderId,
-        });
-        console.log(
-          chalk.green(`Order dengan ID ${order.orderId} berhasil dibatalkan.`)
+
+    if (openOrders.length === 0) {
+      console.log(chalk.green("Tidak ada order terbuka yang perlu ditutup."));
+      return;
+    }
+
+    const cancelPromises = openOrders.map((order) =>
+      client.futuresCancelOrder({ symbol: SYMBOL, orderId: order.orderId })
+    );
+
+    const results = await Promise.allSettled(cancelPromises);
+
+    results.forEach((result, i) => {
+      const orderId = openOrders[i].orderId;
+      if (result.status === "fulfilled") {
+        console.log(chalk.green(`Order ${orderId} dibatalkan.`));
+      } else {
+        console.error(
+          chalk.bgRed(
+            `Gagal membatalkan order ${orderId}: ${
+              result.reason.message || result.reason
+            }`
+          )
         );
       }
-    } else {
-      console.log(chalk.green("Tidak ada order terbuka yang perlu ditutup."));
-    }
+    });
   } catch (error) {
-    console.error(chalk.bgRed("Kesalahan saat menutup order terbuka:"), error);
+    console.error(
+      chalk.bgRed("Kesalahan saat menutup order terbuka:"),
+      error.message || error
+    );
     throw error;
   }
 }
@@ -96,56 +120,69 @@ async function closeOpenPositions() {
   try {
     console.log(chalk.blue("Memeriksa dan menutup semua posisi terbuka..."));
     const positions = await client.futuresPositionRisk();
+
+    const closePromises = [];
+
     for (const position of positions) {
-      if (parseFloat(position.positionAmt) !== 0) {
-        const side = parseFloat(position.positionAmt) > 0 ? "SELL" : "BUY";
-        const quantity = Math.abs(parseFloat(position.positionAmt));
-        try {
-          await client.futuresOrder({
-            symbol: position.symbol,
-            side,
-            type: "MARKET",
-            quantity,
-          });
-          console.log(
-            chalk.green(
-              `Posisi pada ${position.symbol} berhasil ditutup dengan kuantitas ${quantity}.`
-            )
-          );
+      const amt = parseFloat(position.positionAmt);
+      if (amt === 0) continue;
 
-          // Hitung profit atau loss
-          const currentPrice = parseFloat(
-            position.markPrice || position.entryPrice
-          );
-          const entryPrice = parseFloat(position.entryPrice);
-          const pnl =
-            side === "SELL"
-              ? (currentPrice - entryPrice) * quantity
-              : (entryPrice - currentPrice) * quantity;
+      const side = amt > 0 ? "SELL" : "BUY";
+      const quantity = Math.abs(amt);
+      const symbol = position.symbol;
 
-          if (pnl > 0) {
-            totalProfit += pnl;
-            const profitMessage = `Profit dari posisi pada ${
-              position.symbol
-            }: ${pnl.toFixed(2)} USDT`;
-            console.log(chalk.green(profitMessage));
-            logToFile(profitMessage);
-          } else {
-            totalLoss += Math.abs(pnl);
-            const lossMessage = `Loss dari posisi pada ${
-              position.symbol
-            }: ${Math.abs(pnl).toFixed(2)} USDT`;
-            console.log(chalk.red(lossMessage));
-            logToFile(lossMessage);
+      closePromises.push(
+        (async () => {
+          try {
+            await client.futuresOrder({
+              symbol,
+              side,
+              type: "MARKET",
+              quantity,
+            });
+
+            console.log(
+              chalk.green(
+                `Posisi pada ${symbol} berhasil ditutup dengan kuantitas ${quantity}.`
+              )
+            );
+
+            const markPrice = parseFloat(
+              position.markPrice || position.entryPrice
+            );
+            const entryPrice = parseFloat(position.entryPrice);
+            const pnl =
+              side === "SELL"
+                ? (markPrice - entryPrice) * quantity
+                : (entryPrice - markPrice) * quantity;
+
+            const message =
+              pnl > 0
+                ? `Profit dari posisi pada ${symbol}: ${pnl.toFixed(2)} USDT`
+                : `Loss dari posisi pada ${symbol}: ${Math.abs(pnl).toFixed(
+                    2
+                  )} USDT`;
+
+            if (pnl > 0) {
+              totalProfit += pnl;
+              console.log(chalk.green(message));
+            } else {
+              totalLoss += Math.abs(pnl);
+              console.log(chalk.red(message));
+            }
+
+            logToFile(message);
+          } catch (err) {
+            console.error(
+              chalk.bgRed(`Gagal menutup posisi pada ${symbol}:`),
+              err.message || err
+            );
           }
-        } catch (error) {
-          console.error(
-            chalk.bgRed(`Gagal menutup posisi pada ${position.symbol}:`),
-            error.message || error
-          );
-        }
-      }
+        })()
+      );
     }
+
+    await Promise.allSettled(closePromises);
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan saat menutup posisi terbuka:"),
