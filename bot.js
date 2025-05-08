@@ -193,23 +193,22 @@ async function closeOpenPositions() {
 
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
-  if (!candles.every(c => c && c.high && c.low && c.close)) {
-    throw new Error("Candle tidak valid: missing high, low, or close.");
-  }
-
-  if (candles.length < period + 1) {
+  if (!Array.isArray(candles) || candles.length < period + 1) {
     throw new Error(`Jumlah candle minimal harus ${period + 1} untuk ATR.`);
   }
 
   let trSum = 0;
 
   for (let i = candles.length - period; i < candles.length; i++) {
-    const high = parseFloat(candles[i].high);
-    const low = parseFloat(candles[i].low);
-    const prevClose = parseFloat(candles[i - 1].close);
+    const c = candles[i];
+    const prev = candles[i - 1];
+
+    const high = parseFloat(c.high);
+    const low = parseFloat(c.low);
+    const prevClose = parseFloat(prev?.close);
 
     if (![high, low, prevClose].every(Number.isFinite)) {
-      throw new Error(`Nilai candle tidak valid (NaN): high=${high}, low=${low}, prevClose=${prevClose}`);
+      throw new Error(`Data tidak valid di ATR loop: high=${high}, low=${low}, prevClose=${prevClose}`);
     }
 
     const tr = Math.max(
