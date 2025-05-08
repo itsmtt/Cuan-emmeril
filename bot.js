@@ -533,6 +533,8 @@ async function determineMarketCondition(
     emaSell,
   ]);
 
+  console.log("ATR:", atr);
+  
   console.log(
     `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(
      sellSignal * 100
@@ -858,7 +860,7 @@ async function trade() {
       calculateVWAP(candles),
       calculateRSI(candles, 14),
     ]);
-    console.log("ATR:", atr);
+    
 
     // Cek kondisi ekstrem
     if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes))
