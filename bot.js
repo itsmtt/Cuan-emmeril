@@ -493,10 +493,9 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  // Normalisasi ATR: ATR 0.1 = 1.0, di bawah itu makin kecil
   const atrWeight = Math.min(1, atr / 0.1);
+  const signalBoost = 1 + (1 - atrWeight) * 0.2;
 
-  // Threshold lebih agresif saat ATR rendah
   const threshold =
     atr < 0.05
       ? 0.6
@@ -516,25 +515,29 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const vwapLow = vwap * 0.95;
   const vwapHigh = vwap * 1.05;
 
-  // Hitung sinyal dan perkuat jika ATR rendah
-  let buySignal = aggregateFuzzySignals([
+  const signalsBuy = [
     fuzzyMembership(rsi, 30, 50, "linear"),
-    macdBuy,
+    Number(macdBuy),
     fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
     fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
-    emaBuy,
-  ]);
+    Number(emaBuy),
+  ];
 
-  let sellSignal = aggregateFuzzySignals([
+  const signalsSell = [
     fuzzyMembership(rsi, 50, 70, "linear"),
-    macdSell,
+    Number(macdSell),
     fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
     fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
-    emaSell,
-  ]);
+    Number(emaSell),
+  ];
 
-  // Perkuat sinyal saat ATR rendah
-  const signalBoost = 1 + (1 - atrWeight) * 0.2;
+  let buySignal = aggregateFuzzySignals(signalsBuy);
+  let sellSignal = aggregateFuzzySignals(signalsSell);
+
+  // Jaga-jaga terhadap NaN
+  if (isNaN(buySignal)) buySignal = 0;
+  if (isNaN(sellSignal)) sellSignal = 0;
+
   buySignal *= signalBoost;
   sellSignal *= signalBoost;
 
