@@ -193,31 +193,43 @@ async function closeOpenPositions() {
 
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
-  if (!candles.every((c) => c.high && c.low && c.close)) {
-    throw new Error(
-      "Format candle tidak valid. Pastikan data memiliki high, low, dan close."
-    );
-  }
-
   const len = candles.length;
+
   if (len < period + 1) {
-    throw new Error("Jumlah candle tidak mencukupi untuk menghitung ATR.");
+    throw new Error(`Jumlah candle minimal harus ${period + 1} untuk ATR.`);
   }
 
   let trSum = 0;
+  let validCount = 0;
+
   for (let i = len - period; i < len; i++) {
-    const high = parseFloat(candles[i].high);
-    const low = parseFloat(candles[i].low);
-    const prevClose = parseFloat(candles[i - 1].close);
+    const current = candles[i];
+    const previous = candles[i - 1];
+
+    const high = Number(current?.high);
+    const low = Number(current?.low);
+    const prevClose = Number(previous?.close);
+
+    if (![high, low, prevClose].every(Number.isFinite)) {
+      console.warn(`❌ ATR: Candle invalid di index ${i}`, { high, low, prevClose });
+      continue;
+    }
 
     const highLow = high - low;
     const highClose = Math.abs(high - prevClose);
     const lowClose = Math.abs(low - prevClose);
 
-    trSum += Math.max(highLow, highClose, lowClose);
+    const tr = Math.max(highLow, highClose, lowClose);
+    trSum += tr;
+    validCount++;
   }
 
-  return trSum / period;
+  if (validCount === 0) {
+    throw new Error("❌ ATR gagal dihitung: tidak ada data TR valid.");
+  }
+
+  const atr = trSum / validCount;
+  return Number.isFinite(atr) ? atr : 0; // fallback aman
 }
 
 // Fungsi untuk menghitung EMA
