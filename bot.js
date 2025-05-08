@@ -868,9 +868,10 @@ async function trade() {
 
     const marketCondition = await determineMarketCondition(
       rsi,
-      vwap,
-      closingPrices,
-      lastPrice
+  vwap,
+  closingPrices,
+  lastPrice,
+  atr
     );
 
     const [openOrders, positions] = await Promise.all([
