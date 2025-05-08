@@ -486,38 +486,22 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 }
 
 // Fungsi untuk menentukan kondisi pasar
-async function determineMarketCondition(
-  rsi,
-  vwap,
-  closingPrices,
-  lastPrice,
-  atr
-) {
+async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr) {
   const len = closingPrices.length;
   const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
   const longEMA = calculateEMA(closingPrices.slice(len - 20), 20);
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  // Dinamic threshold calculation based on ATR
-  const minATR = 0.05;
-  const maxATR = 0.1;
-  const minThreshold = 0.65;
-  const maxThreshold = 0.8;
-  
-  let threshold;
-  if (atr <= minATR) {
-    threshold = minThreshold;
-  } else if (atr >= maxATR) {
-    threshold = maxThreshold;
-  } else {
-    threshold = minThreshold + 
-      ((atr - minATR) / (maxATR - minATR)) * 
-      (maxThreshold - minThreshold);
-  }
-  
-  // Clamping values for safety
-  threshold = Math.min(Math.max(threshold, 0.6), 0.85);
+  // Threshold yang lebih adaptif terhadap ATR dan RSI
+  const threshold =
+    atr > 0.1
+      ? (rsi < 40 ? 0.7 : 0.8)
+      : atr < 0.05
+      ? (rsi > 60 ? 0.6 : 0.65)
+      : rsi < 45
+      ? 0.7
+      : 0.75;
 
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
@@ -546,10 +530,7 @@ async function determineMarketCondition(
   ]);
 
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% | ` +
-    `SELL = ${(sellSignal * 100).toFixed(2)}% | ` +
-    `Dynamic Threshold = ${(threshold * 100).toFixed(2)}% ` +
-    `(ATR: ${atr.toFixed(4)})`
+    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(2)}%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(2)}%`
   );
 
   if (buySignal > sellSignal && buySignal >= threshold) {
@@ -563,6 +544,7 @@ async function determineMarketCondition(
     return "NEUTRAL";
   }
 }
+
 // Fungsi untuk menetapkan order grid
 async function placeGridOrders(
   currentPrice,
