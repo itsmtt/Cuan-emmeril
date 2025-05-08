@@ -491,77 +491,88 @@ async function determineMarketCondition(
   vwap,
   closingPrices,
   lastPrice,
-  atr
+  atr,
+  volumes
 ) {
   const len = closingPrices.length;
+
+  // Indikator EMA
   const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
   const longEMA = calculateEMA(closingPrices.slice(len - 20), 20);
+  const fastEMA = calculateEMA(closingPrices.slice(len - 6), 5); // fast momentum
+
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  // Optimasi threshold dinamis berdasarkan ATR
-  // - ATR tinggi (>0.1): threshold lebih ketat (0.8-0.85)
-  // - ATR rendah (<0.05): threshold lebih longgar (0.6-0.65)
-  // - Nilai antara: interpolasi linear
-  const baseThreshold = 0.7; // Nilai dasar threshold
-  const atrSensitivity = 2.5; // Faktor sensitivitas terhadap ATR
-  
-  // Hitung threshold dinamis dengan fungsi sigmoid untuk transisi yang halus
-  const normalizedAtr = (atr - 0.05) / 0.05; // Normalisasi ATR sekitar 0.05
-  const threshold = baseThreshold + 
-    (0.15 / (1 + Math.exp(-atrSensitivity * normalizedAtr))); // Range 0.65-0.85
+  // Volatilitas relatif untuk threshold dinamis
+  const volatility = Math.abs(upperBand - lowerBand) / vwap;
+  const threshold = Math.min(1, 0.65 + volatility); // biasanya ~0.75–0.85
 
+  // Indikator binary
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
+  const fastBuy = lastPrice > fastEMA ? 1 : 0;
+  const fastSell = lastPrice < fastEMA ? 1 : 0;
   const macdBuy = macdLine > signalLine ? 1 : 0;
   const macdSell = macdLine < signalLine ? 1 : 0;
 
-  // Optimasi parameter fuzzy berdasarkan ATR
-  const bandBuffer = 1 + (atr * 2); // Buffer Bollinger Bands dinamis
-  const vwapBuffer = 0.05 + (atr * 1.5); // Buffer VWAP dinamis
+  // Range band
+  const lowerBandUp = lowerBand * 1.02;
+  const upperBandDown = upperBand * 0.98;
+  const vwapLow = vwap * 0.95;
+  const vwapHigh = vwap * 1.05;
 
-  const lowerBandUp = lowerBand * bandBuffer;
-  const upperBandDown = upperBand / bandBuffer;
-  const vwapLow = vwap * (1 - vwapBuffer);
-  const vwapHigh = vwap * (1 + vwapBuffer);
+  // Volume confirmation
+  const avgVol = volumes.slice(-15).reduce((a, b) => a + b, 0) / 15;
+  const volRatio = volumes.at(-1) / avgVol;
+  const volumeConfirm = fuzzyMembership(volRatio, 1, 1.5, "linear"); // 1.0–1.5x avg volume
 
-  // Optimasi bobot sinyal berdasarkan ATR
-  const trendWeight = 0.3 + (atr * 2); // Lebih percaya tren saat volatilitas tinggi
-  const meanReversionWeight = 0.3 - (atr * 2); // Kurang percaya mean reversion saat volatilitas tinggi
-  
-  const buySignal = aggregateFuzzySignals([
-    fuzzyMembership(rsi, 30, 50, "linear"),
-    macdBuy * trendWeight,
-    fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid") * meanReversionWeight,
-    fuzzyMembership(lastPrice, vwapLow, vwap, "linear") * meanReversionWeight,
-    emaBuy * trendWeight,
-  ], [0.2, trendWeight, meanReversionWeight, meanReversionWeight, trendWeight]);
+  // Fuzzy sinyal + bobot
+  const buyWeights = [0.15, 0.2, 0.15, 0.15, 0.15, 0.2];
+  const sellWeights = [0.15, 0.2, 0.15, 0.15, 0.15, 0.2];
 
-  const sellSignal = aggregateFuzzySignals([
-    fuzzyMembership(rsi, 50, 70, "linear"),
-    macdSell * trendWeight,
-    fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid") * meanReversionWeight,
-    fuzzyMembership(lastPrice, vwap, vwapHigh, "linear") * meanReversionWeight,
-    emaSell * trendWeight,
-  ], [0.2, trendWeight, meanReversionWeight, meanReversionWeight, trendWeight]);
+  const buySignal = aggregateFuzzySignals(
+    [
+      fuzzyMembership(rsi, 30, 50, "linear"),
+      macdBuy,
+      fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
+      fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
+      emaBuy,
+      fastBuy,
+    ],
+    buyWeights
+  ) * volumeConfirm;
+
+  const sellSignal = aggregateFuzzySignals(
+    [
+      fuzzyMembership(rsi, 50, 70, "linear"),
+      macdSell,
+      fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
+      fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
+      emaSell,
+      fastSell,
+    ],
+    sellWeights
+  ) * volumeConfirm;
 
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% (Threshold = ${(threshold * 100).toFixed(2)}%), ` +
-    `SELL = ${(sellSignal * 100).toFixed(2)}% (Threshold = ${(threshold * 100).toFixed(2)}%) ` +
-    `[ATR: ${atr.toFixed(4)}]`
+    `Sinyal Fuzzy: BUY = ${(buySignal * 100).toFixed(2)}% | SELL = ${(sellSignal * 100).toFixed(
+      2
+    )}% | Threshold = ${(threshold * 100).toFixed(2)}%`
   );
 
   if (buySignal > sellSignal && buySignal >= threshold) {
-    console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
+    console.log("📈 Sinyal: LONG — peluang beli terkonfirmasi.");
     return "LONG";
   } else if (sellSignal > buySignal && sellSignal >= threshold) {
-    console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
+    console.log("📉 Sinyal: SHORT — peluang jual terkonfirmasi.");
     return "SHORT";
   } else {
-    console.log("Posisi sekarang NEUTRAL. Menunggu.");
+    console.log("⏸️ Sinyal: NEUTRAL — menunggu kepastian arah.");
     return "NEUTRAL";
   }
 }
+
 // Fungsi untuk menetapkan order grid
 async function placeGridOrders(
   currentPrice,
