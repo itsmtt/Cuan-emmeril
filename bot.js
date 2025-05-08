@@ -193,45 +193,60 @@ async function closeOpenPositions() {
 
 // Fungsi untuk menghitung ATR
 async function calculateATR(candles, period) {
+  // Validate input parameters
+  if (!Array.isArray(candles) || candles.length === 0) {
+    throw new Error("Data candles harus berupa array yang tidak kosong.");
+  }
+
+  if (typeof period !== 'number' || period <= 0) {
+    throw new Error("Period harus berupa angka positif.");
+  }
+
+  // Validate candle structure
+  const isValidCandle = candles.every(c => 
+    c && 
+    typeof c.high === 'number' && 
+    typeof c.low === 'number' && 
+    typeof c.close === 'number'
+  );
+
+  if (!isValidCandle) {
+    throw new Error(
+      "Format candle tidak valid. Pastikan data memiliki high, low, dan close yang valid."
+    );
+  }
+
   const len = candles.length;
-
   if (len < period + 1) {
-    throw new Error(`Jumlah candle minimal harus ${period + 1} untuk ATR.`);
+    throw new Error(
+      `Jumlah candle (${len}) tidak mencukupi untuk menghitung ATR dengan period ${period}.`
+    );
   }
 
-  let trSum = 0;
-  let validCount = 0;
-
-  for (let i = len - period; i < len; i++) {
+  // Calculate True Range (TR) for each candle
+  const trueRanges = [];
+  for (let i = 1; i < len; i++) {
     const current = candles[i];
-    const previous = candles[i - 1];
+    const previous = candles[i-1];
 
-    const high = Number(current?.high);
-    const low = Number(current?.low);
-    const prevClose = Number(previous?.close);
+    const highLow = current.high - current.low;
+    const highClose = Math.abs(current.high - previous.close);
+    const lowClose = Math.abs(current.low - previous.close);
 
-    if (![high, low, prevClose].every(Number.isFinite)) {
-      console.warn(`❌ ATR: Candle invalid di index ${i}`, { high, low, prevClose });
-      continue;
-    }
-
-    const highLow = high - low;
-    const highClose = Math.abs(high - prevClose);
-    const lowClose = Math.abs(low - prevClose);
-
-    const tr = Math.max(highLow, highClose, lowClose);
-    trSum += tr;
-    validCount++;
+    trueRanges.push(Math.max(highLow, highClose, lowClose));
   }
 
-  if (validCount === 0) {
-    throw new Error("❌ ATR gagal dihitung: tidak ada data TR valid.");
+  // Calculate ATR using the last 'period' true ranges
+  const relevantTRs = trueRanges.slice(-period);
+  const atr = relevantTRs.reduce((sum, tr) => sum + tr, 0) / period;
+
+  // Additional validation for the result
+  if (isNaN(atr) {
+    throw new Error("Perhitungan ATR menghasilkan nilai NaN. Periksa data input.");
   }
 
-  const atr = trSum / validCount;
-  return Number.isFinite(atr) ? atr : 0; // fallback aman
+  return atr;
 }
-
 // Fungsi untuk menghitung EMA
 function calculateEMA(prices, period) {
   const len = prices.length;
