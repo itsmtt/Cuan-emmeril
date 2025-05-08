@@ -499,7 +499,25 @@ async function determineMarketCondition(
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  const threshold = atr > 0.1 ? 0.8 : atr < 0.05 ? 0.65 : 0.75;
+  // Dinamic threshold calculation based on ATR
+  const minATR = 0.05;
+  const maxATR = 0.1;
+  const minThreshold = 0.65;
+  const maxThreshold = 0.8;
+  
+  let threshold;
+  if (atr <= minATR) {
+    threshold = minThreshold;
+  } else if (atr >= maxATR) {
+    threshold = maxThreshold;
+  } else {
+    threshold = minThreshold + 
+      ((atr - minATR) / (maxATR - minATR)) * 
+      (maxThreshold - minThreshold);
+  }
+  
+  // Clamping values for safety
+  threshold = Math.min(Math.max(threshold, 0.6), 0.85);
 
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
@@ -528,11 +546,10 @@ async function determineMarketCondition(
   ]);
 
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% >= ${(
-      threshold * 100
-    ).toFixed(2)}%, SELL = ${(sellSignal * 100).toFixed(2)}% >= ${(
-      threshold * 100
-    ).toFixed(2)}%`
+    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% | ` +
+    `SELL = ${(sellSignal * 100).toFixed(2)}% | ` +
+    `Dynamic Threshold = ${(threshold * 100).toFixed(2)}% ` +
+    `(ATR: ${atr.toFixed(4)})`
   );
 
   if (buySignal > sellSignal && buySignal >= threshold) {
@@ -546,7 +563,6 @@ async function determineMarketCondition(
     return "NEUTRAL";
   }
 }
-
 // Fungsi untuk menetapkan order grid
 async function placeGridOrders(
   currentPrice,
