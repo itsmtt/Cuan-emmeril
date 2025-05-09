@@ -496,8 +496,7 @@ async function determineMarketCondition(
   vwap,
   closingPrices,
   lastPrice,
-  atr,
-  volumes
+  atr
 ) {
   const len = closingPrices.length;
   const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
@@ -508,21 +507,8 @@ async function determineMarketCondition(
   const isTrending = Math.abs(shortEMA - longEMA) / longEMA;
   const atrRatio = atr / lastPrice;
 
-  // Volume spike detection
-  const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
-  const isVolumeSpike = volumes.at(-1) > avgVolume * 2;
-
-  // Mode switch: AGGRESSIVE saat pasar aktif
-  const mode =
-    atrRatio >= 0.008 || isTrending >= 0.005 || isVolumeSpike
-      ? "AGGRESSIVE"
-      : "DEFENSIVE";
-
-  // Threshold dinamis berdasarkan mode
   const threshold =
-    mode === "AGGRESSIVE"
-      ? 0.5 + Math.min(atrRatio * 4, 0.08) + Math.min(isTrending * 2, 0.1)
-      : 0.65 + Math.min(atrRatio * 5, 0.1) + Math.min(isTrending * 2, 0.15);
+    0.5 + Math.min(atrRatio * 5, 0.1) + Math.min(isTrending * 2, 0.15);
 
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
@@ -556,6 +542,10 @@ async function determineMarketCondition(
     [0.2, 0.2, 0.2, 0.2, 0.2]
   );
 
+  const isStrongTrend = isTrending >= 0.003;
+  const rsiBuyZone = rsi <= 45;
+  const rsiSellZone = rsi >= 55;
+
   const confirmationCountBuy =
     emaBuy +
     macdBuy +
@@ -570,57 +560,66 @@ async function determineMarketCondition(
       ? 1
       : 0);
 
-  const minConfirmation = mode === "AGGRESSIVE" ? 1 : 2;
-
-  // Cek RSI overbought dan oversold history
-  const rsiValues = [];
-  for (let i = closingPrices.length - 20; i < closingPrices.length; i++) {
-    const slice = closingPrices.slice(i - 14, i);
-    if (slice.length === 14) {
-      const candleSet = slice.map((close) => ({ close: close.toString() }));
-      rsiValues.push(await calculateRSI(candleSet, 14));
-    }
-  }
-
-  const overbought = rsiValues.filter((r) => r > 70);
-  const oversold = rsiValues.filter((r) => r < 30);
-  let rsiConditionOK = false;
-
-  if (overbought.length && oversold.length) {
-    const avgOver = overbought.reduce((a, b) => a + b, 0) / overbought.length;
-    const avgUnder = oversold.reduce((a, b) => a + b, 0) / oversold.length;
-    const avgMid = (avgOver + avgUnder) / 2;
-    rsiConditionOK = avgMid >= 48 && avgMid <= 52;
-  }
-
+  // 🧾 LOG INFORMASI TAMBAHAN
+  console.log(chalk.yellowBright("=== Market Analysis ==="));
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% | SELL = ${(
-      sellSignal * 100
-    ).toFixed(2)}% | Threshold: ${(threshold * 100).toFixed(
-      2
-    )}% | Mode: ${mode} | RSI Confirm: ${rsiConditionOK}`
+    `RSI: ${rsi.toFixed(2)}, VWAP: ${vwap.toFixed(
+      6
+    )}, Last Price: ${lastPrice.toFixed(6)}`
   );
+  console.log(
+    `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
+      6
+    )}, isTrending: ${(isTrending * 100).toFixed(2)}%`
+  );
+  console.log(`MACD: ${macdLine.toFixed(6)}, Signal: ${signalLine.toFixed(6)}`);
+  console.log(
+    `ATR: ${atr.toFixed(6)} | ATR Ratio: ${(atrRatio * 100).toFixed(2)}%`
+  );
+  console.log(`Threshold: ${(threshold * 100).toFixed(2)}%`);
+  console.log(
+    `Buy Signal: ${(buySignal * 100).toFixed(
+      2
+    )}%, Confirmations: ${confirmationCountBuy}, RSI Buy Zone: ${rsiBuyZone}`
+  );
+  console.log(
+    `Sell Signal: ${(sellSignal * 100).toFixed(
+      2
+    )}%, Confirmations: ${confirmationCountSell}, RSI Sell Zone: ${rsiSellZone}`
+  );
+  console.log(`Strong Trend: ${isStrongTrend}`);
 
+  // 🔍 Evaluasi akhir
   if (
     buySignal > sellSignal &&
     buySignal >= threshold &&
-    (isTrending > 0.003 || isVolumeSpike) &&
-    rsiConditionOK &&
-    confirmationCountBuy >= minConfirmation
+    isStrongTrend &&
+    rsiBuyZone &&
+    confirmationCountBuy >= 2
   ) {
-    console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
+    console.log(
+      chalk.greenBright(
+        "🟢 Posisi sekarang LONG (indikator menunjukkan peluang beli)."
+      )
+    );
     return "LONG";
   } else if (
     sellSignal > buySignal &&
     sellSignal >= threshold &&
-    (isTrending > 0.003 || isVolumeSpike) &&
-    rsiConditionOK &&
-    confirmationCountSell >= minConfirmation
+    isStrongTrend &&
+    rsiSellZone &&
+    confirmationCountSell >= 2
   ) {
-    console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
+    console.log(
+      chalk.redBright(
+        "🔴 Posisi sekarang SHORT (indikator menunjukkan peluang jual)."
+      )
+    );
     return "SHORT";
   } else {
-    console.log("Posisi sekarang NEUTRAL. Menunggu.");
+    console.log(
+      chalk.gray("⚪ Posisi sekarang NEUTRAL. Menunggu sinyal valid...")
+    );
     return "NEUTRAL";
   }
 }
