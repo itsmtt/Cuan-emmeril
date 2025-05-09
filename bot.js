@@ -446,8 +446,6 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
   }
 
   const avgVolume = sumVolume / volumes.length;
-
-  // ATR kecil → gunakan rasio terhadap harga untuk skala ekstrem
   const atrRatio = atr / lastPrice;
 
   // Volume spike dinamis
@@ -462,11 +460,11 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 
   // Hitung fuzzy signals
   const fuzzySignals = [
-    fuzzyMembership(atrRatio, 0.003, 0.006, "trapezoid"), // volatilitas menengah
-    fuzzyMembership(atrRatio, 0.006, 0.012, "trapezoid"), // volatilitas tinggi
-    fuzzyMembership(lastVolume, volSpikeLow, volSpikeHigh, "triangle"), // lonjakan volume
-    fuzzyMembership(lastPrice, vwapFarBelow, vwapBelow, "linear"), // harga sangat di bawah VWAP
-    fuzzyMembership(lastPrice, vwapAbove, vwapFarAbove, "linear"), // harga sangat di atas VWAP
+    fuzzyMembership(atrRatio, 0.003, 0.006, "trapezoid"), // medium volatility
+    fuzzyMembership(atrRatio, 0.006, 0.012, "trapezoid"), // high volatility
+    fuzzyMembership(lastVolume, volSpikeLow, volSpikeHigh, "triangle"),
+    fuzzyMembership(lastPrice, vwapFarBelow, vwapBelow, "linear"),
+    fuzzyMembership(lastPrice, vwapAbove, vwapFarAbove, "linear"),
   ];
 
   const isExtreme = aggregateFuzzySignals(
@@ -474,14 +472,25 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
     [0.2, 0.2, 0.2, 0.2, 0.2]
   );
 
+  // === ✅ Threshold Dinamis Berdasarkan ATR dan Volume ===
+  const baseThreshold = 0.6;
+  const atrComponent = Math.min(atrRatio * 5, 0.1); // max kontribusi dari ATR: 10%
+  const volumeComponent =
+    lastVolume > volSpikeHigh ? 0.1 : lastVolume > volSpikeLow ? 0.05 : 0;
+  const threshold = baseThreshold + atrComponent + volumeComponent;
+
   console.log(
-    `Kondisi pasar ekstrem: ${(isExtreme * 100).toFixed(2)}% (ATR=${atr.toFixed(
+    `Kondisi pasar ekstrem: ${(isExtreme * 100).toFixed(2)}% (Threshold: ${(
+      threshold * 100
+    ).toFixed(2)}%) | ATR=${atr.toFixed(6)}, VWAP=${vwap.toFixed(
       6
-    )}, VWAP=${vwap.toFixed(6)}, Harga=${lastPrice.toFixed(6)})`
+    )}, Harga=${lastPrice.toFixed(6)}`
   );
 
-  if (isExtreme >= 0.75) {
-    console.log("Pasar dalam kondisi ekstrem. Menghentikan trading sementara.");
+  if (isExtreme >= threshold) {
+    console.log(
+      "🚨 Pasar dalam kondisi ekstrem. Menghentikan trading sementara."
+    );
     await closeOpenPositions();
     await closeOpenOrders();
     return true;
