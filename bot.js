@@ -610,7 +610,7 @@ async function determineMarketCondition(
   if (
     buySignal > sellSignal &&
     buySignal >= threshold &&
-    isStrongTrend &&
+    // isStrongTrend &&
     rsiBuyZone &&
     confirmationCountBuy >= 2
   ) {
@@ -623,7 +623,7 @@ async function determineMarketCondition(
   } else if (
     sellSignal > buySignal &&
     sellSignal >= threshold &&
-    isStrongTrend &&
+    //isStrongTrend &&
     rsiSellZone &&
     confirmationCountSell >= 2
   ) {
