@@ -498,85 +498,130 @@ async function determineMarketCondition(
   lastPrice,
   atr
 ) {
-  // Optimasi: Gunakan window yang lebih pendek untuk DOGE yang volatile
   const len = closingPrices.length;
-  const shortEMA = calculateEMA(closingPrices.slice(len - 8), 4);  // Diperpendek dari 10/5
-  const longEMA = calculateEMA(closingPrices.slice(len - 16), 8);  // Diperpendek dari 20/10
-  
-  // Optimasi MACD dengan parameter lebih agresif
-  const { macdLine, signalLine } = calculateMACD(closingPrices, 8, 16, 4); // Shorten periods
-  
-  // Bollinger Bands dengan deviasi lebih lebar untuk DOGE
-  const { upperBand, lowerBand } = calculateBollingerBands(closingPrices, 14, 2.5);
-  
-  // Threshold dinamis untuk DOGE
-  const atrRatio = atr / lastPrice;
-  const isTrending = Math.abs(shortEMA - longEMA) / longEMA;
-  const threshold = 0.55 + Math.min(atrRatio * 8, 0.15); // Threshold lebih rendah untuk DOGE
+  const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
+  const longEMA = calculateEMA(closingPrices.slice(len - 20), 20);
+  const { macdLine, signalLine } = calculateMACD(closingPrices);
+  const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  // Signal calculation dengan parameter khusus DOGE
+  const isTrending = Math.abs(shortEMA - longEMA) / longEMA;
+  const atrRatio = atr / lastPrice;
+
+  const threshold =
+    0.6 + Math.min(atrRatio * 5, 0.1) + Math.min(isTrending * 2, 0.15);
+
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
   const macdBuy = macdLine > signalLine ? 1 : 0;
   const macdSell = macdLine < signalLine ? 1 : 0;
 
-  // Band buffer khusus DOGE (lebih lebar)
-  const lowerBandUp = lowerBand * 1.03;  // 3% buffer
-  const upperBandDown = upperBand * 0.97;
-  const vwapLow = vwap * 0.93;  // 7% range untuk DOGE
-  const vwapHigh = vwap * 1.07;
+  const lowerBandUp = lowerBand * 1.02;
+  const upperBandDown = upperBand * 0.98;
+  const vwapLow = vwap * 0.95;
+  const vwapHigh = vwap * 1.05;
 
-  // Fuzzy signals dengan bobot lebih ke momentum untuk DOGE
   const buySignal = aggregateFuzzySignals(
     [
-      fuzzyMembership(rsi, 35, 50, "linear"),  // RSI range lebih tinggi
+      fuzzyMembership(rsi, 30, 50, "linear"),
       macdBuy,
       fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
       fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
       emaBuy,
     ],
-    [0.15, 0.3, 0.2, 0.15, 0.2]  // Lebih berat ke MACD
+    [0.2, 0.2, 0.2, 0.2, 0.2]
   );
 
   const sellSignal = aggregateFuzzySignals(
     [
-      fuzzyMembership(rsi, 50, 65, "linear"),  // RSI range lebih rendah
+      fuzzyMembership(rsi, 50, 70, "linear"),
       macdSell,
       fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
       fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
       emaSell,
     ],
-    [0.15, 0.3, 0.2, 0.15, 0.2]
+    [0.2, 0.2, 0.2, 0.2, 0.2]
   );
 
-  // Kondisi khusus DOGE
-  const isStrongTrend = isTrending > 0.004; // Threshold lebih rendah
-  const rsiBuyZone = rsi < 48;  // Range lebih longgar
-  const rsiSellZone = rsi > 52;
+  const isStrongTrend = isTrending > 0.003;
+  const rsiBuyZone = rsi < 45;
+  const rsiSellZone = rsi > 55;
 
-  // Confirmation count dengan toleransi lebih rendah
-  const confirmationCountBuy = emaBuy + macdBuy;
-  const confirmationCountSell = emaSell + macdSell;
+  const confirmationCountBuy =
+    emaBuy +
+    macdBuy +
+    (fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid") > 0.5
+      ? 1
+      : 0);
 
-  // Logging ringkas
-  console.log(chalk.yellowBright("=== DOGE Market Analysis ==="));
-  console.log(`RSI: ${rsi.toFixed(2)} | Price: ${lastPrice.toFixed(6)}`);
-  console.log(`Trend: ${(isTrending * 100).toFixed(2)}% | ATR: ${atr.toFixed(6)}`);
-  console.log(`Signals: BUY ${(buySignal * 100).toFixed(1)}% | SELL ${(sellSignal * 100).toFixed(1)}%`);
+  const confirmationCountSell =
+    emaSell +
+    macdSell +
+    (fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid") > 0.5
+      ? 1
+      : 0);
 
-  // Evaluasi cepat dengan safety check
-  if (buySignal >= threshold && rsiBuyZone && confirmationCountBuy >= 1) {
-    console.log(chalk.greenBright("🟢 LONG (Fast Confirmation)"));
+  // 🧾 LOG INFORMASI TAMBAHAN
+  console.log(chalk.yellowBright("=== Market Analysis ==="));
+  console.log(
+    `RSI: ${rsi.toFixed(2)}, VWAP: ${vwap.toFixed(
+      6
+    )}, Last Price: ${lastPrice.toFixed(6)}`
+  );
+  console.log(
+    `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
+      6
+    )}, isTrending: ${(isTrending * 100).toFixed(2)}%`
+  );
+  console.log(`MACD: ${macdLine.toFixed(6)}, Signal: ${signalLine.toFixed(6)}`);
+  console.log(
+    `ATR: ${atr.toFixed(6)} | ATR Ratio: ${(atrRatio * 100).toFixed(2)}%`
+  );
+  console.log(`Threshold: ${(threshold * 100).toFixed(2)}%`);
+  console.log(
+    `Buy Signal: ${(buySignal * 100).toFixed(
+      2
+    )}%, Confirmations: ${confirmationCountBuy}, RSI Buy Zone: ${rsiBuyZone}`
+  );
+  console.log(
+    `Sell Signal: ${(sellSignal * 100).toFixed(
+      2
+    )}%, Confirmations: ${confirmationCountSell}, RSI Sell Zone: ${rsiSellZone}`
+  );
+  console.log(`Strong Trend: ${isStrongTrend}`);
+
+  // 🔍 Evaluasi akhir
+  if (
+    buySignal > sellSignal &&
+    buySignal >= threshold &&
+    isStrongTrend &&
+    rsiBuyZone &&
+    confirmationCountBuy >= 2
+  ) {
+    console.log(
+      chalk.greenBright(
+        "🟢 Posisi sekarang LONG (indikator menunjukkan peluang beli)."
+      )
+    );
     return "LONG";
-  } 
-  
-  if (sellSignal >= threshold && rsiSellZone && confirmationCountSell >= 1) {
-    console.log(chalk.redBright("🔴 SHORT (Fast Confirmation)"));
+  } else if (
+    sellSignal > buySignal &&
+    sellSignal >= threshold &&
+    isStrongTrend &&
+    rsiSellZone &&
+    confirmationCountSell >= 2
+  ) {
+    console.log(
+      chalk.redBright(
+        "🔴 Posisi sekarang SHORT (indikator menunjukkan peluang jual)."
+      )
+    );
     return "SHORT";
+  } else {
+    console.log(
+      chalk.gray("⚪ Posisi sekarang NEUTRAL. Menunggu sinyal valid...")
+    );
+    return "NEUTRAL";
   }
-
-  console.log(chalk.gray("⚪ NEUTRAL (No Strong Signal)"));
-  return "NEUTRAL";
 }
 
 // Fungsi untuk menetapkan order grid
