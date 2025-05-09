@@ -499,45 +499,66 @@ async function determineMarketCondition(
   const { macdLine, signalLine } = calculateMACD(closingPrices);
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
-  const isTrending = Math.abs(shortEMA - longEMA) / longEMA; // persentase deviasi EMA
+  const isTrending = Math.abs(shortEMA - longEMA) / longEMA;
   const atrLevel = atr;
 
-  // Threshold dinamis berbasis ATR dan kekuatan tren (EMA divergence)
+  // Threshold dinamis: semakin volatil dan trending, semakin tinggi ambang sinyal diterima
   const threshold =
     0.6 + Math.min(atrLevel * 2, 0.1) + Math.min(isTrending * 2, 0.15);
-  // Hasil akhir threshold akan berada di rentang kira-kira [0.6, 0.85]
 
+  // Sinyal diskrit dari indikator utama
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
   const macdBuy = macdLine > signalLine ? 1 : 0;
   const macdSell = macdLine < signalLine ? 1 : 0;
 
+  // Zona BB dan VWAP
   const lowerBandUp = lowerBand * 1.02;
   const upperBandDown = upperBand * 0.98;
   const vwapLow = vwap * 0.95;
   const vwapHigh = vwap * 1.05;
 
+  // Fuzzy signal calculation
   const buySignal = aggregateFuzzySignals(
     [
-      fuzzyMembership(rsi, 30, 50, "linear"), // oversold
+      fuzzyMembership(rsi, 30, 50, "linear"),
       macdBuy,
-      fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"), // bawah BB
-      fuzzyMembership(lastPrice, vwapLow, vwap, "linear"), // di bawah VWAP
+      fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid"),
+      fuzzyMembership(lastPrice, vwapLow, vwap, "linear"),
       emaBuy,
     ],
     [0.2, 0.2, 0.2, 0.2, 0.2]
-  ); // bisa disesuaikan dinamis juga
+  );
 
   const sellSignal = aggregateFuzzySignals(
     [
-      fuzzyMembership(rsi, 50, 70, "linear"), // overbought
+      fuzzyMembership(rsi, 50, 70, "linear"),
       macdSell,
-      fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"), // atas BB
-      fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"), // di atas VWAP
+      fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid"),
+      fuzzyMembership(lastPrice, vwap, vwapHigh, "linear"),
       emaSell,
     ],
     [0.2, 0.2, 0.2, 0.2, 0.2]
   );
+
+  // Filter tambahan untuk menghindari false signal
+  const isStrongTrend = isTrending > 0.003;
+  const rsiBuyZone = rsi < 45;
+  const rsiSellZone = rsi > 55;
+
+  const confirmationCountBuy =
+    emaBuy +
+    macdBuy +
+    (fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid") > 0.5
+      ? 1
+      : 0);
+
+  const confirmationCountSell =
+    emaSell +
+    macdSell +
+    (fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid") > 0.5
+      ? 1
+      : 0);
 
   console.log(
     `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% | SELL = ${(
@@ -545,10 +566,22 @@ async function determineMarketCondition(
     ).toFixed(2)}% | Threshold: ${(threshold * 100).toFixed(2)}%`
   );
 
-  if (buySignal > sellSignal && buySignal >= threshold) {
+  if (
+    buySignal > sellSignal &&
+    buySignal >= threshold &&
+    isStrongTrend &&
+    rsiBuyZone &&
+    confirmationCountBuy >= 2
+  ) {
     console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
     return "LONG";
-  } else if (sellSignal > buySignal && sellSignal >= threshold) {
+  } else if (
+    sellSignal > buySignal &&
+    sellSignal >= threshold &&
+    isStrongTrend &&
+    rsiSellZone &&
+    confirmationCountSell >= 2
+  ) {
     console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
     return "SHORT";
   } else {
