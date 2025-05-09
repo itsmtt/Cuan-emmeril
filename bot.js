@@ -604,7 +604,7 @@ async function determineMarketCondition(
       2
     )}%, Confirmations: ${confirmationCountSell}, RSI Sell Zone: ${rsiSellZone}`
   );
-  console.log(`Strong Trend: ${isStrongTrend}`);
+  //console.log(`Strong Trend: ${isStrongTrend}`);
 
   // ✅ Evaluasi sinyal akhir
   if (
