@@ -508,7 +508,7 @@ async function determineMarketCondition(
   const atrRatio = atr / lastPrice;
 
   const threshold =
-    0.6 + Math.min(atrRatio * 5, 0.1) + Math.min(isTrending * 2, 0.15);
+    0.5 + Math.min(atrRatio * 5, 0.1) + Math.min(isTrending * 2, 0.15);
 
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
