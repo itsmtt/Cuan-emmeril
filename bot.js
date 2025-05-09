@@ -439,29 +439,34 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
   if (volumes.length === 0) return false;
 
   let sumVolume = 0;
-  let lastVolume = 0;
+  const lastVolume = volumes[volumes.length - 1];
 
   for (let i = 0; i < volumes.length; i++) {
-    const vol = volumes[i];
-    sumVolume += vol;
-    if (i === volumes.length - 1) lastVolume = vol;
+    sumVolume += volumes[i];
   }
 
   const avgVolume = sumVolume / volumes.length;
 
-  const avgVol15 = avgVolume * 1.5;
-  const avgVol30 = avgVolume * 3;
-  const vwap80 = vwap * 0.8;
-  const vwap90 = vwap * 0.9;
-  const vwap110 = vwap * 1.1;
-  const vwap120 = vwap * 1.2;
+  // ATR kecil → gunakan rasio terhadap harga untuk skala ekstrem
+  const atrRatio = atr / lastPrice;
 
+  // Volume spike dinamis
+  const volSpikeLow = avgVolume * 1.5;
+  const volSpikeHigh = avgVolume * 3;
+
+  // VWAP ekstrem dinamis
+  const vwapFarBelow = vwap * 0.985;
+  const vwapBelow = vwap * 0.995;
+  const vwapAbove = vwap * 1.005;
+  const vwapFarAbove = vwap * 1.015;
+
+  // Hitung fuzzy signals
   const fuzzySignals = [
-    fuzzyMembership(atr, 0.05, 0.1, "trapezoid"),
-    fuzzyMembership(atr, 0.1, 0.2, "trapezoid"),
-    fuzzyMembership(lastVolume, avgVol15, avgVol30, "triangle"),
-    fuzzyMembership(lastPrice, vwap80, vwap90, "linear"),
-    fuzzyMembership(lastPrice, vwap110, vwap120, "linear"),
+    fuzzyMembership(atrRatio, 0.003, 0.006, "trapezoid"), // volatilitas menengah
+    fuzzyMembership(atrRatio, 0.006, 0.012, "trapezoid"), // volatilitas tinggi
+    fuzzyMembership(lastVolume, volSpikeLow, volSpikeHigh, "triangle"), // lonjakan volume
+    fuzzyMembership(lastPrice, vwapFarBelow, vwapBelow, "linear"), // harga sangat di bawah VWAP
+    fuzzyMembership(lastPrice, vwapAbove, vwapFarAbove, "linear"), // harga sangat di atas VWAP
   ];
 
   const isExtreme = aggregateFuzzySignals(
@@ -471,8 +476,8 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 
   console.log(
     `Kondisi pasar ekstrem: ${(isExtreme * 100).toFixed(2)}% (ATR=${atr.toFixed(
-      2
-    )}, VWAP=${vwap.toFixed(2)}, Harga=${lastPrice.toFixed(2)})`
+      6
+    )}, VWAP=${vwap.toFixed(6)}, Harga=${lastPrice.toFixed(6)})`
   );
 
   if (isExtreme >= 0.75) {
