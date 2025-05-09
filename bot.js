@@ -560,12 +560,36 @@ async function determineMarketCondition(
       ? 1
       : 0);
 
+  // 🧾 LOG INFORMASI TAMBAHAN
+  console.log(chalk.yellowBright("=== Market Analysis ==="));
   console.log(
-    `Fuzzy Signals: BUY = ${(buySignal * 100).toFixed(2)}% | SELL = ${(
-      sellSignal * 100
-    ).toFixed(2)}% | Threshold: ${(threshold * 100).toFixed(2)}%`
+    `RSI: ${rsi.toFixed(2)}, VWAP: ${vwap.toFixed(
+      6
+    )}, Last Price: ${lastPrice.toFixed(6)}`
   );
+  console.log(
+    `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
+      6
+    )}, isTrending: ${(isTrending * 100).toFixed(2)}%`
+  );
+  console.log(`MACD: ${macdLine.toFixed(6)}, Signal: ${signalLine.toFixed(6)}`);
+  console.log(
+    `ATR: ${atr.toFixed(6)} | ATR Ratio: ${(atrRatio * 100).toFixed(2)}%`
+  );
+  console.log(`Threshold: ${(threshold * 100).toFixed(2)}%`);
+  console.log(
+    `Buy Signal: ${(buySignal * 100).toFixed(
+      2
+    )}%, Confirmations: ${confirmationCountBuy}, RSI Buy Zone: ${rsiBuyZone}`
+  );
+  console.log(
+    `Sell Signal: ${(sellSignal * 100).toFixed(
+      2
+    )}%, Confirmations: ${confirmationCountSell}, RSI Sell Zone: ${rsiSellZone}`
+  );
+  console.log(`Strong Trend: ${isStrongTrend}`);
 
+  // 🔍 Evaluasi akhir
   if (
     buySignal > sellSignal &&
     buySignal >= threshold &&
@@ -573,7 +597,11 @@ async function determineMarketCondition(
     rsiBuyZone &&
     confirmationCountBuy >= 2
   ) {
-    console.log("Posisi sekarang LONG (indikator menunjukkan peluang beli).");
+    console.log(
+      chalk.greenBright(
+        "🟢 Posisi sekarang LONG (indikator menunjukkan peluang beli)."
+      )
+    );
     return "LONG";
   } else if (
     sellSignal > buySignal &&
@@ -582,10 +610,16 @@ async function determineMarketCondition(
     rsiSellZone &&
     confirmationCountSell >= 2
   ) {
-    console.log("Posisi sekarang SHORT (indikator menunjukkan peluang jual).");
+    console.log(
+      chalk.redBright(
+        "🔴 Posisi sekarang SHORT (indikator menunjukkan peluang jual)."
+      )
+    );
     return "SHORT";
   } else {
-    console.log("Posisi sekarang NEUTRAL. Menunggu.");
+    console.log(
+      chalk.gray("⚪ Posisi sekarang NEUTRAL. Menunggu sinyal valid...")
+    );
     return "NEUTRAL";
   }
 }
@@ -807,7 +841,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
 // Fungsi untuk memantau status order terbuka dan mengambil tindakan
 async function monitorOrders() {
   try {
-    console.log(chalk.blue("Memeriksa status order terbuka..."));
+    console.log(chalk.blue("\n📡 Memeriksa status order terbuka..."));
 
     const [openOrders, positions] = await Promise.all([
       client.futuresOpenOrders({ symbol: SYMBOL }),
@@ -818,54 +852,46 @@ async function monitorOrders() {
       (pos) => parseFloat(pos.positionAmt) !== 0
     );
 
-    // Inisialisasi penghitung
-    let takeProfitCount = 0;
-    let stopLossCount = 0;
-    let limitCount = 0;
+    // Hitung jenis order
+    const takeProfitCount = openOrders.filter(o => o.type === "TAKE_PROFIT_MARKET").length;
+    const stopLossCount = openOrders.filter(o => o.type === "STOP_MARKET").length;
+    const limitCount = openOrders.filter(o => o.type === "LIMIT").length;
 
-    for (const order of openOrders) {
-      if (order.type === "TAKE_PROFIT_MARKET") takeProfitCount++;
-      else if (order.type === "STOP_MARKET") stopLossCount++;
-      else if (order.type === "LIMIT") limitCount++;
-    }
+    // === 📊 Log Status Ringkas ===
+    console.log(chalk.yellowBright(`\n=== Rangkuman Order ===`));
+    console.log(`TP aktif   : ${takeProfitCount}`);
+    console.log(`SL aktif   : ${stopLossCount}`);
+    console.log(`Limit Order: ${limitCount}`);
+    console.log(`Posisi     : ${openPosition ? `${openPosition.symbol} (${openPosition.positionAmt})` : "Tidak ada posisi aktif"}`);
 
     let shouldCloseAll = false;
 
     if (takeProfitCount === 0) {
       console.log(chalk.red("Tidak ada Take Profit aktif."));
       shouldCloseAll = true;
-    } else {
-      console.log(chalk.green(`${takeProfitCount} Take Profit aktif.`));
     }
 
     if (stopLossCount === 0) {
       console.log(chalk.red("Tidak ada Stop Loss aktif."));
       shouldCloseAll = true;
-    } else {
-      console.log(chalk.green(`${stopLossCount} Stop Loss aktif.`));
     }
 
     if (limitCount === 0 && !openPosition) {
       console.log(chalk.red("Tidak ada limit order atau posisi terbuka."));
       shouldCloseAll = true;
-    } else {
-      if (limitCount > 0) {
-        console.log(chalk.green(`${limitCount} limit order aktif.`));
-      }
-      if (openPosition) {
-        console.log(
-          chalk.green(`Masih ada posisi terbuka di ${openPosition.symbol}.`)
-        );
-      }
     }
 
-    if (shouldCloseAll) {
-      console.log(chalk.blue("Menutup semua posisi dan order..."));
-      await closeOpenPositions();
-      console.log(chalk.green("Semua posisi telah ditutup."));
-      await closeOpenOrders();
-      console.log(chalk.green("Semua order telah dibatalkan."));
+    if (!shouldCloseAll) {
+      console.log(chalk.green("\nSemua kondisi order terpenuhi. Tidak perlu tindakan."));
+      return;
     }
+
+    // === 🛑 Tindakan Penutupan ===
+    console.log(chalk.blue("\nKondisi tidak aman. Menutup semua posisi dan order..."));
+    await closeOpenPositions();
+    console.log(chalk.green("Semua posisi telah ditutup."));
+    await closeOpenOrders();
+    console.log(chalk.green("Semua order telah dibatalkan."));
   } catch (error) {
     console.error(
       chalk.bgRed("Kesalahan saat memantau order terbuka:"),
@@ -873,6 +899,7 @@ async function monitorOrders() {
     );
   }
 }
+
 
 // Fungsi trading utama
 async function trade() {
