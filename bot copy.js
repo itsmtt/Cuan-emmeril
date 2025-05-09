@@ -560,15 +560,7 @@ async function determineMarketCondition(
       ? 1
       : 0);
 
-  // 🚫 Cegah sinyal jika ATR terlalu kecil dan tidak trending
-  if (atrRatio < 0.001 && !isTrending) {
-    console.log(
-      chalk.gray("⚠️ ATR terlalu kecil dan tidak ada tren — abaikan sinyal.")
-    );
-    return "NEUTRAL";
-  }
-
-  // 🧾 Log Informasi
+  // 🧾 LOG INFORMASI TAMBAHAN
   console.log(chalk.yellowBright("=== Market Analysis ==="));
   console.log(
     `RSI: ${rsi.toFixed(2)}, VWAP: ${vwap.toFixed(
@@ -597,7 +589,7 @@ async function determineMarketCondition(
   );
   console.log(`Strong Trend: ${isStrongTrend}`);
 
-  // ✅ Evaluasi sinyal akhir
+  // 🔍 Evaluasi akhir
   if (
     buySignal > sellSignal &&
     buySignal >= threshold &&
