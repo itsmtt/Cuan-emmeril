@@ -853,53 +853,66 @@ async function monitorOrders() {
     );
 
     // Hitung jenis order
-    const takeProfitCount = openOrders.filter(o => o.type === "TAKE_PROFIT_MARKET").length;
-    const stopLossCount = openOrders.filter(o => o.type === "STOP_MARKET").length;
-    const limitCount = openOrders.filter(o => o.type === "LIMIT").length;
+    const takeProfitCount = openOrders.filter(
+      (o) => o.type === "TAKE_PROFIT_MARKET"
+    ).length;
+    const stopLossCount = openOrders.filter(
+      (o) => o.type === "STOP_MARKET"
+    ).length;
+    const limitCount = openOrders.filter((o) => o.type === "LIMIT").length;
 
     // === 📊 Log Status Ringkas ===
     console.log(chalk.yellowBright(`\n=== Rangkuman Order ===`));
     console.log(`TP aktif   : ${takeProfitCount}`);
     console.log(`SL aktif   : ${stopLossCount}`);
     console.log(`Limit Order: ${limitCount}`);
-    console.log(`Posisi     : ${openPosition ? `${openPosition.symbol} (${openPosition.positionAmt})` : "Tidak ada posisi aktif"}`);
+    console.log(
+      `Posisi     : ${
+        openPosition
+          ? `✅ ${openPosition.symbol} (${openPosition.positionAmt})`
+          : "❌ Tidak ada posisi aktif"
+      }`
+    );
 
     let shouldCloseAll = false;
 
     if (takeProfitCount === 0) {
-      console.log(chalk.red("Tidak ada Take Profit aktif."));
+      console.log(chalk.red("❌ Tidak ada Take Profit aktif."));
       shouldCloseAll = true;
     }
 
     if (stopLossCount === 0) {
-      console.log(chalk.red("Tidak ada Stop Loss aktif."));
+      console.log(chalk.red("❌ Tidak ada Stop Loss aktif."));
       shouldCloseAll = true;
     }
 
     if (limitCount === 0 && !openPosition) {
-      console.log(chalk.red("Tidak ada limit order atau posisi terbuka."));
+      console.log(chalk.red("❌ Tidak ada limit order atau posisi terbuka."));
       shouldCloseAll = true;
     }
 
     if (!shouldCloseAll) {
-      console.log(chalk.green("\nSemua kondisi order terpenuhi. Tidak perlu tindakan."));
+      console.log(
+        chalk.green("\n✅ Semua kondisi order terpenuhi. Tidak perlu tindakan.")
+      );
       return;
     }
 
     // === 🛑 Tindakan Penutupan ===
-    console.log(chalk.blue("\nKondisi tidak aman. Menutup semua posisi dan order..."));
+    console.log(
+      chalk.blue("\n⚠️ Kondisi tidak aman. Menutup semua posisi dan order...")
+    );
     await closeOpenPositions();
-    console.log(chalk.green("Semua posisi telah ditutup."));
+    console.log(chalk.green("✔ Semua posisi telah ditutup."));
     await closeOpenOrders();
-    console.log(chalk.green("Semua order telah dibatalkan."));
+    console.log(chalk.green("✔ Semua order telah dibatalkan."));
   } catch (error) {
     console.error(
-      chalk.bgRed("Kesalahan saat memantau order terbuka:"),
+      chalk.bgRed("💥 Kesalahan saat memantau order terbuka:"),
       error.message || error
     );
   }
 }
-
 
 // Fungsi trading utama
 async function trade() {
