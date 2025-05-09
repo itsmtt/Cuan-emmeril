@@ -592,79 +592,92 @@ async function placeGridOrders(
   direction,
   skipCleanup = false
 ) {
-  if (!skipCleanup) {
-    await closeOpenPositions();
-    await closeOpenOrders();
-  }
-
-  const exchangeInfo = await client.futuresExchangeInfo();
-  const symbolInfo = exchangeInfo.symbols.find((s) => s.symbol === SYMBOL);
-  if (!symbolInfo) {
-    console.error(`Symbol ${SYMBOL} tidak ditemukan di Binance.`);
-    return;
-  }
-
-  const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
-    SYMBOL
-  );
-  const tickSize = parseFloat(
-    symbolInfo.filters.find((f) => f.tickSize).tickSize
-  );
-  const buffer = atr;
-  const orderGrid = GRID_COUNT;
-
-  const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
-  const existingPrices = new Set(openOrders.map((order) => +order.price));
-
-  const quantity = +((BASE_USDT * LEVERAGE) / currentPrice).toFixed(
-    quantityPrecision
-  );
-  const batchOrders = [];
-
-  // Fungsi bantu untuk pembulatan harga ke tickSize
-  const roundPrice = (price) =>
-    +(Math.round(price / tickSize) * tickSize).toFixed(pricePrecision);
-
-  for (let i = 1; i <= orderGrid; i++) {
-    const rawPrice =
-      direction === "LONG"
-        ? currentPrice - buffer * i
-        : currentPrice + buffer * i;
-
-    const price = roundPrice(rawPrice);
-
-    if (existingPrices.has(price)) continue;
-
-    batchOrders.push({
-      symbol: SYMBOL,
-      side: direction === "LONG" ? "BUY" : "SELL",
-      type: "LIMIT",
-      price,
-      quantity,
-      timeInForce: "GTC",
-    });
-  }
-
-  if (batchOrders.length === 0) {
-    console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
-    return;
-  }
-
-  const results = await Promise.allSettled(
-    batchOrders.map((order) => client.futuresOrder(order))
-  );
-
-  results.forEach((res, i) => {
-    if (res.status === "rejected") {
-      console.error(
-        chalk.bgRed(
-          `Gagal menempatkan order: ${res.reason?.message || res.reason}`
-        )
-      );
+  try {
+    if (!skipCleanup) {
+      await closeOpenPositions();
+      await closeOpenOrders();
     }
-  });
 
-  await placeTakeProfitAndStopLoss(batchOrders, atr, direction);
+    const exchangeInfo = await client.futuresExchangeInfo();
+    const symbolInfo = exchangeInfo.symbols.find((s) => s.symbol === SYMBOL);
+
+    if (!symbolInfo) {
+      console.error(`Symbol ${SYMBOL} tidak ditemukan di Binance.`);
+      return;
+    }
+
+    const { pricePrecision, quantityPrecision } = await getSymbolPrecision(
+      SYMBOL
+    );
+
+    const tickSize = parseFloat(
+      symbolInfo.filters.find((f) => f.filterType === "PRICE_FILTER").tickSize
+    );
+
+    const orderGrid = GRID_COUNT;
+
+    // ===== ✅ Buffer Minimum Dinamis =====
+    const atrRatio = atr / currentPrice;
+    const minBuffer = Math.max(tickSize * 5, currentPrice * 0.002); // 0.2% harga atau 5x tickSize
+    const buffer = Math.max(atr, minBuffer); // Gunakan ATR jika lebih besar
+
+    const openOrders = await client.futuresOpenOrders({ symbol: SYMBOL });
+    const existingPrices = new Set(openOrders.map((order) => +order.price));
+
+    const quantity = +((BASE_USDT * LEVERAGE) / currentPrice).toFixed(
+      quantityPrecision
+    );
+
+    const roundToTick = (price) =>
+      +(Math.round(price / tickSize) * tickSize).toFixed(pricePrecision);
+
+    const batchOrders = [];
+
+    for (let i = 1; i <= orderGrid; i++) {
+      const rawPrice =
+        direction === "LONG"
+          ? currentPrice - buffer * i
+          : currentPrice + buffer * i;
+
+      const price = roundToTick(rawPrice);
+      if (existingPrices.has(price)) continue;
+
+      batchOrders.push({
+        symbol: SYMBOL,
+        side: direction === "LONG" ? "BUY" : "SELL",
+        type: "LIMIT",
+        price,
+        quantity,
+        timeInForce: "GTC",
+      });
+    }
+
+    if (batchOrders.length === 0) {
+      console.log(chalk.yellow("Tidak ada order baru yang ditempatkan."));
+      return;
+    }
+
+    const results = await Promise.allSettled(
+      batchOrders.map((order) => client.futuresOrder(order))
+    );
+
+    results.forEach((res, i) => {
+      if (res.status === "rejected") {
+        console.error(
+          chalk.bgRed(
+            `Gagal menempatkan order: ${res.reason.message || res.reason}`
+          )
+        );
+      }
+    });
+
+    await placeTakeProfitAndStopLoss(batchOrders, atr, direction);
+  } catch (error) {
+    console.error(
+      chalk.bgRed("Kesalahan saat menempatkan order grid:"),
+      error.message || error
+    );
+  }
 }
 
 // Fungsi untuk menetapkan TP dan SL
@@ -682,13 +695,20 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
     const tickSize = parseFloat(
       symbolInfo.filters.find((f) => f.filterType === "PRICE_FILTER").tickSize
     );
+
+    // === ✅ Buffer dinamis untuk pasar ATR kecil ===
+    const currentPrice = +orders[0].price;
+    const minBuffer = Math.max(tickSize * 5, currentPrice * 0.002); // 0.2% harga atau 5x tick
+    const baseBuffer = Math.max(atr, minBuffer);
+
+    // Ambil batas minimum dari exchange (optional, tidak terlalu pengaruh jika ATR kecil)
     const minStopDistance =
       parseFloat(
         symbolInfo.filters.find((f) => f.filterType === "PERCENT_PRICE")
           ?.multiplierUp || 0.1
       ) * atr;
 
-    const buffer = atr + Math.max(atr * 0.1, minStopDistance);
+    const buffer = baseBuffer + Math.max(baseBuffer * 0.1, minStopDistance);
 
     const roundToTick = (price) =>
       +(Math.round(price / tickSize) * tickSize).toFixed(pricePrecision);
@@ -709,8 +729,10 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
 
     for (const { price, quantity } of orders) {
       const orderPrice = +price;
+
       const tp =
         direction === "LONG" ? orderPrice + buffer : orderPrice - buffer;
+
       const sl =
         direction === "LONG" ? orderPrice - buffer : orderPrice + buffer;
 
@@ -767,7 +789,7 @@ async function placeTakeProfitAndStopLoss(orders, atr, direction) {
         console.log(chalk.yellow(`SL @ ${roundedSL} sudah ada.`));
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // delay per order pair
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // optional delay
     }
   } catch (error) {
     console.error(
