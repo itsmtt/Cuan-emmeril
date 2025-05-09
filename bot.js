@@ -500,13 +500,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 }
 
 // Fungsi untuk menentukan kondisi pasar
-async function determineMarketCondition(
-  rsi,
-  vwap,
-  closingPrices,
-  lastPrice,
-  atr
-) {
+async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr) {
   const len = closingPrices.length;
   const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
   const longEMA = calculateEMA(closingPrices.slice(len - 20), 20);
@@ -516,8 +510,7 @@ async function determineMarketCondition(
   const isTrending = Math.abs(shortEMA - longEMA) / longEMA;
   const atrRatio = atr / lastPrice;
 
-  const threshold =
-    0.5 + Math.min(atrRatio * 5, 0.1) + Math.min(isTrending * 2, 0.15);
+  const threshold = 0.45 + Math.min(atrRatio * 5, 0.1) + Math.min(isTrending * 2, 0.15);
 
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
@@ -552,91 +545,58 @@ async function determineMarketCondition(
   );
 
   const isStrongTrend = isTrending >= 0.003;
-  const rsiBuyZone = rsi <= 45;
-  const rsiSellZone = rsi >= 55;
+  const rsiBuyZone = rsi <= 48;
+  const rsiSellZone = rsi >= 52;
 
   const confirmationCountBuy =
-    emaBuy +
-    macdBuy +
-    (fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid") > 0.5
-      ? 1
-      : 0);
+    emaBuy + macdBuy +
+    (fuzzyMembership(lastPrice, lowerBand, lowerBandUp, "trapezoid") > 0.5 ? 1 : 0);
 
   const confirmationCountSell =
-    emaSell +
-    macdSell +
-    (fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid") > 0.5
-      ? 1
-      : 0);
+    emaSell + macdSell +
+    (fuzzyMembership(lastPrice, upperBandDown, upperBand, "trapezoid") > 0.5 ? 1 : 0);
 
-  // 🚫 Cegah sinyal jika ATR terlalu kecil dan tidak trending
+  const altTrendBuy = emaBuy && macdBuy;
+  const altTrendSell = emaSell && macdSell;
+
+  // 🚫 Cegah sinyal jika benar-benar flat
   if (atrRatio < 0.001 && !isTrending) {
-    console.log(
-      chalk.gray("⚠️ ATR terlalu kecil dan tidak ada tren — abaikan sinyal.")
-    );
+    console.log(chalk.gray("⚠️ ATR terlalu kecil dan tidak ada tren — abaikan sinyal."));
     return "NEUTRAL";
   }
 
-  // 🧾 Log Informasi
+  // 🧾 Log Analisis
   console.log(chalk.yellowBright("=== Market Analysis ==="));
-  console.log(
-    `RSI: ${rsi.toFixed(2)}, VWAP: ${vwap.toFixed(
-      6
-    )}, Last Price: ${lastPrice.toFixed(6)}`
-  );
-  console.log(
-    `Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(
-      6
-    )}, isTrending: ${(isTrending * 100).toFixed(2)}%`
-  );
+  console.log(`RSI: ${rsi.toFixed(2)}, VWAP: ${vwap.toFixed(6)}, Last Price: ${lastPrice.toFixed(6)}`);
+  console.log(`Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(6)}, isTrending: ${(isTrending * 100).toFixed(2)}%`);
   console.log(`MACD: ${macdLine.toFixed(6)}, Signal: ${signalLine.toFixed(6)}`);
-  console.log(
-    `ATR: ${atr.toFixed(6)} | ATR Ratio: ${(atrRatio * 100).toFixed(2)}%`
-  );
+  console.log(`ATR: ${atr.toFixed(6)} | ATR Ratio: ${(atrRatio * 100).toFixed(2)}%`);
   console.log(`Threshold: ${(threshold * 100).toFixed(2)}%`);
-  console.log(
-    `Buy Signal: ${(buySignal * 100).toFixed(
-      2
-    )}%, Confirmations: ${confirmationCountBuy}, RSI Buy Zone: ${rsiBuyZone}`
-  );
-  console.log(
-    `Sell Signal: ${(sellSignal * 100).toFixed(
-      2
-    )}%, Confirmations: ${confirmationCountSell}, RSI Sell Zone: ${rsiSellZone}`
-  );
-  //console.log(`Strong Trend: ${isStrongTrend}`);
+  console.log(`Buy Signal: ${(buySignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountBuy}, RSI Buy Zone: ${rsiBuyZone}`);
+  console.log(`Sell Signal: ${(sellSignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountSell}, RSI Sell Zone: ${rsiSellZone}`);
+  console.log(`Trend Valid: ${isStrongTrend}, Alt Trend Buy: ${altTrendBuy}, Alt Trend Sell: ${altTrendSell}`);
 
-  // ✅ Evaluasi sinyal akhir
+  // ✅ Final Evaluasi
   if (
     buySignal > sellSignal &&
     buySignal >= threshold &&
-    // isStrongTrend &&
+    (isStrongTrend || altTrendBuy) &&
     rsiBuyZone &&
     confirmationCountBuy >= 2
   ) {
-    console.log(
-      chalk.greenBright(
-        "🟢 Posisi sekarang LONG (indikator menunjukkan peluang beli)."
-      )
-    );
+    console.log(chalk.greenBright("🟢 LONG - Sinyal valid dan kondisi pasar mendukung."));
     return "LONG";
   } else if (
     sellSignal > buySignal &&
     sellSignal >= threshold &&
-    //isStrongTrend &&
+    (isStrongTrend || altTrendSell) &&
     rsiSellZone &&
     confirmationCountSell >= 2
   ) {
-    console.log(
-      chalk.redBright(
-        "🔴 Posisi sekarang SHORT (indikator menunjukkan peluang jual)."
-      )
-    );
+    console.log(chalk.redBright("🔴 SHORT - Sinyal valid dan kondisi pasar mendukung."));
     return "SHORT";
   } else {
-    console.log(
-      chalk.gray("⚪ Posisi sekarang NEUTRAL. Menunggu sinyal valid...")
-    );
+    console.log(chalk.gray("⚪ NEUTRAL - Belum ada sinyal kuat."));
     return "NEUTRAL";
   }
 }
