@@ -656,7 +656,6 @@ async function placeGridOrders(
     const orderGrid = GRID_COUNT;
 
     // ===== ✅ Buffer Minimum Dinamis =====
-    const atrRatio = atr / currentPrice;
     const minBuffer = Math.max(tickSize * 5, currentPrice * 0.002); // 0.2% harga atau 5x tickSize
     const buffer = Math.max(atr, minBuffer); // Gunakan ATR jika lebih besar
 
