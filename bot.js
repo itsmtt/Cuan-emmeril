@@ -500,25 +500,21 @@ async function determineMarketCondition(
   const { upperBand, lowerBand } = calculateBollingerBands(closingPrices);
 
   const isTrending = Math.abs(shortEMA - longEMA) / longEMA;
-  const atrLevel = atr;
+  const atrRatio = atr / lastPrice;
 
-  // Threshold dinamis: semakin volatil dan trending, semakin tinggi ambang sinyal diterima
   const threshold =
-    0.6 + Math.min(atrLevel * 2, 0.1) + Math.min(isTrending * 2, 0.15);
+    0.6 + Math.min(atrRatio * 5, 0.1) + Math.min(isTrending * 2, 0.15);
 
-  // Sinyal diskrit dari indikator utama
   const emaBuy = shortEMA > longEMA ? 1 : 0;
   const emaSell = shortEMA < longEMA ? 1 : 0;
   const macdBuy = macdLine > signalLine ? 1 : 0;
   const macdSell = macdLine < signalLine ? 1 : 0;
 
-  // Zona BB dan VWAP
   const lowerBandUp = lowerBand * 1.02;
   const upperBandDown = upperBand * 0.98;
   const vwapLow = vwap * 0.95;
   const vwapHigh = vwap * 1.05;
 
-  // Fuzzy signal calculation
   const buySignal = aggregateFuzzySignals(
     [
       fuzzyMembership(rsi, 30, 50, "linear"),
@@ -541,7 +537,6 @@ async function determineMarketCondition(
     [0.2, 0.2, 0.2, 0.2, 0.2]
   );
 
-  // Filter tambahan untuk menghindari false signal
   const isStrongTrend = isTrending > 0.003;
   const rsiBuyZone = rsi < 45;
   const rsiSellZone = rsi > 55;
