@@ -542,9 +542,9 @@ async function determineMarketCondition(
     [0.2, 0.2, 0.2, 0.2, 0.2]
   );
 
-  const isStrongTrend = isTrending > 0.003;
-  const rsiBuyZone = rsi < 45;
-  const rsiSellZone = rsi > 55;
+  const isStrongTrend = isTrending >= 0.003;
+  const rsiBuyZone = rsi <= 45;
+  const rsiSellZone = rsi >= 55;
 
   const confirmationCountBuy =
     emaBuy +
