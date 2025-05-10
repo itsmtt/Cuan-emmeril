@@ -500,7 +500,7 @@ async function checkExtremeMarketConditions(atr, vwap, lastPrice, volumes) {
 }
 
 // Fungsi untuk menentukan kondisi pasar
-async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr) {
+async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr, volumes, candles) {
   const len = closingPrices.length;
   const shortEMA = calculateEMA(closingPrices.slice(len - 10), 5);
   const longEMA = calculateEMA(closingPrices.slice(len - 20), 20);
@@ -559,44 +559,62 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const altTrendBuy = emaBuy && macdBuy;
   const altTrendSell = emaSell && macdSell;
 
-  // 🚫 Cegah sinyal jika benar-benar flat
+  // Volume Spike Filter
+  const recentVolumes = volumes.slice(-10);
+  const avgVolume = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
+  const lastVolume = volumes.at(-1);
+  const volumeSpike = lastVolume > avgVolume * 1.3;
+
+  // Bullish/Bearish Candle Filter
+  const lastCandle = candles.at(-1);
+  const body = Math.abs(lastCandle.close - lastCandle.open);
+  const range = lastCandle.high - lastCandle.low;
+  const bullishCandle = lastCandle.close > lastCandle.open && body / range >= 0.5;
+  const bearishCandle = lastCandle.open > lastCandle.close && body / range >= 0.5;
+
+  // Cegah sinyal saat pasar terlalu flat
   if (atrRatio < 0.001 && !isTrending) {
     console.log(chalk.gray("⚠️ ATR terlalu kecil dan tidak ada tren — abaikan sinyal."));
     return "NEUTRAL";
   }
 
-  // 🧾 Log Analisis
+  // Log Analisis
   console.log(chalk.yellowBright("=== Market Analysis ==="));
   console.log(`RSI: ${rsi.toFixed(2)}, VWAP: ${vwap.toFixed(6)}, Last Price: ${lastPrice.toFixed(6)}`);
   console.log(`Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(6)}, isTrending: ${(isTrending * 100).toFixed(2)}%`);
   console.log(`MACD: ${macdLine.toFixed(6)}, Signal: ${signalLine.toFixed(6)}`);
   console.log(`ATR: ${atr.toFixed(6)} | ATR Ratio: ${(atrRatio * 100).toFixed(2)}%`);
+  console.log(`Volume Spike: ${volumeSpike}, Candle Valid: ${bullishCandle || bearishCandle}`);
   console.log(`Threshold: ${(threshold * 100).toFixed(2)}%`);
-  console.log(`Buy Signal: ${(buySignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountBuy}, RSI Buy Zone: ${rsiBuyZone}`);
-  console.log(`Sell Signal: ${(sellSignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountSell}, RSI Sell Zone: ${rsiSellZone}`);
-  console.log(`Trend Valid: ${isStrongTrend}, Alt Trend Buy: ${altTrendBuy}, Alt Trend Sell: ${altTrendSell}`);
+  console.log(`Buy Signal: ${(buySignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountBuy}`);
+  console.log(`Sell Signal: ${(sellSignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountSell}`);
+  console.log(`Trend: ${isStrongTrend}, Alt Buy: ${altTrendBuy}, Alt Sell: ${altTrendSell}`);
 
-  // ✅ Final Evaluasi
+  // Final Evaluasi
   if (
     buySignal > sellSignal &&
     buySignal >= threshold &&
     (isStrongTrend || altTrendBuy) &&
     rsiBuyZone &&
-    confirmationCountBuy >= 2
+    confirmationCountBuy >= 3 &&
+    volumeSpike &&
+    bullishCandle
   ) {
-    console.log(chalk.greenBright("🟢 LONG - Sinyal valid dan kondisi pasar mendukung."));
+    console.log(chalk.greenBright("🟢 LONG - Sinyal valid dan kuat."));
     return "LONG";
   } else if (
     sellSignal > buySignal &&
     sellSignal >= threshold &&
     (isStrongTrend || altTrendSell) &&
     rsiSellZone &&
-    confirmationCountSell >= 2
+    confirmationCountSell >= 3 &&
+    volumeSpike &&
+    bearishCandle
   ) {
-    console.log(chalk.redBright("🔴 SHORT - Sinyal valid dan kondisi pasar mendukung."));
+    console.log(chalk.redBright("🔴 SHORT - Sinyal valid dan kuat."));
     return "SHORT";
   } else {
-    console.log(chalk.gray("⚪ NEUTRAL - Belum ada sinyal kuat."));
+    console.log(chalk.gray("⚪ NEUTRAL - Belum ada sinyal berkualitas."));
     return "NEUTRAL";
   }
 }
@@ -938,13 +956,7 @@ async function trade() {
     if (await checkExtremeMarketConditions(atr, vwap, lastPrice, volumes))
       return;
 
-    const marketCondition = await determineMarketCondition(
-      rsi,
-      vwap,
-      closingPrices,
-      lastPrice,
-      atr
-    );
+    const marketCondition = await determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr, volumes, candles);
 
     const [openOrders, positions] = await Promise.all([
       client.futuresOpenOrders({ symbol: SYMBOL }),
