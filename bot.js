@@ -590,16 +590,16 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
 
   // Log Analisis
   console.log(chalk.yellowBright("=== Market Analysis ==="));
-  console.log(`RSI: ${rsi.toFixed(2)}, VWAP: ${vwap.toFixed(6)}, Last Price: ${lastPrice.toFixed(6)}`);
-  console.log(`Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(6)}, isTrending: ${(isTrending * 100).toFixed(2)}%`);
-  console.log(`MACD: ${macdLine.toFixed(6)}, Signal: ${signalLine.toFixed(6)}`);
-  console.log(`ATR: ${atr.toFixed(6)} | ATR Ratio: ${(atrRatio * 100).toFixed(2)}%`);
-  console.log(`Volume Spike: ${volumeSpike}, Candle Body Valid: ${bullishCandle || bearishCandle}`);
-  console.log(`Threshold: ${(threshold * 100).toFixed(2)}%`);
-  console.log(`Buy Signal: ${(buySignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountBuy}`);
-  console.log(`Sell Signal: ${(sellSignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountSell}`);
-  console.log(`Trend: ${isStrongTrend}, Alt Buy: ${altTrendBuy}, Alt Sell: ${altTrendSell}`);
-
+console.log(`Price       : ${lastPrice.toFixed(6)} | VWAP: ${vwap.toFixed(6)} | ATR: ${atr.toFixed(6)} (${(atrRatio * 100).toFixed(2)}%)`);
+console.log(`RSI         : ${rsi.toFixed(2)} | Buy Zone: ${rsiBuyZone} | Sell Zone: ${rsiSellZone}`);
+console.log(`EMA         : Short ${shortEMA.toFixed(6)} | Long ${longEMA.toFixed(6)} | Trend: ${(isTrending * 100).toFixed(2)}% ${isStrongTrend ? chalk.green("[STRONG]") : chalk.gray("[WEAK]")}`);
+console.log(`MACD        : MACD ${macdLine.toFixed(6)} | Signal ${signalLine.toFixed(6)} | Cross: ${macdBuy ? "↑ Buy" : macdSell ? "↓ Sell" : "–"}`);
+console.log(`Bands       : Low ${lowerBand.toFixed(6)} | Up ${upperBand.toFixed(6)}`);
+console.log(`Volume      : Last ${lastVolume.toFixed(2)} | Avg ${avgVolume.toFixed(2)} | Spike: ${volumeSpike ? chalk.green("YES") : chalk.gray("NO")}`);
+console.log(`Candle      : Body ${(body / range * 100).toFixed(1)}% | Type: ${bullishCandle ? chalk.green("Bullish") : bearishCandle ? chalk.red("Bearish") : "Neutral"}`);
+console.log(`Threshold   : ${(threshold * 100).toFixed(2)}%`);
+console.log(`Buy Signal  : ${(buySignal * 100).toFixed(2)}% | Confirm: ${confirmationCountBuy} | AltTrend: ${altTrendBuy}`);
+console.log(`Sell Signal : ${(sellSignal * 100).toFixed(2)}% | Confirm: ${confirmationCountSell} | AltTrend: ${altTrendSell}`);
   // Final Evaluasi
   if (
     buySignal > sellSignal &&
