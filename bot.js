@@ -522,7 +522,7 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const vwapLow = vwap * 0.95;
   const vwapHigh = vwap * 1.05;
 
-  const buySignal = aggregateFuzzySignals(
+  const rawBuySignal = aggregateFuzzySignals(
     [
       fuzzyMembership(rsi, 30, 50, "linear"),
       macdBuy,
@@ -533,7 +533,7 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
     [0.2, 0.2, 0.2, 0.2, 0.2]
   );
 
-  const sellSignal = aggregateFuzzySignals(
+  const rawSellSignal = aggregateFuzzySignals(
     [
       fuzzyMembership(rsi, 50, 70, "linear"),
       macdSell,
@@ -559,20 +559,30 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const altTrendBuy = emaBuy && macdBuy;
   const altTrendSell = emaSell && macdSell;
 
-  // Volume Spike Filter
+  // Volume Spike & Candle Bonus
   const recentVolumes = volumes.slice(-10);
   const avgVolume = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
   const lastVolume = volumes.at(-1);
   const volumeSpike = lastVolume > avgVolume * 1.3;
 
-  // Bullish/Bearish Candle Filter
   const lastCandle = candles.at(-1);
   const body = Math.abs(lastCandle.close - lastCandle.open);
   const range = lastCandle.high - lastCandle.low;
   const bullishCandle = lastCandle.close > lastCandle.open && body / range >= 0.5;
   const bearishCandle = lastCandle.open > lastCandle.close && body / range >= 0.5;
 
-  // Cegah sinyal saat pasar terlalu flat
+  let buyBonus = 0;
+  if (volumeSpike) buyBonus += 0.05;
+  if (bullishCandle) buyBonus += 0.05;
+
+  let sellBonus = 0;
+  if (volumeSpike) sellBonus += 0.05;
+  if (bearishCandle) sellBonus += 0.05;
+
+  const buySignal = rawBuySignal + buyBonus;
+  const sellSignal = rawSellSignal + sellBonus;
+
+  // Cegah sinyal saat market flat
   if (atrRatio < 0.001 && !isTrending) {
     console.log(chalk.gray("⚠️ ATR terlalu kecil dan tidak ada tren — abaikan sinyal."));
     return "NEUTRAL";
@@ -584,7 +594,7 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   console.log(`Short EMA: ${shortEMA.toFixed(6)}, Long EMA: ${longEMA.toFixed(6)}, isTrending: ${(isTrending * 100).toFixed(2)}%`);
   console.log(`MACD: ${macdLine.toFixed(6)}, Signal: ${signalLine.toFixed(6)}`);
   console.log(`ATR: ${atr.toFixed(6)} | ATR Ratio: ${(atrRatio * 100).toFixed(2)}%`);
-  console.log(`Volume Spike: ${volumeSpike}, Candle Valid: ${bullishCandle || bearishCandle}`);
+  console.log(`Volume Spike: ${volumeSpike}, Candle Body Valid: ${bullishCandle || bearishCandle}`);
   console.log(`Threshold: ${(threshold * 100).toFixed(2)}%`);
   console.log(`Buy Signal: ${(buySignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountBuy}`);
   console.log(`Sell Signal: ${(sellSignal * 100).toFixed(2)}%, Confirmations: ${confirmationCountSell}`);
@@ -596,9 +606,7 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
     buySignal >= threshold &&
     (isStrongTrend || altTrendBuy) &&
     rsiBuyZone &&
-    confirmationCountBuy >= 3 &&
-    volumeSpike &&
-    bullishCandle
+    confirmationCountBuy >= 2
   ) {
     console.log(chalk.greenBright("🟢 LONG - Sinyal valid dan kuat."));
     return "LONG";
@@ -607,9 +615,7 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
     sellSignal >= threshold &&
     (isStrongTrend || altTrendSell) &&
     rsiSellZone &&
-    confirmationCountSell >= 3 &&
-    volumeSpike &&
-    bearishCandle
+    confirmationCountSell >= 2
   ) {
     console.log(chalk.redBright("🔴 SHORT - Sinyal valid dan kuat."));
     return "SHORT";
