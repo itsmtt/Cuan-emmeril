@@ -913,7 +913,7 @@ async function trade() {
   try {
     const [ticker, candles] = await Promise.all([
       client.futuresPrices(),
-      client.futuresCandles({ symbol: SYMBOL, interval: "15m" }),
+      client.futuresCandles({ symbol: SYMBOL, interval: "5m" }),
     ]);
 
     const price = ticker[SYMBOL];
