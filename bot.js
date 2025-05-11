@@ -522,6 +522,14 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const vwapLow = vwap * 0.95;
   const vwapHigh = vwap * 1.05;
 
+  // Cegah entry jika harga terlalu jauh dari Bollinger Band
+  const isLateBuy = lastPrice > upperBand * 1.005;
+  const isLateSell = lastPrice < lowerBand * 0.995;
+  if (isLateBuy || isLateSell) {
+    console.log(chalk.gray("⚠️ Harga terlalu jauh dari Bollinger Band — kemungkinan sinyal sudah terlambat."));
+    return "NEUTRAL";
+  }
+
   const rawBuySignal = aggregateFuzzySignals(
     [
       fuzzyMembership(rsi, 30, 50, "linear"),
@@ -582,7 +590,6 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
   const buySignal = rawBuySignal + buyBonus;
   const sellSignal = rawSellSignal + sellBonus;
 
-  // Cegah sinyal saat market flat
   if (atrRatio < 0.001 && !isTrending) {
     console.log(chalk.gray("⚠️ ATR terlalu kecil dan tidak ada tren — abaikan sinyal."));
     return "NEUTRAL";
@@ -590,16 +597,17 @@ async function determineMarketCondition(rsi, vwap, closingPrices, lastPrice, atr
 
   // Log Analisis
   console.log(chalk.yellowBright("=== Market Analysis ==="));
-console.log(`Price       : ${lastPrice.toFixed(6)} | VWAP: ${vwap.toFixed(6)} | ATR: ${atr.toFixed(6)} (${(atrRatio * 100).toFixed(2)}%)`);
-console.log(`RSI         : ${rsi.toFixed(2)} | Buy Zone: ${rsiBuyZone} | Sell Zone: ${rsiSellZone}`);
-console.log(`EMA         : Short ${shortEMA.toFixed(6)} | Long ${longEMA.toFixed(6)} | Trend: ${(isTrending * 100).toFixed(2)}% ${isStrongTrend ? chalk.green("[STRONG]") : chalk.gray("[WEAK]")}`);
-console.log(`MACD        : MACD ${macdLine.toFixed(6)} | Signal ${signalLine.toFixed(6)} | Cross: ${macdBuy ? "↑ Buy" : macdSell ? "↓ Sell" : "–"}`);
-console.log(`Bands       : Low ${lowerBand.toFixed(6)} | Up ${upperBand.toFixed(6)}`);
-console.log(`Volume      : Last ${lastVolume.toFixed(2)} | Avg ${avgVolume.toFixed(2)} | Spike: ${volumeSpike ? chalk.green("YES") : chalk.gray("NO")}`);
-console.log(`Candle      : Body ${(body / range * 100).toFixed(1)}% | Type: ${bullishCandle ? chalk.green("Bullish") : bearishCandle ? chalk.red("Bearish") : "Neutral"}`);
-console.log(`Threshold   : ${(threshold * 100).toFixed(2)}%`);
-console.log(`Buy Signal  : ${(buySignal * 100).toFixed(2)}% | Confirm: ${confirmationCountBuy} | AltTrend: ${altTrendBuy}`);
-console.log(`Sell Signal : ${(sellSignal * 100).toFixed(2)}% | Confirm: ${confirmationCountSell} | AltTrend: ${altTrendSell}`);
+  console.log(`Price       : ${lastPrice.toFixed(6)} | VWAP: ${vwap.toFixed(6)} | ATR: ${atr.toFixed(6)} (${(atrRatio * 100).toFixed(2)}%)`);
+  console.log(`RSI         : ${rsi.toFixed(2)} | Buy Zone: ${rsiBuyZone} | Sell Zone: ${rsiSellZone}`);
+  console.log(`EMA         : Short ${shortEMA.toFixed(6)} | Long ${longEMA.toFixed(6)} | Trend: ${(isTrending * 100).toFixed(2)}% ${isStrongTrend ? chalk.green("[STRONG]") : chalk.gray("[WEAK]")}`);
+  console.log(`MACD        : MACD ${macdLine.toFixed(6)} | Signal ${signalLine.toFixed(6)} | Cross: ${macdBuy ? "↑ Buy" : macdSell ? "↓ Sell" : "–"}`);
+  console.log(`Bands       : Low ${lowerBand.toFixed(6)} | Up ${upperBand.toFixed(6)}`);
+  console.log(`Volume      : Last ${lastVolume.toFixed(2)} | Avg ${avgVolume.toFixed(2)} | Spike: ${volumeSpike ? chalk.green("YES") : chalk.gray("NO")}`);
+  console.log(`Candle      : Body ${(body / range * 100).toFixed(1)}% | Type: ${bullishCandle ? chalk.green("Bullish") : bearishCandle ? chalk.red("Bearish") : "Neutral"}`);
+  console.log(`Threshold   : ${(threshold * 100).toFixed(2)}%`);
+  console.log(`Buy Signal  : ${(buySignal * 100).toFixed(2)}% | Confirm: ${confirmationCountBuy} | AltTrend: ${altTrendBuy}`);
+  console.log(`Sell Signal : ${(sellSignal * 100).toFixed(2)}% | Confirm: ${confirmationCountSell} | AltTrend: ${altTrendSell}`);
+
   // Final Evaluasi
   if (
     buySignal > sellSignal &&
